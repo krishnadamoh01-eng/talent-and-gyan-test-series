@@ -8,8 +8,14 @@
 <a href="#home">होम</a><a href="#tests">मॉक टेस्ट</a><a href="#series">टेस्ट सीरीज</a><a href="#plans">प्राइसिंग</a><a href="#results">मेरे रिजल्ट</a><a href="#help">सहायता</a></nav></header>
 <section class="hero" id="home"><h1>Talent And Gyan Test Series</h1><p>MP पटवारी और अन्य प्रतियोगी परीक्षाओं की Online Test Series। Test के दौरान उत्तर नहीं दिखेंगे। पूरा Test Submit करने के बाद Result, सही उत्तर और Explanation दिखाई देंगे।</p><button class="btn orange" onclick="document.getElementById('tests').scrollIntoView({behavior:'smooth'})">Mock Test देखें</button></section>
 <div class="container" id="series"><div class="title">📚 परीक्षाएँ</div><div class="grid">
-<div class="card"><h3>MP पटवारी</h3><p class="muted">Online Mock Tests</p></div><div class="card"><h3>MPPSC</h3><p class="muted">Questions बाद में जोड़े जा सकेंगे</p></div><div class="card"><h3>MP पुलिस</h3><p class="muted">Questions बाद में जोड़े जा सकेंगे</p></div><div class="card"><h3>ग्रुप 4</h3><p class="muted">Questions बाद में जोड़े जा सकेंगे</p></div><div class="card"><h3>Hospital Assistant</h3><p class="muted">Online Tests</p></div><div class="card"><h3>अन्य परीक्षाएँ</h3><p class="muted">Admin Panel से जोड़ी जा सकेंगी</p></div></div></div>
+<div class="card"><h3>MP पटवारी</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MP पटवारी')">देखें</button></div>
+<div class="card"><h3>MPPSC</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MPPSC')">देखें</button></div>
+<div class="card"><h3>MP पुलिस</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MP पुलिस')">देखें</button></div>
+<div class="card"><h3>ग्रुप 4</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('ग्रुप 4')">देखें</button></div>
+<div class="card"><h3>Hospital Assistant</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('Hospital Assistant')">देखें</button></div>
+<div class="card"><h3>अन्य परीक्षाएँ</h3><p class="muted">बाद में परीक्षा जोड़ें</p><button class="btn" onclick="openExam('अन्य परीक्षाएँ')">देखें</button></div></div></div>
 <div class="container" id="tests"><div class="title">📝 उपलब्ध Mock Tests</div><div class="grid" id="testCards"></div></div>
+<div class="modal" id="examModal"><div class="box" id="examContent"></div></div>
 <div class="container" id="plans"><div class="title">💳 Access Plans</div><div class="grid">
 <div class="card"><h3>1 दिन</h3><div class="price">₹10</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay('1 दिन','₹10')">Access लें</button></div>
 <div class="card"><h3>2 दिन</h3><div class="price">₹15</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay('2 दिन','₹15')">Access लें</button></div>
@@ -31,8 +37,45 @@ const defaultTests=[
 ["सांची स्तूप किस जिले में स्थित है?",["भोपाल","रायसेन","सीहोर","विदिशा"],1,"सांची स्तूप रायसेन जिले में स्थित है।"],
 ["'कमल' का पर्यायवाची कौन सा है?",["पंकज","पवन","पर्वत","पल्लव"],0,"पंकज कमल का पर्यायवाची है।"]]}
 ];
-let tests=JSON.parse(localStorage.getItem("tgy_tests")||"null")||defaultTests;
+let tests=JSON.parse(localStorage.getItem("tgy_tests")||"null")||defaultTests;tests=tests.map(t=>({...t,exam:t.exam||"MP पटवारी"}));
 let results=JSON.parse(localStorage.getItem("tgy_results")||"[]");
+
+const demoQuestions = [
+["मध्य प्रदेश की राजधानी क्या है?",["इंदौर","भोपाल","उज्जैन","जबलपुर"],1,"भोपाल मध्य प्रदेश की राजधानी है।"],
+["भारत का संविधान कब लागू हुआ?",["15 अगस्त 1947","26 जनवरी 1950","26 नवंबर 1949","2 अक्टूबर 1950"],1,"संविधान 26 जनवरी 1950 को लागू हुआ।"],
+["2 + 8 × 3 = ?",["30","26","24","18"],1,"गुणा पहले: 8×3=24, फिर 2 जोड़ने पर 26।"],
+["सांची स्तूप किस जिले में है?",["भोपाल","रायसेन","सीहोर","विदिशा"],1,"सांची रायसेन जिले में है।"],
+["'कमल' का पर्यायवाची है?",["पंकज","पवन","पर्वत","पल्लव"],0,"पंकज कमल का पर्यायवाची है।"]
+];
+const examDemo = ["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant","अन्य परीक्षाएँ"];
+function openExam(exam){
+  const list = tests.filter(t => t.exam === exam);
+  let html = `<h2>${esc(exam)}</h2><p class="muted">पहले Demo Test मुफ्त में दें। Demo के बाद Test Series खरीदने का विकल्प मिलेगा।</p>
+  <div class="card" style="border:2px solid #f07800"><h3>🎁 ${esc(exam)} Demo Test</h3><p>5 Questions • Demo Test</p><button class="btn orange" onclick="startExamDemo('${esc(exam)}')">Free Demo Test दें</button></div>`;
+  if(list.length){
+    html += `<h3>📚 उपलब्ध Test Series</h3>` + list.map((t,i)=>`<div class="card"><b>${esc(t.name)}</b><p>${t.questions.length} Questions • ${t.time} मिनट</p><button class="btn" onclick="closeExam();openTest(${tests.indexOf(t)})">Test दें</button></div>`).join("");
+  }
+  html += `<div class="card" style="margin-top:15px"><h3>💳 Demo के बाद Test Series</h3><p>अधिक Tests के लिए अपनी पसंद का Access Plan चुनें।</p><button class="btn orange" onclick="closeExam();document.getElementById('plans').scrollIntoView({behavior:'smooth'})">Test Series खरीदें</button></div>
+  <button class="btn gray" onclick="closeExam()">बंद करें</button>`;
+  document.getElementById("examContent").innerHTML=html;
+  document.getElementById("examModal").style.display="flex";
+}
+function closeExam(){document.getElementById("examModal").style.display="none"}
+function startExamDemo(exam){
+  closeExam();
+  window.state={t:{name:exam+" Demo Test",time:10,questions:demoQuestions},idx:0,answers:Array(demoQuestions.length).fill(null)};
+  document.getElementById("modalContent").innerHTML=`<div class="timer" id="timer"></div><h2>${esc(exam)} — Free Demo Test</h2><p class="muted">यह Demo Test मुफ्त है। Option चुनना जरूरी है।</p><div id="qarea"></div><button class="btn gray" id="prev" onclick="prevQ()">← Previous</button> <button class="btn" id="next" onclick="nextQ()">Next →</button>`;
+  document.getElementById("modal").style.display="flex"; renderQ();
+  let sec=10*60; window.timer=setInterval(()=>{sec--;let e=document.getElementById("timer");if(e)e.textContent=`⏱️ ${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;if(sec<=0)submitDemo()},1000);
+}
+function submitDemo(){
+  clearInterval(window.timer);
+  const s=state; let correct=0,attempted=s.answers.filter(x=>x!==null).length;
+  s.t.questions.forEach((q,i)=>{if(s.answers[i]===q[2])correct++});
+  let wrong=attempted-correct, skipped=s.t.questions.length-attempted, percent=(correct/s.t.questions.length*100).toFixed(0);
+  document.getElementById("modalContent").innerHTML=`<h2>🎉 Demo Result</h2><div class="result"><b>कुल:</b> ${s.t.questions.length} | <b>Attempt:</b> ${attempted} | <b>सही:</b> ${correct} | <b>गलत:</b> ${wrong} | <b>छोड़े:</b> ${skipped}<br><b>Percentage:</b> ${percent}%</div>
+  <div class="card" style="margin-top:15px"><h3>🚀 आगे Test Series लें</h3><p>आपने Demo पूरा कर लिया है। अब पूरी Test Series में उपलब्ध सभी Tests देने के लिए Access Plan चुनें।</p><button class="btn orange" onclick="closeM();document.getElementById('plans').scrollIntoView({behavior:'smooth'})">Test Series खरीदें</button></div><button class="btn gray" onclick="closeM()">बंद करें</button>`;
+}
 function renderTests(){document.getElementById("testCards").innerHTML=tests.map((t,i)=>`<div class="card"><h3>${esc(t.name)}</h3><p class="muted">${t.questions.length} Questions • ${t.time} मिनट</p><button class="btn" onclick="openTest(${i})">Test दें</button></div>`).join("")}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 renderTests();
