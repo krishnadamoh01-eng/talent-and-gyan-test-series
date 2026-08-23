@@ -3,8 +3,13 @@
 <title>Talent And Gyan Test Series</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Devanagari",sans-serif;background:#f5f7fb;color:#172334}header{background:#123b68;color:white;padding:15px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px;position:sticky;top:0;z-index:5}.logo{font-size:22px;font-weight:800}nav{display:flex;gap:4px;flex-wrap:wrap}nav a{color:#fff;text-decoration:none;padding:9px;border-radius:7px}.hero{padding:48px 5%;background:white}.hero h1{font-size:40px;color:#123b68;margin:0 0 12px}.hero p{max-width:780px;font-size:18px;line-height:1.6;color:#5d6d7e}.container{width:90%;max-width:1150px;margin:32px auto}.title{font-size:28px;color:#123b68;margin-bottom:16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.card{background:#fff;border:1px solid #e0e7ef;border-radius:14px;padding:19px;box-shadow:0 5px 18px #173a5c12}.btn{border:0;background:#1769aa;color:white;padding:11px 17px;border-radius:8px;font-weight:700;cursor:pointer}.orange{background:#f07800}.gray{background:#667789}.price{font-size:28px;font-weight:800;color:#123b68}.muted{color:#697989;font-size:14px}.ad{background:#fff7e6;border:1px dashed #d9a52b;padding:20px;text-align:center;border-radius:12px}.footer{background:#102b49;color:#dce8f4;padding:25px 5%;text-align:center;margin-top:50px}.modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;padding:16px;z-index:20}.box{background:#fff;border-radius:15px;width:min(820px,100%);max-height:92vh;overflow:auto;padding:24px}.q{border:1px solid #dfe7ef;border-radius:10px;padding:15px;margin:13px 0}.q label{display:block;padding:8px}.timer{position:sticky;top:0;background:#123b68;color:#fff;padding:10px;text-align:center;border-radius:8px;font-weight:700}input,textarea,select{width:100%;padding:11px;border:1px solid #cbd7e3;border-radius:8px;margin:6px 0 12px}.result{background:#eef8f0;border:1px solid #b9dfc1;padding:18px;border-radius:10px}.pay{background:#eef6ff;border:1px solid #bfd7ee;padding:17px;border-radius:10px}.upi{font-weight:800;color:#123b68;font-size:18px;word-break:break-all}.qr{width:210px;max-width:100%;display:block;margin:12px auto;border:1px solid #ddd}.help-status{padding:10px;background:#fff7e6;border-radius:8px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){header{flex-direction:column;align-items:flex-start}.hero h1{font-size:30px}.row{grid-template-columns:1fr}}
+</style><style id="student-login-top-style">
+.student-auth-top{display:flex;align-items:center;gap:6px;margin-left:auto}
+.student-auth-top a{color:#fff!important;text-decoration:none;padding:9px 12px;border-radius:8px;background:#1769aa;font-weight:700}
+.student-auth-top a.register{background:#f07800}
+@media(max-width:700px){.student-auth-top{width:100%;justify-content:flex-end}.student-auth-top a{padding:7px 9px;font-size:13px}}
 </style></head><body>
-<header><div class="logo">Talent And Gyan Test Series</div><nav><span id="authLinks"></span><a href="#home">होम</a><a href="#tests">मॉक टेस्ट</a><a href="#series">टेस्ट सीरीज</a><a href="#plans">प्राइसिंग</a><a href="#results">मेरे रिजल्ट</a><a href="#help">सहायता</a></nav></header>
+<header><div class="logo">Talent And Gyan Test Series</div><nav><a href="#home">होम</a><a href="#tests">मॉक टेस्ट</a><a href="#series">टेस्ट सीरीज</a><a href="#plans">प्राइसिंग</a><a href="#results">मेरे रिजल्ट</a><a href="#help">सहायता</a></nav><div class="student-auth-top" id="studentAuthTop"></div></header>
 <section class="hero" id="home"><h1>Talent And Gyan Test Series</h1><p>MP पटवारी और अन्य प्रतियोगी परीक्षाओं की Online Test Series। Test के दौरान उत्तर नहीं दिखेंगे। पूरा Test Submit करने के बाद Result, सही उत्तर और Explanation दिखाई देंगे।</p><button class="btn orange" onclick="document.getElementById('tests').scrollIntoView({behavior:'smooth'})">Mock Test देखें</button></section>
 <div class="container" id="series"><div class="title">📚 परीक्षाएँ</div><div class="grid">
 <div class="card"><h3>MP पटवारी</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MP पटवारी')">देखें</button></div>
@@ -17,11 +22,11 @@
 <div class="modal" id="authModal"><div class="box" id="authContent"></div></div>
 <div class="modal" id="examModal"><div class="box" id="examContent"></div></div>
 <div class="container" id="plans"><div class="title">💳 Access Plans</div><div class="grid">
-<div class="card"><h3>1 दिन</h3><div class="price">₹10</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay('1 दिन','₹10')">Access लें</button></div>
-<div class="card"><h3>2 दिन</h3><div class="price">₹15</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay('2 दिन','₹15')">Access लें</button></div>
-<div class="card"><h3>5 दिन</h3><div class="price">₹30</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay('5 दिन','₹30')">Access लें</button></div>
-<div class="card"><h3>7 दिन</h3><div class="price">₹50</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay('7 दिन','₹50')">Access लें</button></div>
-<div class="card"><h3>15 दिन</h3><div class="price">₹80</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay('15 दिन','₹80')">Access लें</button></div></div></div>
+<div class="card"><h3>1 दिन</h3><div class="price">₹10</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay()">Access लें</button></div>
+<div class="card"><h3>2 दिन</h3><div class="price">₹15</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay()">Access लें</button></div>
+<div class="card"><h3>5 दिन</h3><div class="price">₹30</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay()">Access लें</button></div>
+<div class="card"><h3>7 दिन</h3><div class="price">₹50</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay()">Access लें</button></div>
+<div class="card"><h3>15 दिन</h3><div class="price">₹80</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay()">Access लें</button></div></div></div>
 <div class="container"><div class="ad"><h3>📢 Advertisement</h3><p class="muted">यहाँ आपके Advertisement दिखाए जा सकते हैं।</p></div></div>
 <div class="container" id="results"><div class="title">📊 मेरे रिजल्ट</div><div class="card" id="resultList">अभी कोई Result नहीं है।</div></div>
 <div class="container" id="help"><div class="title">🛠️ सहायता / शिकायत</div><div class="card"><p>Payment, Login, Test, Result या किसी अन्य समस्या के लिए शिकायत भेजें।</p><label>नाम</label><input id="hname" placeholder="आपका नाम"><label>Email</label><input id="hemail" placeholder="आपकी Email ID"><label>समस्या</label><select id="htype"><option>Payment की समस्या</option><option>Login की समस्या</option><option>Test नहीं खुल रहा</option><option>Timer की समस्या</option><option>Result की समस्या</option><option>Payment किया लेकिन Access नहीं मिला</option><option>अन्य समस्या</option></select><label>Transaction / UTR</label><input id="hutr" placeholder="यदि लागू हो"><label>समस्या का विवरण</label><textarea id="hmsg" rows="4"></textarea><button class="btn" onclick="sendHelp()">शिकायत Submit करें</button></div></div>
@@ -112,19 +117,33 @@ function doLogin(){
 }
 function logout(){localStorage.removeItem("tgy_user");closeAuth();updateAuthUI()}
 function updateAuthUI(){
- const nav=document.querySelector("nav"); if(!nav)return;
- let old=document.getElementById("authLinks"); if(old)old.remove();
+ const box=document.getElementById("studentAuthTop"); if(!box)return;
  const u=JSON.parse(localStorage.getItem("tgy_user")||"null");
- const span=document.createElement("span"); span.id="authLinks";
- span.innerHTML=u?`<a href="#" onclick="openAuth('account');return false">👤 ${esc(u.name)}</a>`:`<a href="#" onclick="openAuth('login');return false">🔐 Login</a><a href="#" onclick="openAuth('register');return false">📝 Register</a>`;
- nav.prepend(span);
+ box.innerHTML=u?`<a href="#" onclick="openAuth('account');return false">👤 ${esc(u.name)}</a>`:`<a href="#" onclick="openAuth('login');return false">🔐 Login</a><a class="register" href="#" onclick="openAuth('register');return false">📝 Register</a>`;
 }
 
 function renderTests(){document.getElementById("testCards").innerHTML=tests.map((t,i)=>`<div class="card"><h3>${esc(t.name)}</h3><p class="muted">${t.questions.length} Questions • ${t.time} मिनट</p><button class="btn" onclick="openTest(${i})">Test दें</button></div>`).join("")}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 renderTests();
-function pay(plan,amount){document.getElementById("modalContent").innerHTML=`<h2>${plan} Access</h2><div class="pay"><p>QR Code स्कैन करके ${amount} Payment करें:</p><img class="qr" src="upi_qr.jpeg" alt="UPI QR Code"><div class="upi">paytm.s2uiv58@pty</div><p><b>Payment करने के बाद आपका Access 15 से 30 मिनट के अंदर चालू कर दिया जाएगा।</b></p><p>Payment के बाद Transaction / UTR Number जरूर भेजें।</p><label>नाम</label><input id="pn"><label>Transaction / UTR Number</label><input id="utr"><button class="btn" onclick="submitPayment('${esc(plan)}','${esc(amount)}')">Details Submit करें</button> <button class="btn gray" onclick="closeM()">बंद करें</button></div>`;document.getElementById("modal").style.display="flex"}
-function submitPayment(plan,amount){let p=JSON.parse(localStorage.getItem("tgy_payments")||"[]");p.push({name:document.getElementById("pn").value,plan,amount,utr:document.getElementById("utr").value,date:new Date().toLocaleString()});localStorage.setItem("tgy_payments",JSON.stringify(p));alert("Payment details submit हो गई हैं। Access 15 से 30 मिनट में चालू किया जाएगा।");closeM()}
+const plans=[{days:1,amount:10},{days:2,amount:15},{days:5,amount:30},{days:7,amount:50},{days:15,amount:80}];
+const courses=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant","अन्य परीक्षाएँ"];
+function pay(){
+ document.getElementById("modalContent").innerHTML=`<h2>📚 Test Series खरीदें</h2><p><b>Step 1:</b> कौन-सी Test Series खरीदनी है?</p><select id="payCourse" onchange="showPlanStep()">${courses.map(c=>`<option>${esc(c)}</option>`).join("")}</select><div id="planStep"></div><button class="btn gray" onclick="closeM()">बंद करें</button>`;
+ document.getElementById("modal").style.display="flex"; showPlanStep();
+}
+function showPlanStep(){
+ const c=document.getElementById("payCourse").value;
+ document.getElementById("planStep").innerHTML=`<p><b>Step 2:</b> कितने दिन का Access चाहिए?</p><div class="grid">${plans.map(x=>`<div class="card"><h3>${x.days} दिन</h3><div class="price">₹${x.amount}</div><button class="btn orange" onclick="showPayment('${esc(c)}',${x.days},${x.amount})">यह Plan चुनें</button></div>`).join("")}</div>`;
+}
+function showPayment(course,days,amount){
+ document.getElementById("modalContent").innerHTML=`<h2>💳 Payment</h2><div class="pay"><p><b>Test Series:</b> ${esc(course)}</p><p><b>Plan:</b> ${days} दिन</p><p><b>Amount:</b> ₹${amount}</p><img class="qr" src="upi_qr.jpeg" alt="UPI QR Code"><div class="upi">paytm.s2uiv58@pty</div><p>QR Code से ₹${amount} Payment करें और UTR भरें।</p><label>नाम</label><input id="pn"><label>Email</label><input id="pemail" type="email"><label>Transaction / UTR Number</label><input id="utr"><button class="btn" onclick="submitPayment('${esc(course)}',${days},${amount})">Payment Details Submit करें</button> <button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
+}
+function submitPayment(course,days,amount){
+ let p=JSON.parse(localStorage.getItem("tgy_payments")||"[]");
+ p.push({name:document.getElementById("pn").value,email:document.getElementById("pemail").value,course,days,amount,utr:document.getElementById("utr").value,date:new Date().toLocaleString(),status:"Pending"});
+ localStorage.setItem("tgy_payments",JSON.stringify(p));
+ document.getElementById("modalContent").innerHTML=`<h2>✅ Payment Details प्राप्त हो गई हैं</h2><div class="result"><b>Test Series:</b> ${esc(course)}<br><b>Plan:</b> ${days} दिन<br><b>Amount:</b> ₹${amount}<br><b>Status:</b> 🟡 Pending</div><p><b>आपका Access 15 से 30 मिनट के अंदर चालू कर दिया जाएगा।</b></p><button class="btn" onclick="closeM()">ठीक है</button>`;
+}
 function closeM(){document.getElementById("modal").style.display="none";clearInterval(window.timer)}
 function openTest(i){const t=tests[i];window.state={t,idx:0,answers:Array(t.questions.length).fill(null)};document.getElementById("modalContent").innerHTML=`<div class="timer" id="timer"></div><h2>${esc(t.name)}</h2><p class="muted">Option चुनना जरूरी है। Previous से वापस जाकर उत्तर बदल सकते हैं।</p><div id="qarea"></div><button class="btn gray" id="prev" onclick="prevQ()">← Previous</button> <button class="btn" id="next" onclick="nextQ()">Next →</button>`;document.getElementById("modal").style.display="flex";renderQ();let sec=t.time*60;window.timer=setInterval(()=>{sec--;let e=document.getElementById("timer");if(e)e.textContent=`⏱️ ${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;if(sec<=0)submitTest()},1000)}
 function renderQ(){let s=state,q=s.t.questions[s.idx];document.getElementById("qarea").innerHTML=`<div class="q"><b>प्रश्न ${s.idx+1}. ${esc(q[0])}</b>${q[1].map((o,j)=>`<label><input type="radio" name="ans" value="${j}" ${s.answers[s.idx]===j?"checked":""} onchange="state.answers[state.idx]=+this.value"> ${String.fromCharCode(65+j)}. ${esc(o)}</label>`).join("")}</div>`;document.getElementById("prev").style.visibility=s.idx?"visible":"hidden";document.getElementById("next").textContent=s.idx===s.t.questions.length-1?"Submit Test":"Next →"}

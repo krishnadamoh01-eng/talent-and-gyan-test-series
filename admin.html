@@ -46,7 +46,7 @@ function checkAdmin(){
 <p class="muted">यहाँ Register किए हुए Users और उनके Access की जानकारी दिखाई जाएगी।</p>
 <table><thead><tr><th>नाम</th><th>Email</th><th>Mobile</th><th>Register Date</th><th>Access</th><th>Action</th></tr></thead>
 <tbody id="ut"></tbody></table></section>
-<section id="payments" class="sec"><h1>Payments</h1><p>Merchant UPI: <b>paytm.s2uiv58@pty</b><br>Email: <b>krishna.damoh01@gmail.com</b></p><img src="upi_qr.jpeg" alt="UPI QR" style="width:180px;max-width:100%"><table><thead><tr><th>User</th><th>Plan</th><th>Amount</th><th>UTR</th><th>Action</th></tr></thead><tbody id="pt"></tbody></table></section>
+<section id="payments" class="sec"><h1>Payments</h1><p>Merchant UPI: <b>paytm.s2uiv58@pty</b><br>Email: <b>krishna.damoh01@gmail.com</b></p><img src="upi_qr.jpeg" alt="UPI QR" style="width:180px;max-width:100%"><table><thead><tr><th>User</th><th>Email</th><th>Test Series</th><th>Plan</th><th>Amount</th><th>UTR</th><th>Status</th><th>Action</th></tr></thead><tbody id="pt"></tbody></table></section>
 <section id="ads" class="sec"><h1>Advertisements</h1><div class="card"><p>Advertisement जोड़ने/बदलने का section।</p><button class="btn orange" onclick="alert('Final online version में यहाँ Ad management form रहेगा।')">+ नया Advertisement</button></div></section>
 <section id="plans" class="sec"><h1>Plans</h1><table><tr><th>अवधि</th><th>कीमत</th></tr><tr><td>1 दिन</td><td>₹10</td></tr><tr><td>2 दिन</td><td>₹15</td></tr><tr><td>5 दिन</td><td>₹30</td></tr><tr><td>7 दिन</td><td>₹50</td></tr><tr><td>15 दिन</td><td>₹80</td></tr></table></section>
 <section id="support" class="sec"><h1>🛠️ Support / Complaints <span id="badge"></span></h1><table><thead><tr><th>नाम</th><th>Email</th><th>समस्या</th><th>UTR</th><th>विवरण</th><th>स्थिति</th></tr></thead><tbody id="ct"></tbody></table></section>
@@ -127,52 +127,65 @@ async function parsePdfFile(){
 function normalizePdfText(t){
   return t.replace(/\u00a0/g,' ').replace(/\r/g,'\n').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim();
 }
+function cleanPdfText(t){
+  return t.replace(/\u00a0/g,' ')
+    .replace(/\r/g,'\n')
+    .replace(/[ \t]+/g,' ')
+    .replace(/\n{2,}/g,'\n')
+    .trim();
+}
+
 function parseQuestionText(raw){
-  let t=normalizePdfText(raw);
-  // Normalize common option/answer labels.
-  t=t.replace(/\bAns(?:wer)?\s*[:.)-]\s*/gi,'\nANSWER: ');
-  t=t.replace(/(^|\s)([A-Da-d])[\s]*[.)]\s*/g,'\n$2. ');
-  // Split at numbered question starts. Supports 1., 1), Q1., प्रश्न 1.
+  let t=cleanPdfText(raw);
+
+  // Remove everything before the first real question. This prevents the PDF title,
+  // subtitle, total-question line, subject line, etc. from becoming Question 1.
+  const firstQ=t.search(/(?:^|\n|\s)(?:प्र\.\s*|प्रश्न\s+)(\d{1,4})\s+/);
+  if(firstQ>=0) t=t.slice(firstQ).trim();
+
+  // PDF.js can return the whole page as one long line, so detect "प्र. N"
+  // regardless of whether a newline exists.
+  const qRe=/(?:^|\s)(?:प्र\.\s*|प्रश्न\s+)(\d{1,4})\s+/g;
   const starts=[];
-  const re=/(?:^|\n)\s*(?:प्रश्न\s*)?(?:Q(?:uestion)?\s*)?(\d{1,4})\s*[.)-]\s+/gi;
   let m;
-  while((m=re.exec(t))!==null){starts.push({pos:m.index + (m[0].length - m[0].trimStart().length), num:+m[1]});}
-  let blocks=[];
-  if(starts.length){
-    for(let i=0;i<starts.length;i++){
-      const a=starts[i].pos, b=i+1<starts.length?starts[i+1].pos:t.length;
-      blocks.push(t.slice(a,b).trim());
-    }
-  } else {
-    // fallback: split by "Question"
-    blocks=t.split(/\n(?=(?:Question|प्रश्न)\s*\d+)/i).map(x=>x.trim()).filter(Boolean);
-  }
+  while((m=qRe.exec(t))!==null) starts.push({pos:m.index, num:Number(m[1]), end:qRe.lastIndex});
+
   const out=[];
-  for(const block of blocks){
-    const answerMatch=block.match(/(?:^|\n)\s*ANSWER\s*[:.-]\s*([A-D1-4])\b/i);
-    const answer=answerMatch?answerMatch[1].toUpperCase():'';
-    const clean=block.replace(/(?:^|\n)\s*ANSWER\s*[:.-].*$/is,'').trim();
-    const optMatches=[...clean.matchAll(/(?:^|\n)\s*([A-D])\s*[.)-]\s*(.*?)(?=\n\s*[A-D]\s*[.)-]\s*|\s*$)/gis)];
-    let qtext=clean, opts=['','','',''];
-    if(optMatches.length>=2){
-      const first=optMatches[0].index;
-      qtext=clean.slice(0,first).trim();
-      optMatches.slice(0,4).forEach(x=>opts[x[1].toUpperCase().charCodeAt(0)-65]=x[2].trim());
-    }else{
-      // Some PDFs keep options inline; attempt A/B/C/D boundaries.
-      const inline=[...clean.matchAll(/\s([A-D])\s*[.)-]\s+/g)];
-      if(inline.length>=2){
-        qtext=clean.slice(0,inline[0].index).trim();
-        inline.slice(0,4).forEach((x,i)=>opts[i]=clean.slice(x.index+x[0].length,(inline[i+1]?.index??clean.length)).trim());
-      }
+  for(let i=0;i<starts.length;i++){
+    const block=t.slice(starts[i].end, i+1<starts.length?starts[i+1].pos:t.length).trim();
+    if(!block) continue;
+
+    // Cut the block at the answer and explanation labels.
+    const ansM=block.match(/(?:^|\s)उत्तर\s*[:\-]\s*\(?([A-D])\)?\s*([^\n]*?)(?=\s+(?:जानकारी|व्याख्या)\s*[:\-]|$)/i);
+    const expM=block.match(/(?:^|\s)(?:जानकारी|व्याख्या)\s*[:\-]\s*([\s\S]*)$/i);
+
+    // Question text is everything before option A.
+    const aM=block.search(/\(\s*A\s*\)\s*/i);
+    if(aM<0) continue;
+    const q=block.slice(0,aM).replace(/\s+/g,' ').trim();
+
+    // Extract A-D even when all four options are on one line.
+    const optPart=block.slice(aM);
+    const markers=[...optPart.matchAll(/\(\s*([A-D])\s*\)\s*/gi)];
+    if(markers.length<4) continue;
+
+    const opts=['','','',''];
+    for(let j=0;j<4;j++){
+      const from=markers[j].index+markers[j][0].length;
+      const to=j+1<markers.length?markers[j+1].index:(ansM?ansM.index:optPart.length);
+      const idx=markers[j][1].toUpperCase().charCodeAt(0)-65;
+      opts[idx]=optPart.slice(from,to).replace(/\s+/g,' ').trim();
     }
-    if(qtext && opts.filter(Boolean).length>=2){
-      let correct=-1;
-      if(answer){
-        if(/^[A-D]$/.test(answer)) correct=answer.charCodeAt(0)-65;
-        else if(/^[1-4]$/.test(answer)) correct=+answer-1;
-      }
-      out.push({q:qtext.replace(/\s+/g,' ').trim(),o:opts,correct,ex:''});
+
+    let correct=-1;
+    if(ansM){
+      const letter=ansM[1].toUpperCase();
+      correct=letter.charCodeAt(0)-65;
+    }
+
+    const explanation=expM?expM[1].replace(/\s+/g,' ').trim():'';
+    if(q && opts.every(Boolean)){
+      out.push({q,o:opts,correct,ex:explanation});
     }
   }
   return out;
@@ -180,7 +193,7 @@ function parseQuestionText(raw){
 function renderPdfPreview(){
   const out=document.getElementById('pdfPreview');
   if(!parsedPdfQuestions.length){out.innerHTML='<div class="card"><b>कोई structured Question नहीं मिला।</b><p>PDF का format अलग है या यह scanned PDF है।</p></div>';return}
-  out.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn" onclick="selectAllPdf()">सभी Select</button><button class="btn gray" onclick="deselectAllPdf()">सब हटाएँ</button><button class="btn orange" onclick="importParsedPdf()">✓ Selected Questions Import करें</button></div>
+  out.innerHTML=`<div class="card" style="margin-bottom:12px"><b>✅ ${parsedPdfQuestions.length} वास्तविक Questions मिले</b><p class="muted">PDF की Heading/Header को अलग रखा गया है और Question 1 से ही Import होगा।</p></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn" onclick="selectAllPdf()">सभी Select</button><button class="btn gray" onclick="deselectAllPdf()">सब हटाएँ</button><button class="btn orange" onclick="importParsedPdf()">✓ Selected Questions Import करें</button></div>
   <p><b>${parsedPdfQuestions.length}</b> Questions मिले। Import से पहले नीचे Edit कर सकते हैं।</p>
   <div id="pdfRows"></div>`;
   const rows=document.getElementById('pdfRows');
@@ -205,7 +218,7 @@ function importParsedPdf(){
   save(); renderAll();
   document.getElementById('pdfPreview').innerHTML=`<div class="card"><b>✅ Import सफल</b><p>${qs.length} Questions को <b>${esc(name)}</b> में जोड़ दिया गया है।</p></div>`;
 }
-function renderPayments(){let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]");document.getElementById("pt").innerHTML=a.length?a.map((x,i)=>`<tr><td>${esc(x.name||"-")}</td><td>${esc(x.plan)}</td><td>${esc(x.amount)}</td><td>${esc(x.utr||"-")}</td><td><button class="btn" onclick="activate(${i})">Give Access</button></td></tr>`).join(""):"<tr><td colspan='5'>अभी कोई Payment Request नहीं।</td></tr>"}
+function renderPayments(){let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]");document.getElementById("pt").innerHTML=a.length?a.map((x,i)=>`<tr><td>${esc(x.name||"-")}</td><td>${esc(x.email||"-")}</td><td>${esc(x.course||"-")}</td><td>${esc(x.days?x.days+" दिन":x.plan||"-")}</td><td>₹${esc(x.amount||"-")}</td><td>${esc(x.utr||"-")}</td><td>${esc(x.status||"Pending")}</td><td><button class="btn" onclick="activate(${i})">Give Access</button></td></tr>`).join(""):"<tr><td colspan='8'>अभी कोई Payment Request नहीं।</td></tr>"}
 function activate(i){let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]");a[i].status="Access Activated";localStorage.setItem("tgy_payments",JSON.stringify(a));alert("Access Activated (Demo).")}
 function renderComplaints(){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");document.getElementById("badge").textContent=a.filter(x=>x.status!=="Resolved").length+" New";document.getElementById("ct").innerHTML=a.length?a.map((x,i)=>`<tr><td>${esc(x.name||"-")}</td><td>${esc(x.email||"-")}</td><td>${esc(x.type)}</td><td>${esc(x.utr||"-")}</td><td>${esc(x.msg||"-")}</td><td><button class="btn" onclick="resolve(${i})">Resolve</button></td></tr>`).join(""):"<tr><td colspan='6'>अभी कोई शिकायत नहीं।</td></tr>"}
 function resolve(i){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");a[i].status="Resolved";localStorage.setItem("tgy_help",JSON.stringify(a));renderAll()}
