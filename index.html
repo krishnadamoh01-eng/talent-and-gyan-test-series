@@ -4,8 +4,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Devanagari",sans-serif;background:#f5f7fb;color:#172334}header{background:#123b68;color:white;padding:15px 5%;display:flex;justify-content:space-between;align-items:center;gap:15px;position:sticky;top:0;z-index:5}.logo{font-size:22px;font-weight:800}nav{display:flex;gap:4px;flex-wrap:wrap}nav a{color:#fff;text-decoration:none;padding:9px;border-radius:7px}.hero{padding:48px 5%;background:white}.hero h1{font-size:40px;color:#123b68;margin:0 0 12px}.hero p{max-width:780px;font-size:18px;line-height:1.6;color:#5d6d7e}.container{width:90%;max-width:1150px;margin:32px auto}.title{font-size:28px;color:#123b68;margin-bottom:16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}.card{background:#fff;border:1px solid #e0e7ef;border-radius:14px;padding:19px;box-shadow:0 5px 18px #173a5c12}.btn{border:0;background:#1769aa;color:white;padding:11px 17px;border-radius:8px;font-weight:700;cursor:pointer}.orange{background:#f07800}.gray{background:#667789}.price{font-size:28px;font-weight:800;color:#123b68}.muted{color:#697989;font-size:14px}.ad{background:#fff7e6;border:1px dashed #d9a52b;padding:20px;text-align:center;border-radius:12px}.footer{background:#102b49;color:#dce8f4;padding:25px 5%;text-align:center;margin-top:50px}.modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;padding:16px;z-index:20}.box{background:#fff;border-radius:15px;width:min(820px,100%);max-height:92vh;overflow:auto;padding:24px}.q{border:1px solid #dfe7ef;border-radius:10px;padding:15px;margin:13px 0}.q label{display:block;padding:8px}.timer{position:sticky;top:0;background:#123b68;color:#fff;padding:10px;text-align:center;border-radius:8px;font-weight:700}input,textarea,select{width:100%;padding:11px;border:1px solid #cbd7e3;border-radius:8px;margin:6px 0 12px}.result{background:#eef8f0;border:1px solid #b9dfc1;padding:18px;border-radius:10px}.pay{background:#eef6ff;border:1px solid #bfd7ee;padding:17px;border-radius:10px}.upi{font-weight:800;color:#123b68;font-size:18px;word-break:break-all}.qr{width:210px;max-width:100%;display:block;margin:12px auto;border:1px solid #ddd}.help-status{padding:10px;background:#fff7e6;border-radius:8px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){header{flex-direction:column;align-items:flex-start}.hero h1{font-size:30px}.row{grid-template-columns:1fr}}
 </style></head><body>
-<header><div class="logo">Talent And Gyan Test Series</div><nav>
-<a href="#home">होम</a><a href="#tests">मॉक टेस्ट</a><a href="#series">टेस्ट सीरीज</a><a href="#plans">प्राइसिंग</a><a href="#results">मेरे रिजल्ट</a><a href="#help">सहायता</a></nav></header>
+<header><div class="logo">Talent And Gyan Test Series</div><nav><span id="authLinks"></span><a href="#home">होम</a><a href="#tests">मॉक टेस्ट</a><a href="#series">टेस्ट सीरीज</a><a href="#plans">प्राइसिंग</a><a href="#results">मेरे रिजल्ट</a><a href="#help">सहायता</a></nav></header>
 <section class="hero" id="home"><h1>Talent And Gyan Test Series</h1><p>MP पटवारी और अन्य प्रतियोगी परीक्षाओं की Online Test Series। Test के दौरान उत्तर नहीं दिखेंगे। पूरा Test Submit करने के बाद Result, सही उत्तर और Explanation दिखाई देंगे।</p><button class="btn orange" onclick="document.getElementById('tests').scrollIntoView({behavior:'smooth'})">Mock Test देखें</button></section>
 <div class="container" id="series"><div class="title">📚 परीक्षाएँ</div><div class="grid">
 <div class="card"><h3>MP पटवारी</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MP पटवारी')">देखें</button></div>
@@ -15,6 +14,7 @@
 <div class="card"><h3>Hospital Assistant</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('Hospital Assistant')">देखें</button></div>
 <div class="card"><h3>अन्य परीक्षाएँ</h3><p class="muted">बाद में परीक्षा जोड़ें</p><button class="btn" onclick="openExam('अन्य परीक्षाएँ')">देखें</button></div></div></div>
 <div class="container" id="tests"><div class="title">📝 उपलब्ध Mock Tests</div><div class="grid" id="testCards"></div></div>
+<div class="modal" id="authModal"><div class="box" id="authContent"></div></div>
 <div class="modal" id="examModal"><div class="box" id="examContent"></div></div>
 <div class="container" id="plans"><div class="title">💳 Access Plans</div><div class="grid">
 <div class="card"><h3>1 दिन</h3><div class="price">₹10</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay('1 दिन','₹10')">Access लें</button></div>
@@ -25,7 +25,10 @@
 <div class="container"><div class="ad"><h3>📢 Advertisement</h3><p class="muted">यहाँ आपके Advertisement दिखाए जा सकते हैं।</p></div></div>
 <div class="container" id="results"><div class="title">📊 मेरे रिजल्ट</div><div class="card" id="resultList">अभी कोई Result नहीं है।</div></div>
 <div class="container" id="help"><div class="title">🛠️ सहायता / शिकायत</div><div class="card"><p>Payment, Login, Test, Result या किसी अन्य समस्या के लिए शिकायत भेजें।</p><label>नाम</label><input id="hname" placeholder="आपका नाम"><label>Email</label><input id="hemail" placeholder="आपकी Email ID"><label>समस्या</label><select id="htype"><option>Payment की समस्या</option><option>Login की समस्या</option><option>Test नहीं खुल रहा</option><option>Timer की समस्या</option><option>Result की समस्या</option><option>Payment किया लेकिन Access नहीं मिला</option><option>अन्य समस्या</option></select><label>Transaction / UTR</label><input id="hutr" placeholder="यदि लागू हो"><label>समस्या का विवरण</label><textarea id="hmsg" rows="4"></textarea><button class="btn" onclick="sendHelp()">शिकायत Submit करें</button></div></div>
-<footer class="footer">© 2026 Talent And Gyan Test Series<br>Contact Email: <b>krishna.damoh01@gmail.com</b></footer>
+<footer class="footer">© 2026 Talent And Gyan Test Series<br>
+<a href="https://www.youtube.com/@TGMOTIVATION70" target="_blank" rel="noopener" style="display:inline-block;margin:12px 5px;padding:10px 16px;background:#ff0000;color:#fff;text-decoration:none;border-radius:8px;font-weight:700">▶️ हमारा YouTube Channel</a>
+<a href="https://www.youtube.com/@TGMOTIVATION70?sub_confirmation=1" target="_blank" rel="noopener" style="display:inline-block;margin:12px 5px;padding:10px 16px;background:#c00;color:#fff;text-decoration:none;border-radius:8px;font-weight:700">🔔 Subscribe करें</a><br>
+Contact Email: <b>krishna.damoh01@gmail.com</b></footer>
 <div class="modal" id="modal"><div class="box" id="modalContent"></div></div>
 <script>
 const defaultTests=[
@@ -76,6 +79,47 @@ function submitDemo(){
   document.getElementById("modalContent").innerHTML=`<h2>🎉 Demo Result</h2><div class="result"><b>कुल:</b> ${s.t.questions.length} | <b>Attempt:</b> ${attempted} | <b>सही:</b> ${correct} | <b>गलत:</b> ${wrong} | <b>छोड़े:</b> ${skipped}<br><b>Percentage:</b> ${percent}%</div>
   <div class="card" style="margin-top:15px"><h3>🚀 आगे Test Series लें</h3><p>आपने Demo पूरा कर लिया है। अब पूरी Test Series में उपलब्ध सभी Tests देने के लिए Access Plan चुनें।</p><button class="btn orange" onclick="closeM();document.getElementById('plans').scrollIntoView({behavior:'smooth'})">Test Series खरीदें</button></div><button class="btn gray" onclick="closeM()">बंद करें</button>`;
 }
+
+function openAuth(mode){
+ const logged=JSON.parse(localStorage.getItem("tgy_user")||"null");
+ if(mode==="account" && logged){
+   document.getElementById("authContent").innerHTML=`<h2>👤 My Account</h2><div class="card"><b>नाम:</b> ${esc(logged.name)}<br><b>Email:</b> ${esc(logged.email)}<br><b>Mobile:</b> ${esc(logged.mobile||"-")}</div><h3>मेरे Results</h3><div id="myres"></div><button class="btn danger" onclick="logout()">Logout</button> <button class="btn gray" onclick="closeAuth()">बंद करें</button>`;
+   const rs=JSON.parse(localStorage.getItem("tgy_results")||"[]"); document.getElementById("myres").innerHTML=rs.length?rs.map(r=>`<div class="q"><b>${esc(r.test)}</b><br>सही: ${r.correct} | गलत: ${r.wrong} | ${r.percent}%</div>`).join(""):"अभी कोई Result नहीं।";
+ } else if(mode==="login"){
+   document.getElementById("authContent").innerHTML=`<h2>🔐 Login</h2><label>Email</label><input id="aemail" type="email"><label>Password</label><input id="apass" type="password"><button class="btn" onclick="doLogin()">Login</button> <button class="btn gray" onclick="closeAuth()">बंद करें</button><p>Account नहीं है? <a href="#" onclick="openAuth('register');return false">Register करें</a></p>`;
+ } else {
+   document.getElementById("authContent").innerHTML=`<h2>📝 Register</h2><label>नाम</label><input id="rname"><label>Email</label><input id="remail" type="email"><label>Mobile</label><input id="rmobile"><label>Password</label><input id="rpass" type="password"><label>Confirm Password</label><input id="rcpass" type="password"><button class="btn" onclick="doRegister()">Register</button> <button class="btn gray" onclick="closeAuth()">बंद करें</button>`;
+ }
+ document.getElementById("authModal").style.display="flex";
+}
+function closeAuth(){document.getElementById("authModal").style.display="none"}
+function doRegister(){
+ const name=rname.value.trim(),email=remail.value.trim().toLowerCase(),mobile=rmobile.value.trim(),pass=rpass.value,cpass=rcpass.value;
+ if(!name||!email||!pass||pass!==cpass){alert("सभी जरूरी जानकारी सही भरें।");return}
+ const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
+ if(users.some(u=>u.email===email)){alert("इस Email से Account पहले से बना है।");return}
+ users.push({name,email,mobile,password:pass,created:new Date().toLocaleString(),access:null});
+ localStorage.setItem("tgy_users",JSON.stringify(users));
+ localStorage.setItem("tgy_user",JSON.stringify(users[users.length-1]));
+ alert("Registration सफल हुआ।"); closeAuth(); updateAuthUI();
+}
+function doLogin(){
+ const email=aemail.value.trim().toLowerCase(),pass=apass.value;
+ const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
+ const u=users.find(x=>x.email===email&&x.password===pass);
+ if(!u){alert("Email या Password गलत है।");return}
+ localStorage.setItem("tgy_user",JSON.stringify(u)); closeAuth(); updateAuthUI();
+}
+function logout(){localStorage.removeItem("tgy_user");closeAuth();updateAuthUI()}
+function updateAuthUI(){
+ const nav=document.querySelector("nav"); if(!nav)return;
+ let old=document.getElementById("authLinks"); if(old)old.remove();
+ const u=JSON.parse(localStorage.getItem("tgy_user")||"null");
+ const span=document.createElement("span"); span.id="authLinks";
+ span.innerHTML=u?`<a href="#" onclick="openAuth('account');return false">👤 ${esc(u.name)}</a>`:`<a href="#" onclick="openAuth('login');return false">🔐 Login</a><a href="#" onclick="openAuth('register');return false">📝 Register</a>`;
+ nav.prepend(span);
+}
+
 function renderTests(){document.getElementById("testCards").innerHTML=tests.map((t,i)=>`<div class="card"><h3>${esc(t.name)}</h3><p class="muted">${t.questions.length} Questions • ${t.time} मिनट</p><button class="btn" onclick="openTest(${i})">Test दें</button></div>`).join("")}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 renderTests();
@@ -88,6 +132,6 @@ function nextQ(){if(state.answers[state.idx]===null){alert("पहले को�
 function prevQ(){if(state.idx){state.idx--;renderQ()}}
 function submitTest(){clearInterval(window.timer);let s=state,correct=0,attempted=s.answers.filter(x=>x!==null).length;s.t.questions.forEach((q,i)=>{if(s.answers[i]===q[2])correct++});let wrong=attempted-correct,skipped=s.t.questions.length-attempted,percent=(correct/s.t.questions.length*100).toFixed(2);results.unshift({test:s.t.name,total:s.t.questions.length,attempted,correct,wrong,skipped,percent,date:new Date().toLocaleString()});localStorage.setItem("tgy_results",JSON.stringify(results));let rows=s.t.questions.map((q,i)=>`<div class="q"><b>${i+1}. ${esc(q[0])}</b><p>आपका उत्तर: ${s.answers[i]===null?"नहीं दिया":esc(q[1][s.answers[i]])} ${s.answers[i]===q[2]?"✅":"❌"}</p><p><b>सही उत्तर:</b> ${esc(q[1][q[2]])}</p><p class="muted">${esc(q[3]||"")}</p></div>`).join("");document.getElementById("modalContent").innerHTML=`<h2>🎉 आपका Result</h2><div class="result"><b>कुल प्रश्न:</b> ${s.t.questions.length}<br><b>Attempt किए:</b> ${attempted}<br><b>सही:</b> ${correct} ✅<br><b>गलत:</b> ${wrong} ❌<br><b>छोड़े:</b> ${skipped}<br><b>अंक:</b> ${correct}/${s.t.questions.length}<br><b>Percentage:</b> ${percent}%</div><h3>Answer Key & Explanation</h3>${rows}<button class="btn" onclick="closeM();renderResults()">बंद करें</button>`;renderResults()}
 function renderResults(){document.getElementById("resultList").innerHTML=results.length?results.slice(0,10).map(r=>`<div class="q"><b>${esc(r.test)}</b><br>Attempt: ${r.attempted} | सही: ${r.correct} | गलत: ${r.wrong} | छोड़े: ${r.skipped} | ${r.percent}%<br><span class="muted">${esc(r.date)}</span></div>`).join(""):"अभी कोई Result नहीं है।"}
-renderResults();
+renderResults();updateAuthUI();
 function sendHelp(){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");a.push({name:hname.value,email:hemail.value,type:htype.value,utr:hutr.value,msg:hmsg.value,date:new Date().toLocaleString(),status:"Pending"});localStorage.setItem("tgy_help",JSON.stringify(a));alert("शिकायत Submit हो गई है।");hname.value=hemail.value=hutr.value=hmsg.value=""}
 </script></body></html>

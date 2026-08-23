@@ -1,12 +1,51 @@
 <!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin Panel - Talent And Gyan</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Devanagari",sans-serif;background:#f4f7fb;color:#172334}header{background:#123b68;color:#fff;padding:16px 24px;display:flex;justify-content:space-between}.layout{display:flex;min-height:calc(100vh - 58px)}aside{width:220px;background:#fff;padding:12px;border-right:1px solid #ddd}aside button{width:100%;padding:11px;border:0;background:none;text-align:left;border-radius:8px;margin:3px 0;cursor:pointer}aside button.active,aside button:hover{background:#e8f1fa;color:#123b68;font-weight:700}main{flex:1;padding:24px}.sec{display:none}.sec.show{display:block}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.card,table{background:#fff;border:1px solid #e1e8ef;border-radius:12px}.card{padding:18px}.stat{font-size:30px;font-weight:800;color:#123b68}table{width:100%;border-collapse:collapse}th,td{padding:11px;border-bottom:1px solid #e7edf2;text-align:left}th{background:#eef4fa}.btn{border:0;background:#1769aa;color:#fff;padding:10px 15px;border-radius:8px;font-weight:700;cursor:pointer}.orange{background:#f07800}.gray{background:#667789}.danger{background:#c62828}input,textarea,select{width:100%;padding:10px;border:1px solid #cbd6e2;border-radius:8px;margin:5px 0 12px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;padding:18px}.box{background:#fff;width:min(900px,100%);max-height:92vh;overflow:auto;border-radius:14px;padding:22px}.badge{background:#fff0d6;color:#875100;padding:4px 8px;border-radius:12px;font-size:12px}.qrow{border:1px solid #dce5ee;border-radius:10px;padding:14px;margin:12px 0}@media(max-width:700px){aside{width:65px}aside button{font-size:0;text-align:center}aside button:first-letter{font-size:20px}main{padding:14px}.row{grid-template-columns:1fr}}
-</style></head><body>
+</style><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script></head><body>
+<div id="adminLogin" style="position:fixed;inset:0;background:#f4f7fb;display:flex;align-items:center;justify-content:center;padding:20px;z-index:99999">
+<div style="background:#fff;width:min(430px,100%);padding:28px;border-radius:16px;box-shadow:0 10px 35px #173a5c22">
+<h2 style="color:#123b68;margin-top:0">🔐 Admin Login</h2>
+<p class="muted">केवल Administrator के लिए</p>
+<label>Admin Email</label><input id="adminEmail" type="email" placeholder="Admin Email">
+<label>Password</label><input id="adminPass" type="password" placeholder="Password">
+<button class="btn" onclick="adminLogin()">Login</button>
+<p id="adminLoginMsg" style="color:#c62828"></p>
+</div></div>
+<script>
+function adminLogin(){
+ const e=document.getElementById('adminEmail').value.trim().toLowerCase();
+ const p=document.getElementById('adminPass').value;
+ if(e==='krishna.damoh01@gmail.com' && p==='Admintg@123'){
+   sessionStorage.setItem('tgy_admin_logged','1');
+   document.getElementById('adminLogin').style.display='none';
+ } else document.getElementById('adminLoginMsg').textContent='Admin Email या Password गलत है।';
+}
+function checkAdmin(){
+ if(sessionStorage.getItem('tgy_admin_logged')==='1') document.getElementById('adminLogin').style.display='none';
+}
+</script>
 <header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span></header><div class="layout"><aside>
 <button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('plans',this)">💳 Plans</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
-<section id="tests" class="sec"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h1>Mock Tests</h1><div><button class="btn" onclick="newTest()">+ नया Test</button><button class="btn orange" onclick="pdfImport()">📄 PDF Import</button></div></div><div class="card" style="margin-bottom:15px"><b>PDF से Questions Import</b><p class="muted">100 Questions की PDF upload करें। Final parser में Question, A/B/C/D, Answer और Explanation को Preview करके Import किया जाएगा।</p><input id="pdfFile" type="file" accept=".pdf"><input id="pdfTestName" placeholder="Test का नाम"><button class="btn orange" onclick="pdfPreview()">PDF Preview</button><div id="pdfPreview"></div></div><table><thead><tr><th>Test</th><th>Questions</th><th>Time</th><th>Action</th></tr></thead><tbody id="tt"></tbody></table></section>
-<section id="users" class="sec"><h1>Users</h1><table><tr><th>नाम</th><th>Email</th><th>Access</th><th>Expiry</th></tr><tr><td>Demo User</td><td>—</td><td><span class="badge">Testing</span></td><td>—</td></tr></table></section>
+<section id="tests" class="sec"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h1>Mock Tests</h1><div><button class="btn" onclick="newTest()">+ नया Test</button><button class="btn orange" onclick="pdfImport()">📄 PDF Import</button></div></div><div class="card" style="margin-bottom:15px">
+<h2>📄 PDF से Questions Import</h2>
+<p>100 Questions की PDF चुनें। सिस्टम PDF का text पढ़कर Question, A/B/C/D, Answer और Explanation की Preview बनाएगा। आप Import से पहले हर Question सुधार सकते हैं।</p>
+<label>Test का नाम</label>
+<input id="pdfTestName" placeholder="जैसे MP Patwari Mock Test - 04">
+<label>PDF File</label>
+<input id="pdfFile" type="file" accept=".pdf" style="width:100%;padding:9px;margin:5px 0 10px">
+<div class="row">
+<div><label>Default Time (minutes)</label><input id="pdfTime" type="number" value="60"></div>
+<div><label>Exam</label><select id="pdfExam"><option>MP पटवारी</option><option>MPPSC</option><option>MP पुलिस</option><option>ग्रुप 4</option><option>Hospital Assistant</option><option>अन्य परीक्षाएँ</option></select></div>
+</div>
+<button class="btn orange" onclick="parsePdfFile()">PDF पढ़ें और Preview बनाएं</button>
+<div id="pdfStatus" class="muted" style="margin-top:10px"></div>
+<div id="pdfPreview" style="margin-top:15px"></div>
+</div><table><thead><tr><th>Test</th><th>Questions</th><th>Time</th><th>Action</th></tr></thead><tbody id="tt"></tbody></table></section>
+<section id="users" class="sec"><h1>👥 Users</h1>
+<p class="muted">यहाँ Register किए हुए Users और उनके Access की जानकारी दिखाई जाएगी।</p>
+<table><thead><tr><th>नाम</th><th>Email</th><th>Mobile</th><th>Register Date</th><th>Access</th><th>Action</th></tr></thead>
+<tbody id="ut"></tbody></table></section>
 <section id="payments" class="sec"><h1>Payments</h1><p>Merchant UPI: <b>paytm.s2uiv58@pty</b><br>Email: <b>krishna.damoh01@gmail.com</b></p><img src="upi_qr.jpeg" alt="UPI QR" style="width:180px;max-width:100%"><table><thead><tr><th>User</th><th>Plan</th><th>Amount</th><th>UTR</th><th>Action</th></tr></thead><tbody id="pt"></tbody></table></section>
 <section id="ads" class="sec"><h1>Advertisements</h1><div class="card"><p>Advertisement जोड़ने/बदलने का section।</p><button class="btn orange" onclick="alert('Final online version में यहाँ Ad management form रहेगा।')">+ नया Advertisement</button></div></section>
 <section id="plans" class="sec"><h1>Plans</h1><table><tr><th>अवधि</th><th>कीमत</th></tr><tr><td>1 दिन</td><td>₹10</td></tr><tr><td>2 दिन</td><td>₹15</td></tr><tr><td>5 दिन</td><td>₹30</td></tr><tr><td>7 दिन</td><td>₹50</td></tr><tr><td>15 दिन</td><td>₹80</td></tr></table></section>
@@ -17,7 +56,29 @@
 let tests=JSON.parse(localStorage.getItem("tgy_tests")||"null")||[{name:"MP Patwari Mock Test - 01",time:60,questions:[["Demo Question",["A","B","C","D"],0,"Demo explanation"]]},{name:"MP Patwari Practice Set - 02",time:30,questions:[["Demo Question 2",["A","B","C","D"],1,"Demo explanation"]]}];
 function save(){localStorage.setItem("tgy_tests",JSON.stringify(tests));document.getElementById("st").textContent=tests.length}
 function show(id,b){document.querySelectorAll(".sec").forEach(x=>x.classList.remove("show"));document.getElementById(id).classList.add("show");document.querySelectorAll("aside button").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderAll()}
-function renderAll(){renderTests();renderPayments();renderComplaints();document.getElementById("sp").textContent=JSON.parse(localStorage.getItem("tgy_payments")||"[]").length;document.getElementById("sc").textContent=JSON.parse(localStorage.getItem("tgy_help")||"[]").filter(x=>x.status!=="Resolved").length}
+
+function renderUsers(){
+ const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
+ document.getElementById("ut").innerHTML=users.length?users.map((u,i)=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.mobile||"-")}</td><td>${esc(u.created||"-")}</td><td>${u.access?`<span class="badge">${esc(u.access)}</span>`:"No Access"}</td><td><button class="btn" onclick="giveUserAccess(${i})">Give Access</button> <button class="btn danger" onclick="removeUserAccess(${i})">Remove</button></td></tr>`).join(""):"<tr><td colspan='6'>अभी कोई User Register नहीं है।</td></tr>";
+}
+function giveUserAccess(i){
+ const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
+ if(!users[i])return;
+ const days=prompt("कितने दिन का Access देना है?", "15");
+ if(!days)return;
+ const d=new Date();d.setDate(d.getDate()+Number(days));
+ users[i].access=`Active • ${days} दिन • ${d.toLocaleDateString()}`;
+ localStorage.setItem("tgy_users",JSON.stringify(users));
+ renderUsers();
+ alert("User का Access चालू कर दिया गया।");
+}
+function removeUserAccess(i){
+ const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
+ if(!users[i])return;
+ if(confirm("क्या इस User का Access बंद करना है?")){users[i].access=null;localStorage.setItem("tgy_users",JSON.stringify(users));renderUsers();}
+}
+
+function renderAll(){renderTests();renderPayments();renderComplaints();renderUsers();document.getElementById("sp").textContent=JSON.parse(localStorage.getItem("tgy_payments")||"[]").length;document.getElementById("sc").textContent=JSON.parse(localStorage.getItem("tgy_help")||"[]").filter(x=>x.status!=="Resolved").length}
 function renderTests(){document.getElementById("tt").innerHTML=tests.map((t,i)=>`<tr><td>${esc(t.name)}</td><td>${t.questions.length}</td><td>${t.time} min</td><td><button class="btn" onclick="editTest(${i})">Edit</button> <button class="btn gray" onclick="toggleTest(${i})">${t.published===false?"Publish":"Unpublish"}</button> <button class="btn danger" onclick="deleteTest(${i})">Delete</button></td></tr>`).join("");save()}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function newTest(){document.getElementById("mb").innerHTML=`<h2>नया Test</h2><label>Test Name</label><input id="tn"><label>Time (minutes)</label><input id="tm" type="number" value="60"><div id="qs"></div><button class="btn gray" onclick="addQ()">+ Question</button> <button class="btn" onclick="saveNew()">Save & Publish</button> <button class="btn gray" onclick="closeM()">Cancel</button>`;document.getElementById("modal").style.display="flex";addQ()}
@@ -26,11 +87,127 @@ function saveNew(){let qs=[...document.querySelectorAll(".qrow")].map(x=>[x.quer
 function editTest(i){alert("Edit screen final database version में पूरा Question Editor खोलेगा। अभी Test मौजूद है: "+tests[i].name)}
 function toggleTest(i){tests[i].published=tests[i].published===false;save();renderAll()}
 function deleteTest(i){if(confirm("क्या यह Test हटाना चाहते हैं?")){tests.splice(i,1);save();renderAll()}}
-function pdfImport(){document.getElementById("pdfFile").click()}
-async function pdfPreview(){const f=document.getElementById("pdfFile").files[0],out=document.getElementById("pdfPreview");if(!f){alert("पहले PDF चुनें।");return}if(!document.getElementById("pdfTestName").value.trim()){alert("Test का नाम लिखें।");return}out.innerHTML="<p>PDF चुनी गई: <b>"+esc(f.name)+"</b></p><p class='muted'>Final parser चरण में इसी PDF को 100-100 Questions में structured Preview करके Import किया जाएगा।</p>"}
+
+function pdfImport(){
+  document.getElementById('pdfFile').click();
+}
+let parsedPdfQuestions=[];
+
+async function parsePdfFile(){
+  const file=document.getElementById('pdfFile').files[0];
+  const out=document.getElementById('pdfPreview');
+  const status=document.getElementById('pdfStatus');
+  const name=document.getElementById('pdfTestName').value.trim();
+  if(!file){alert('पहले PDF चुनें।');return}
+  if(!name){alert('Test का नाम लिखें।');return}
+  if(!file.name.toLowerCase().endsWith('.pdf')){alert('केवल PDF file चुनें।');return}
+  status.textContent='PDF पढ़ी जा रही है...';
+  try{
+    const pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjs.getDocument({data:buf}).promise;
+    let text='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const content=await page.getTextContent();
+      text += content.items.map(x=>x.str).join(' ') + '\n';
+      status.textContent=`PDF पढ़ी जा रही है... Page ${i}/${pdf.numPages}`;
+    }
+    parsedPdfQuestions=parseQuestionText(text);
+    status.textContent=`${pdf.numPages} pages पढ़े गए। ${parsedPdfQuestions.length} Questions मिले।`;
+    renderPdfPreview();
+  }catch(e){
+    console.error(e);
+    status.textContent='PDF पढ़ने में समस्या: '+e.message;
+    out.innerHTML='<div class="card"><b>यह PDF scanned/image हो सकती है।</b><p>ऐसी PDF में OCR की जरूरत होगी। Text-based PDF के लिए यह importer काम करेगा।</p></div>';
+  }
+}
+
+function normalizePdfText(t){
+  return t.replace(/\u00a0/g,' ').replace(/\r/g,'\n').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim();
+}
+function parseQuestionText(raw){
+  let t=normalizePdfText(raw);
+  // Normalize common option/answer labels.
+  t=t.replace(/\bAns(?:wer)?\s*[:.)-]\s*/gi,'\nANSWER: ');
+  t=t.replace(/(^|\s)([A-Da-d])[\s]*[.)]\s*/g,'\n$2. ');
+  // Split at numbered question starts. Supports 1., 1), Q1., प्रश्न 1.
+  const starts=[];
+  const re=/(?:^|\n)\s*(?:प्रश्न\s*)?(?:Q(?:uestion)?\s*)?(\d{1,4})\s*[.)-]\s+/gi;
+  let m;
+  while((m=re.exec(t))!==null){starts.push({pos:m.index + (m[0].length - m[0].trimStart().length), num:+m[1]});}
+  let blocks=[];
+  if(starts.length){
+    for(let i=0;i<starts.length;i++){
+      const a=starts[i].pos, b=i+1<starts.length?starts[i+1].pos:t.length;
+      blocks.push(t.slice(a,b).trim());
+    }
+  } else {
+    // fallback: split by "Question"
+    blocks=t.split(/\n(?=(?:Question|प्रश्न)\s*\d+)/i).map(x=>x.trim()).filter(Boolean);
+  }
+  const out=[];
+  for(const block of blocks){
+    const answerMatch=block.match(/(?:^|\n)\s*ANSWER\s*[:.-]\s*([A-D1-4])\b/i);
+    const answer=answerMatch?answerMatch[1].toUpperCase():'';
+    const clean=block.replace(/(?:^|\n)\s*ANSWER\s*[:.-].*$/is,'').trim();
+    const optMatches=[...clean.matchAll(/(?:^|\n)\s*([A-D])\s*[.)-]\s*(.*?)(?=\n\s*[A-D]\s*[.)-]\s*|\s*$)/gis)];
+    let qtext=clean, opts=['','','',''];
+    if(optMatches.length>=2){
+      const first=optMatches[0].index;
+      qtext=clean.slice(0,first).trim();
+      optMatches.slice(0,4).forEach(x=>opts[x[1].toUpperCase().charCodeAt(0)-65]=x[2].trim());
+    }else{
+      // Some PDFs keep options inline; attempt A/B/C/D boundaries.
+      const inline=[...clean.matchAll(/\s([A-D])\s*[.)-]\s+/g)];
+      if(inline.length>=2){
+        qtext=clean.slice(0,inline[0].index).trim();
+        inline.slice(0,4).forEach((x,i)=>opts[i]=clean.slice(x.index+x[0].length,(inline[i+1]?.index??clean.length)).trim());
+      }
+    }
+    if(qtext && opts.filter(Boolean).length>=2){
+      let correct=-1;
+      if(answer){
+        if(/^[A-D]$/.test(answer)) correct=answer.charCodeAt(0)-65;
+        else if(/^[1-4]$/.test(answer)) correct=+answer-1;
+      }
+      out.push({q:qtext.replace(/\s+/g,' ').trim(),o:opts,correct,ex:''});
+    }
+  }
+  return out;
+}
+function renderPdfPreview(){
+  const out=document.getElementById('pdfPreview');
+  if(!parsedPdfQuestions.length){out.innerHTML='<div class="card"><b>कोई structured Question नहीं मिला।</b><p>PDF का format अलग है या यह scanned PDF है।</p></div>';return}
+  out.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button class="btn" onclick="selectAllPdf()">सभी Select</button><button class="btn gray" onclick="deselectAllPdf()">सब हटाएँ</button><button class="btn orange" onclick="importParsedPdf()">✓ Selected Questions Import करें</button></div>
+  <p><b>${parsedPdfQuestions.length}</b> Questions मिले। Import से पहले नीचे Edit कर सकते हैं।</p>
+  <div id="pdfRows"></div>`;
+  const rows=document.getElementById('pdfRows');
+  rows.innerHTML=parsedPdfQuestions.map((x,i)=>`<div class="qrow" data-i="${i}">
+  <label><input type="checkbox" class="pdfsel" checked> <b>Question ${i+1}</b></label>
+  <label>Question</label><textarea class="pdfq" rows="2">${esc(x.q)}</textarea>
+  <div class="row"><div><label>A</label><input class="pdfo" value="${esc(x.o[0])}"></div><div><label>B</label><input class="pdfo" value="${esc(x.o[1])}"></div><div><label>C</label><input class="pdfo" value="${esc(x.o[2])}"></div><div><label>D</label><input class="pdfo" value="${esc(x.o[3])}"></div></div>
+  <div class="row"><div><label>सही उत्तर</label><select class="pdfans"><option value="-1">चुनें</option><option value="0" ${x.correct===0?'selected':''}>A</option><option value="1" ${x.correct===1?'selected':''}>B</option><option value="2" ${x.correct===2?'selected':''}>C</option><option value="3" ${x.correct===3?'selected':''}>D</option></select></div><div><label>Explanation</label><input class="pdfex" value="${esc(x.ex)}"></div></div></div>`).join('');
+}
+function selectAllPdf(){document.querySelectorAll('.pdfsel').forEach(x=>x.checked=true)}
+function deselectAllPdf(){document.querySelectorAll('.pdfsel').forEach(x=>x.checked=false)}
+function importParsedPdf(){
+  const name=document.getElementById('pdfTestName').value.trim(),time=+document.getElementById('pdfTime').value||60,exam=document.getElementById('pdfExam').value;
+  const qs=[];
+  document.querySelectorAll('#pdfRows .qrow').forEach(row=>{
+    if(!row.querySelector('.pdfsel').checked)return;
+    const q=row.querySelector('.pdfq').value.trim(), opts=[...row.querySelectorAll('.pdfo')].map(x=>x.value.trim()), ans=+row.querySelector('.pdfans').value, ex=row.querySelector('.pdfex').value.trim();
+    if(q && opts.every(Boolean) && ans>=0) qs.push([q,opts,ans,ex]);
+  });
+  if(!qs.length){alert('कम से कम एक पूरा Question और सही Answer चुनें।');return}
+  tests.push({name,time,exam,questions:qs,published:true});
+  save(); renderAll();
+  document.getElementById('pdfPreview').innerHTML=`<div class="card"><b>✅ Import सफल</b><p>${qs.length} Questions को <b>${esc(name)}</b> में जोड़ दिया गया है।</p></div>`;
+}
 function renderPayments(){let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]");document.getElementById("pt").innerHTML=a.length?a.map((x,i)=>`<tr><td>${esc(x.name||"-")}</td><td>${esc(x.plan)}</td><td>${esc(x.amount)}</td><td>${esc(x.utr||"-")}</td><td><button class="btn" onclick="activate(${i})">Give Access</button></td></tr>`).join(""):"<tr><td colspan='5'>अभी कोई Payment Request नहीं।</td></tr>"}
 function activate(i){let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]");a[i].status="Access Activated";localStorage.setItem("tgy_payments",JSON.stringify(a));alert("Access Activated (Demo).")}
 function renderComplaints(){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");document.getElementById("badge").textContent=a.filter(x=>x.status!=="Resolved").length+" New";document.getElementById("ct").innerHTML=a.length?a.map((x,i)=>`<tr><td>${esc(x.name||"-")}</td><td>${esc(x.email||"-")}</td><td>${esc(x.type)}</td><td>${esc(x.utr||"-")}</td><td>${esc(x.msg||"-")}</td><td><button class="btn" onclick="resolve(${i})">Resolve</button></td></tr>`).join(""):"<tr><td colspan='6'>अभी कोई शिकायत नहीं।</td></tr>"}
 function resolve(i){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");a[i].status="Resolved";localStorage.setItem("tgy_help",JSON.stringify(a));renderAll()}
 function closeM(){document.getElementById("modal").style.display="none"}renderAll();
-</script></body></html>
+</script><script>checkAdmin();</script></body></html>
