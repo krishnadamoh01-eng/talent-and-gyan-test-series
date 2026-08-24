@@ -147,6 +147,84 @@ function checkAdmin(){
     <tbody id="mtAllTests"></tbody></table>
   </div>
 </section>
+
+<section id="notes" class="sec">
+ <h1>📄 PDF Notes</h1>
+ <div class="card">
+  <p>यहाँ से PDF सीधे अपलोड करें। विद्यार्थी इसे वेबसाइट पर पढ़ सकेगा; Download button नहीं दिया जाएगा।</p>
+  <label>Notes का नाम</label>
+  <input id="noteTitle" placeholder="जैसे MP पटवारी Notes">
+  <label>Exam</label>
+  <input id="noteExam" placeholder="MP पटवारी">
+  <label>📄 PDF Upload करें</label>
+  <input id="notePdfFile" type="file" accept="application/pdf,.pdf" style="width:100%;padding:10px">
+  <div id="noteUploadStatus" class="muted" style="margin:8px 0"></div>
+  <button class="btn orange" onclick="uploadPdfNote()">⬆️ PDF Upload करके Save करें</button>
+ </div>
+ <div id="adminNotesList"></div>
+</section>
+<script id="pdf-notes-admin-upload">
+function getAdminNotes(){try{return JSON.parse(localStorage.getItem("tgy_pdf_notes")||"[]")}catch(e){return[]}}
+function saveAdminNotes(a){localStorage.setItem("tgy_pdf_notes",JSON.stringify(a))}
+function uploadPdfNote(){
+ const title=document.getElementById("noteTitle").value.trim();
+ const exam=document.getElementById("noteExam").value.trim();
+ const file=document.getElementById("notePdfFile").files[0];
+ const st=document.getElementById("noteUploadStatus");
+ if(!title){alert("Notes का नाम लिखें।");return}
+ if(!file){alert("पहले PDF चुनें।");return}
+ if(file.type!=="application/pdf" && !file.name.toLowerCase().endsWith(".pdf")){alert("केवल PDF file upload करें।");return}
+ st.textContent="⏳ PDF तैयार हो रही है...";
+ const reader=new FileReader();
+ reader.onload=function(){
+   try{
+     const a=getAdminNotes();
+     a.push({title,exam,fileName:file.name,dataUrl:reader.result,pages:""});
+     saveAdminNotes(a);
+     document.getElementById("noteTitle").value="";
+     document.getElementById("noteExam").value="";
+     document.getElementById("notePdfFile").value="";
+     st.textContent="✅ PDF Upload होकर Save हो गई।";
+     renderAdminNotes();
+   }catch(e){
+     st.textContent="❌ PDF Save नहीं हो सकी।";
+     alert("PDF बहुत बड़ी हो सकती है। अभी browser storage की सीमा के कारण छोटी/मध्यम PDF इस्तेमाल करें।");
+   }
+ };
+ reader.onerror=function(){st.textContent="❌ PDF पढ़ी नहीं जा सकी।"};
+ reader.readAsDataURL(file);
+}
+function renderAdminNotes(){
+ const b=document.getElementById("adminNotesList");if(!b)return;
+ const a=getAdminNotes();
+ b.innerHTML=a.map((n,i)=>`<div class="card" style="margin:10px 0">
+   <b>📄 ${esc(n.title)}</b> — ${esc(n.exam||"")}<br>
+   <span class="muted">${esc(n.fileName||"PDF")}</span>
+   <button class="btn" onclick="previewAdminPdfNote(${i})">👁️ Preview</button>
+   <button class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button>
+ </div>`).join("")||"<p>अभी कोई PDF Notes नहीं हैं।</p>";
+}
+function previewAdminPdfNote(i){
+ const n=getAdminNotes()[i];if(!n?.dataUrl)return;
+ const w=window.open("","_blank");
+ if(!w)return;
+ w.document.write(`<title>${esc(n.title)}</title><iframe src="${n.dataUrl}#toolbar=0&navpanes=0" style="width:100%;height:100vh;border:0"></iframe>`);
+ w.document.close();
+}
+function deletePdfNote(i){
+ const a=getAdminNotes();a.splice(i,1);saveAdminNotes(a);renderAdminNotes();
+}
+document.addEventListener("DOMContentLoaded",renderAdminNotes);
+</script>
+<section id="headline-manager" class="sec">
+<h1>📢 Home Headline</h1>
+<div class="card"><p>यह Headline Home Page के सफेद हिस्से में चलेगी।</p>
+<input id="quickHeadline" placeholder="अपनी Headline लिखें">
+<button class="btn orange" onclick="saveQuickHeadline()">💾 Headline Save करें</button></div>
+</section>
+<script>
+function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy_home_custom")||"{}")}catch(e){}c.headline=document.getElementById("quickHeadline").value.trim();localStorage.setItem("tgy_home_custom",JSON.stringify(c));alert("📢 Headline Save हो गई। Student Home refresh करने पर दिखाई देगी।")}
+</script>
 <section id="users" class="sec"><h1>👥 Users</h1>
 <p class="muted">यहाँ Register किए हुए Users और उनके Access की जानकारी दिखाई जाएगी।</p>
 <table><thead><tr><th>नाम</th><th>Email</th><th>Mobile</th><th>Register Date</th><th>Access</th><th>Action</th></tr></thead>
@@ -349,6 +427,7 @@ function openHomeCustomizerAdmin(){
  const html=`<div class="home-customize-card"><h2>🏠 Home Page Customize</h2>
  <p>आप Home Page पर क्या दिखाना चाहते हैं, यहाँ से चुनें।</p>
  <label>Home Title</label><input id="ahTitle" value="${esc(c.title||"Talent And Gyan Test Series")}">
+ <label>Headline (Home Page पर चलाएँ)</label><input id="ahHeadline" placeholder="जैसे: MP पटवारी परीक्षा की नई जानकारी..." value="${esc(c.headline||"")}">
  <label>Subtitle</label><input id="ahSub" value="${esc(c.subtitle||"")}">
  <label>Latest Update / Announcement</label><textarea id="ahAnn" rows="3">${esc(c.announcement||"")}</textarea>
  <h3>Home पर दिखाएँ</h3>${items.map(x=>`<label style="display:block;margin:7px 0"><input type="checkbox" id="ah_${x[0]}" ${c.examInfo&&c.examInfo[x[0]]!==false?"checked":""}> ${x[1]}</label>`).join("")}
@@ -360,7 +439,7 @@ function openHomeCustomizerAdmin(){
 }
 function saveHomeCustomizerAdmin(){
  const old=JSON.parse(localStorage.getItem("tgy_home_custom")||"{}");
- const v={...old,title:document.getElementById("ahTitle").value.trim(),subtitle:document.getElementById("ahSub").value.trim(),announcement:document.getElementById("ahAnn").value.trim(),examInfo:{...(old.examInfo||{})}};
+ const v={...old,title:document.getElementById("ahTitle").value.trim(),subtitle:document.getElementById("ahSub").value.trim(),headline:document.getElementById("ahHeadline").value.trim(),announcement:document.getElementById("ahAnn").value.trim(),examInfo:{...(old.examInfo||{})}};
  Object.keys(v.examInfo).forEach(k=>{const el=document.getElementById("ah_"+k);if(el)v.examInfo[k]=el.checked;});
  localStorage.setItem("tgy_home_custom",JSON.stringify(v));
  alert("Home Page की settings save हो गईं।");
