@@ -44,9 +44,28 @@ h1,h2,h3{color:var(--hc-heading)}
 #homeNewsTicker .ticker-track{display:inline-block;padding-left:100%;animation:tgyTicker 18s linear infinite}
 #homeNewsTicker .ticker-item{margin-right:80px}
 @keyframes tgyTicker{from{transform:translateX(0)}to{transform:translateX(-100%)}} 
+</style>
+<style id="mock-access-hide">
+.mock-access-hidden{display:none!important}
+.home-hero-title{font-size:clamp(34px,5vw,58px)!important;line-height:1.08!important;font-weight:900!important}
+.youtube-top-brand{display:flex;align-items:center;gap:10px;justify-content:center;margin:6px auto 14px;font-weight:800}
+.youtube-top-brand img{width:34px;height:34px;object-fit:contain}
+.youtube-top-brand a{color:inherit;text-decoration:none}
+</style>
+<style id="nav-rearrange-fix">
+header nav{display:none!important}
+.brand-nav-row{display:flex;align-items:center;justify-content:center;padding:10px 14px;background:#fff;border-bottom:1px solid #e3e7ee;gap:8px;flex-wrap:wrap}
+.brand-nav-row a{border:0;text-decoration:none;padding:8px 13px;border-radius:8px;font-weight:700;background:#eef4ff;color:#123b66}
+.brand-nav-row .student-login-nav{margin-left:auto}
+@media(max-width:700px){.brand-nav-row .student-login-nav{margin-left:0}}
 </style></head><body>
-<header><div class="logo">Talent And Gyan Test Series</div><nav><a href="#home">होम</a><a href="#tests">मॉक टेस्ट</a><a href="#series">टेस्ट सीरीज</a><a href="#plans">प्राइसिंग</a><a href="#results">मेरे रिजल्ट</a><a href="#help">सहायता</a></nav><div class="student-auth-top" id="studentAuthTop"></div></header><div id="homeNewsTicker" aria-label="Latest Updates"></div>
-<section class="hero" id="home"><h1>Talent And Gyan Test Series</h1><p>MP पटवारी और अन्य प्रतियोगी परीक्षाओं की Online Test Series। Test के दौरान उत्तर नहीं दिखेंगे। पूरा Test Submit करने के बाद Result, सही उत्तर और Explanation दिखाई देंगे।</p><button class="btn orange" onclick="document.getElementById('tests').scrollIntoView({behavior:'smooth'})">Mock Test देखें</button></section>
+<header><div class="logo">Talent And Gyan Test Series</div><nav><a href="#home">होम</a><a href="#tests">मॉक टेस्ट</a><a href="#series">टेस्ट सीरीज</a><a href="#plans">प्राइसिंग</a><a href="#results">मेरे रिजल्ट</a><a href="#help">सहायता</a></nav><div class="student-auth-top" id="studentAuthTop"></div><div class="youtube-top-brand">
+<span aria-hidden="true" style="display:inline-flex;width:34px;height:24px;border-radius:7px;background:#ff0000;color:#fff;align-items:center;justify-content:center;font-size:15px">▶</span>
+<a href="https://www.youtube.com/@TGMOTIVATION70" target="_blank" rel="noopener">TGMOTIVATION70</a>
+</div></header><div class="brand-nav-row" id="studentNavigation">
+<a href="#home">🏠 Home</a><a href="#mock">🎯 Mock Test</a><a href="#courses">📚 Test Series</a><a href="#info">ℹ️ Exam Info</a><a href="#results">📊 Result</a><a href="#contact">📞 Contact</a><span id="studentAuthTop" class="student-login-nav"></span>
+</div><div id="homeNewsTicker" aria-label="Latest Updates"></div>
+<section class="hero" id="home"><h1>Talent And Gyan Test Series</h1><button class="btn orange" onclick="document.getElementById('tests').scrollIntoView({behavior:'smooth'})">Mock Test देखें</button></section>
 <div class="container" id="series"><div class="title">📚 परीक्षाएँ</div><div class="grid">
 <div class="card"><h3>MP पटवारी</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MP पटवारी')">देखें</button></div>
 <div class="card"><h3>MPPSC</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MPPSC')">देखें</button></div>
@@ -300,3 +319,30 @@ function tgyApplyNews(){
 document.addEventListener("DOMContentLoaded",tgyApplyNews);
 window.addEventListener("storage",tgyApplyNews);
 </script></body></html>
+<script id="home-ui-update">
+document.addEventListener("DOMContentLoaded",()=>{
+  const title=document.getElementById("siteTitle")||document.querySelector(".logo h1,.logo,.brand h1,.brand");
+  if(title) title.classList.add("home-hero-title");
+
+  // Hide likely mock/access plan blocks until their action is clicked.
+  const labels=[...document.querySelectorAll("h1,h2,h3,h4,button,a")];
+  labels.forEach(el=>{
+    const t=(el.textContent||"").trim();
+    if(/मॉक टेस्ट|Mock Test|Access Plan|एक्सेस प्लान/i.test(t)){
+      let box=el.closest(".card,section,.plan,.plans,.mock-test,.access-plan")||el.parentElement;
+      if(box && !box.id?.includes("modal")) box.classList.add("mock-access-hidden");
+    }
+  });
+
+  // Add a compact reveal button if hidden content exists.
+  const hidden=[...document.querySelectorAll(".mock-access-hidden")];
+  if(hidden.length){
+    const btn=document.createElement("button");
+    btn.className="btn";
+    btn.textContent="🎯 Mock Test / Access Plan देखें";
+    btn.onclick=()=>hidden.forEach(x=>x.classList.remove("mock-access-hidden"));
+    const main=document.querySelector("main")||document.body;
+    main.insertBefore(btn,main.firstChild);
+  }
+});
+</script>
