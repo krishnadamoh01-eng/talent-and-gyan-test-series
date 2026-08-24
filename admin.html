@@ -8,7 +8,18 @@
 <style id="news-admin-style">
 .news-row{display:flex;gap:8px;align-items:center;margin:7px 0;padding:8px;border:1px solid #ddd;border-radius:8px}
 .news-row input{flex:1;padding:9px}.news-row button{padding:8px}
-</style></head><body><div id="homeCustomizerArea" style="margin:14px 0"><button class="btn" onclick="openNewsManager()">📰 News Updates</button> <button class="btn" onclick="openHomeCustomizerAdmin()">🏠 Home Page Customize</button> <button class="btn" onclick="openMultiColorAdmin()">🎨 Multi-Color Customize</button></div>
+</style>
+<style id="bulk-question-manager-style">
+.bqm{background:#fff;border:1px solid #dbe3ec;border-radius:14px;padding:16px;margin:14px 0}
+.bqm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.bqm select,.bqm textarea,.bqm input{width:100%;padding:10px;border:1px solid #ccd5df;border-radius:8px}
+.bqm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.bqm-preview{max-height:420px;overflow:auto;background:#f7f9fc;border-radius:10px;padding:10px;margin-top:10px}
+.bqm-q{background:#fff;padding:12px;margin:8px 0;border-radius:9px;border:1px solid #e0e6ee}
+.bqm-muted{color:#667085}
+@media(max-width:700px){.bqm-grid{grid-template-columns:1fr}}
+</style>
+</head><body><div id="homeCustomizerArea" style="margin:14px 0"><button class="btn" onclick="openBulkQuestionManager()">📚 Bulk Questions / PDF Import</button> <button class="btn" onclick="openNewsManager()">📰 News Updates</button> <button class="btn" onclick="openHomeCustomizerAdmin()">🏠 Home Page Customize</button> <button class="btn" onclick="openMultiColorAdmin()">🎨 Multi-Color Customize</button></div>
 <div id="adminLogin" style="position:fixed;inset:0;background:#f4f7fb;display:flex;align-items:center;justify-content:center;padding:20px;z-index:99999">
 <div style="background:#fff;width:min(430px,100%);padding:28px;border-radius:16px;box-shadow:0 10px 35px #173a5c22">
 <h2 style="color:#123b68;margin-top:0">🔐 Admin Login</h2>
@@ -286,4 +297,112 @@ function openNewsManager(){
 function addNews(){const t=document.getElementById("newNewsText").value.trim();if(!t)return;const a=tgyAdminNews();a.push({text:t,enabled:true,date:Date.now()});tgySaveAdminNews(a);openNewsManager()}
 function removeNews(i){const a=tgyAdminNews();a.splice(i,1);tgySaveAdminNews(a);openNewsManager()}
 function saveNews(){const a=tgyAdminNews();a.forEach((x,i)=>{const t=document.getElementById("news_"+i),c=document.getElementById("newsOn_"+i);if(t)x.text=t.value.trim();if(c)x.enabled=c.checked});tgySaveAdminNews(a);alert("📰 News Updates Save हो गए। Student Home Page पर refresh करने पर दिखेंगे।")}
-</script></body></html>
+</script>
+<script id="bulk-question-manager-script">
+const BQM_DEFAULT_EXAMS=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];
+function bqmGet(){try{return JSON.parse(localStorage.getItem("tgy_exam_structure")||"{}")}catch(e){return{}}}
+function bqmSave(x){localStorage.setItem("tgy_exam_structure",JSON.stringify(x))}
+function bqmEsc(v){return (window.esc?esc(v):String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])))}
+function openBulkQuestionManager(){
+ const box=document.getElementById("homeCustomizerArea")||document.body;
+ box.innerHTML=`<div class="bqm"><h2>📚 परीक्षा → Test → Bulk Questions</h2>
+ <p class="bqm-muted">पहले परीक्षा चुनें, फिर Test/Series चुनें। उसके बाद PDF या Bulk Text से एक साथ सभी Questions जोड़ें।</p>
+ <div class="bqm-grid">
+ <div><label>1️⃣ परीक्षा चुनें</label><select id="bqmExam" onchange="bqmLoadTests()"></select></div>
+ <div><label>2️⃣ Test / Series चुनें</label><select id="bqmTest"></select></div>
+ </div>
+ <div class="bqm-actions">
+   <button class="btn" onclick="bqmAddTest()">➕ नया Test/Series</button>
+   <button class="btn" onclick="bqmAddExam()">➕ नई परीक्षा</button>
+ </div>
+ <hr>
+ <h3>3️⃣ Questions एक साथ जोड़ें</h3>
+ <div class="bqm-actions">
+   <input id="bqmPdf" type="file" accept=".pdf,application/pdf" style="max-width:360px">
+   <button class="btn" onclick="bqmImportPdf()">📄 PDF से Import</button>
+ </div>
+ <p>या PDF के बिना पूरा Question Set एक साथ Paste करें:</p>
+ <textarea id="bqmText" rows="12" placeholder="प्रश्न: ...
+(A) ...
+(B) ...
+(C) ...
+(D) ...
+सही उत्तर: (A)
+जानकारी: ...
+
+अगला प्रश्न..."></textarea>
+ <div class="bqm-actions"><button class="btn" onclick="bqmParseText()">🔎 Preview बनाएं</button><button class="btn" onclick="bqmImportAll()">✅ Select All → Import All</button></div>
+ <div id="bqmCount" class="bqm-muted">अभी कोई Questions नहीं।</div>
+ <div id="bqmPreview" class="bqm-preview"></div>
+ </div>`;
+ bqmInit();
+}
+function bqmInit(){
+ const d=bqmGet(); if(!d.exams)d.exams={};
+ BQM_DEFAULT_EXAMS.forEach(e=>{if(!d.exams[e])d.exams[e]={tests:{}}});
+ bqmSave(d);
+ const sel=document.getElementById("bqmExam");
+ sel.innerHTML=Object.keys(d.exams).map(e=>`<option>${bqmEsc(e)}</option>`).join("");
+ bqmLoadTests();
+}
+function bqmLoadTests(){
+ const d=bqmGet(), e=document.getElementById("bqmExam").value;
+ const tests=(d.exams[e]&&d.exams[e].tests)||{};
+ const sel=document.getElementById("bqmTest");
+ sel.innerHTML=Object.keys(tests).length?Object.keys(tests).map(t=>`<option>${bqmEsc(t)}</option>`).join(""):`<option value="">-- नया Test बनाएं --</option>`;
+}
+function bqmAddExam(){
+ const n=prompt("नई परीक्षा का नाम लिखें:"); if(!n)return;
+ const d=bqmGet();d.exams=d.exams||{};d.exams[n]={tests:{}};bqmSave(d);bqmInit();document.getElementById("bqmExam").value=n;bqmLoadTests();
+}
+function bqmAddTest(){
+ const e=document.getElementById("bqmExam").value;if(!e)return;
+ const n=prompt("नए Test/Series का नाम लिखें:");if(!n)return;
+ const d=bqmGet();d.exams[e]=d.exams[e]||{tests:{}};d.exams[e].tests[n]=d.exams[e].tests[n]||{questions:[]};bqmSave(d);bqmLoadTests();document.getElementById("bqmTest").value=n;
+}
+function bqmParseText(){
+ const raw=document.getElementById("bqmText").value.trim();
+ const qs=bqmGenericParse(raw);
+ localStorage.setItem("tgy_bulk_preview",JSON.stringify(qs));
+ bqmRender(qs);
+}
+function bqmGenericParse(raw){
+ let t=raw.replace(/\r/g,"\n").replace(/\u00a0/g," ").replace(/[ \t]+/g," ").trim();
+ const re=/(?:^|\n|\s)(?:प्रश्न\s*(?:क्रमांक\s*)?|प्र\.\s*|Question\s*|Q\.?\s*)(\d+)?[\s:.)-]*/gi;
+ let m,starts=[];while((m=re.exec(t)))starts.push({pos:m.index,end:re.lastIndex});
+ if(!starts.length)starts=[{pos:0,end:0}];
+ const out=[];
+ for(let i=0;i<starts.length;i++){
+   let b=t.slice(starts[i].end,i+1<starts.length?starts[i+1].pos:t.length).trim();
+   const am=b.search(/(?:\(?A\)?|अ)[\s.):-]/i); if(am<0)continue;
+   const q=b.slice(0,am).replace(/\s+/g," ").trim();
+   const marks=[...b.slice(am).matchAll(/(?:\(\s*([A-Da-d])\s*\)|\b([A-Da-d])\s*[.)]|\(\s*([अ-ब])\s*\)|\b([अ-ब])\s*[.)])\s*/g)];
+   if(marks.length<4)continue;
+   let opts=["","","",""];
+   for(let j=0;j<4;j++){let mm=marks[j],idx=mm[1]?mm[1].toUpperCase().charCodeAt(0)-65:(mm[2]?mm[2].toUpperCase().charCodeAt(0)-65:j);let from=am+mm.index+mm[0].length;let to=j<3?am+marks[j+1].index:b.length;opts[idx]=b.slice(from,to).replace(/\s+/g," ").trim();}
+   const ans=b.match(/(?:सही\s*उत्तर|उत्तर|Answer|Ans\.?|Correct\s*Answer|सही\s*विकल्प)\s*[:\-]?\s*\(?([A-Da-dअ-ब1-4IVXivx]+)\)?/i);
+   const ex=b.match(/(?:जानकारी|सामान्य\s*जानकारी|महत्वपूर्ण\s*जानकारी|व्याख्या|Explanation|Solution|समाधान|Note|नोट)\s*[:\-]?\s*([\s\S]*)$/i);
+   out.push({q,o:opts,answer:ans?ans[1]:"",ex:ex?ex[1].trim():""});
+ }
+ return out;
+}
+function bqmRender(qs){
+ document.getElementById("bqmCount").innerHTML=`<b>✅ ${qs.length} Questions मिले</b>`;
+ document.getElementById("bqmPreview").innerHTML=qs.map((x,i)=>`<div class="bqm-q"><b>प्रश्न ${i+1}.</b> ${bqmEsc(x.q)}<br>(A) ${bqmEsc(x.o[0])}<br>(B) ${bqmEsc(x.o[1])}<br>(C) ${bqmEsc(x.o[2])}<br>(D) ${bqmEsc(x.o[3])}<br><b>सही उत्तर:</b> ${bqmEsc(x.answer)} ${x.ex?`<br><b>जानकारी:</b> ${bqmEsc(x.ex)}`:""}</div>`).join("");
+}
+function bqmImportAll(){
+ const e=document.getElementById("bqmExam").value,t=document.getElementById("bqmTest").value;
+ if(!e||!t){alert("पहले परीक्षा और Test/Series चुनें।");return}
+ const qs=JSON.parse(localStorage.getItem("tgy_bulk_preview")||"[]");if(!qs.length){alert("पहले PDF/Text से Preview बनाएं।");return}
+ const d=bqmGet();d.exams[e].tests[t]=d.exams[e].tests[t]||{questions:[]};d.exams[e].tests[t].questions=qs.map((x,i)=>({...x,number:i+1}));
+ bqmSave(d);alert(`✅ ${qs.length} Questions ${e} → ${t} में एक साथ जोड़ दिए गए।`);
+}
+async function bqmImportPdf(){
+ const f=document.getElementById("bqmPdf").files[0];if(!f){alert("पहले PDF चुनें।");return}
+ if(!window.pdfjsLib){alert("PDF Reader library उपलब्ध नहीं है। PDF.js जोड़ने के बाद PDF Import चलेगा।");return}
+ const buf=await f.arrayBuffer(),pdf=await pdfjsLib.getDocument({data:buf}).promise;let text="";
+ for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i),c=await page.getTextContent();text+=c.items.map(x=>x.str).join(" ")+"\\n";}
+ document.getElementById("bqmText").value=text;bqmParseText();
+}
+</script>
+</body></html>
