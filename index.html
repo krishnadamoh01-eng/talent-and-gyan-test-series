@@ -70,7 +70,7 @@ h1,h2,h3{color:var(--hc-heading)}
 
 
 <a href="#" onclick="openStudentPage('help');return false">📞 सहायता</a>
-<span id="studentAuthTop" style="margin-left:auto"></span>
+<span id="studentAuthTop" style="margin-left:auto;display:flex;gap:8px;align-items:center"></span>
 </div><div id="homeNewsTicker" aria-label="Latest Updates"></div>
 <section class="hero" id="home" style="min-height:150px;display:flex;align-items:center;justify-content:center;padding:20px 5%">
   <div id="homeHeadline" class="home-headline" aria-live="polite"></div>
@@ -128,7 +128,7 @@ function openExam(exam){
     html += `<h3>📚 उपलब्ध Test Series</h3>` + list.map((t,i)=>`<div class="card"><b>${esc(t.name)}</b><p>${t.questions.length} Questions • ${t.time} मिनट</p><button class="btn" onclick="closeExam();openTest(${tests.indexOf(t)})">Test दें</button></div>`).join("");
   }
   html += `<div class="card" style="margin-top:15px"><h3>💳 Demo के बाद Test Series</h3><p>अधिक Tests के लिए अपनी पसंद का Access Plan चुनें।</p><button class="btn orange" onclick="closeExam();document.getElementById('plans').scrollIntoView({behavior:'smooth'})">Test Series खरीदें</button></div>
-  <button class="btn gray" onclick="closeExam()">बंद करें</button>`;
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn gray" onclick="closeExam();window.history.back()">← पीछे</button><button class="btn" onclick="closeExam();window.scrollTo({top:0,behavior:'smooth'})">🏠 Home</button><button class="btn gray" onclick="closeExam()">✕ बंद करें</button></div>`;
   document.getElementById("examContent").innerHTML=html;
   document.getElementById("examModal").style.display="flex";
 }
@@ -182,8 +182,10 @@ function doLogin(){
 function logout(){localStorage.removeItem("tgy_user");closeAuth();updateAuthUI()}
 function updateAuthUI(){
  const box=document.getElementById("studentAuthTop"); if(!box)return;
- const u=JSON.parse(localStorage.getItem("tgy_user")||"null");
- box.innerHTML=u?`<a href="#" onclick="openAuth('account');return false">👤 ${esc(u.name)}</a>`:`<a href="#" onclick="openAuth('login');return false">🔐 Login</a><a class="register" href="#" onclick="openAuth('register');return false">📝 Register</a>`;
+ let u=null;try{u=JSON.parse(localStorage.getItem("tgy_user")||"null")}catch(e){}
+ box.innerHTML=u
+  ? `<a href="#" onclick="openAuth('account');return false">👤 ${esc(u.name||"My Account")}</a><button class="btn danger" style="padding:7px 10px" onclick="logout()">🚪 Logout</button>`
+  : `<a href="#" onclick="openAuth('login');return false">🔐 Login</a><a class="register" href="#" onclick="openAuth('register');return false">📝 Register</a>`;
 }
 
 function renderTests(){
@@ -210,7 +212,8 @@ function openTest(i){
  if(tCheck && tCheck.demo!==true && !hasPurchasedTest(tCheck)){
    alert("यह Test आपके Account में खरीदा/Activate नहीं हुआ है।");
    return;
- }const t=tests[i];window.state={t,idx:0,answers:Array(t.questions.length).fill(null)};document.getElementById("modalContent").innerHTML=`<div class="timer" id="timer"></div><h2>${esc(t.name)}</h2><p class="muted">Option चुनना जरूरी है। Previous से वापस जाकर उत्तर बदल सकते हैं।</p><div id="qarea"></div><button class="btn gray" id="prev" onclick="prevQ()">← Previous</button> <button class="btn" id="next" onclick="nextQ()">Next →</button>`;document.getElementById("modal").style.display="flex";renderQ();let sec=t.time*60;window.timer=setInterval(()=>{sec--;let e=document.getElementById("timer");if(e)e.textContent=`⏱️ ${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;if(sec<=0)submitTest()},1000)}
+ }const t=tests[i];window.state={t,idx:0,answers:Array(t.questions.length).fill(null)};document.getElementById("modalContent").innerHTML=`<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap"><div class="timer" id="timer"></div><div><button class="btn gray" onclick="closeTestModal()">← पीछे</button> <button class="btn" onclick="closeTestModal();window.scrollTo({top:0,behavior:'smooth'})">🏠 Home</button></div></div><h2>${esc(t.name)}</h2><p class="muted">Option चुनना जरूरी है। Previous से वापस जाकर उत्तर बदल सकते हैं।</p><div id="qarea"></div><button class="btn gray" id="prev" onclick="prevQ()">← Previous</button> <button class="btn" id="next" onclick="nextQ()">Next →</button>`;document.getElementById("modal").style.display="flex";renderQ();let sec=t.time*60;window.timer=setInterval(()=>{sec--;let e=document.getElementById("timer");if(e)e.textContent=`⏱️ ${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;if(sec<=0)submitTest()},1000)}
+function closeTestModal(){if(window.timer)clearInterval(window.timer);const m=document.getElementById("modal");if(m)m.style.display="none";}
 function renderQ(){let s=state,q=s.t.questions[s.idx];document.getElementById("qarea").innerHTML=`<div class="q"><b>प्रश्न ${s.idx+1}. ${esc(q[0])}</b>${q[1].map((o,j)=>`<label><input type="radio" name="ans" value="${j}" ${s.answers[s.idx]===j?"checked":""} onchange="state.answers[state.idx]=+this.value"> ${String.fromCharCode(65+j)}. ${esc(o)}</label>`).join("")}</div>`;document.getElementById("prev").style.visibility=s.idx?"visible":"hidden";document.getElementById("next").textContent=s.idx===s.t.questions.length-1?"Submit Test":"Next →"}
 function nextQ(){if(state.answers[state.idx]===null){alert("पहले कोई एक विकल्प चुनें।");return}if(state.idx===state.t.questions.length-1)submitTest();else{state.idx++;renderQ()}}
 function prevQ(){if(state.idx){state.idx--;renderQ()}}
@@ -343,14 +346,16 @@ function openStudentPage(key){
  if(key==="purchased"){body='<div class="card"><h2>🎓 My Purchased Tests</h2><div id="myPurchasedTests"></div></div>'}
  if(key==="notes"){body='<div class="card"><h2>📄 PDF Notes</h2><p>यहाँ Notes साइट पर पढ़े जा सकते हैं। Notes को डाउनलोड करने का विकल्प उपलब्ध नहीं होगा।</p><div id="studentNotesList"></div></div>'}
  if(key==="help"){body='<div class="card"><h2>📞 सहायता</h2><p>Payment, Login या Test से संबंधित सहायता के लिए यहाँ जानकारी दी जाएगी।</p></div>'}
- overlay.innerHTML='<div class="student-page-head"><h2>'+titles[key]+'</h2><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body">'+body+'</div>';
+ overlay.innerHTML='<div class="student-page-head"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="student-close" onclick="studentGoBack()">← पीछे</button><button class="student-close" onclick="studentGoHome()">🏠 Home</button><h2>'+titles[key]+'</h2></div><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body">'+body+'</div>';
  overlay.style.display="block"; window.scrollTo(0,0);
  if(key==="mock") renderStudentMockPage();
  if(key==="series") renderStudentSeriesPage();
  if(key==="purchased") renderMyPurchasedTests();
  if(key==="notes") renderStudentNotes();
 }
-function closeStudentPage(){let o=document.getElementById("studentPageOverlay");if(o)o.style.display="none"}
+function closeStudentPage(){let o=document.getElementById("studentPageOverlay");if(o)o.style.display="none";document.body.style.overflow=""}
+function studentGoHome(){closeStudentPage();window.scrollTo({top:0,behavior:"smooth"});}
+function studentGoBack(){window.history.back();}
 function renderStudentMockPage(){let b=document.getElementById("studentMockPageList");if(!b)return;let names=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];b.innerHTML='<div class="grid">'+names.map(n=>'<div class="card"><h3>'+n+'</h3><p>Demo Mock Test</p><button class="btn orange" onclick="alert("'+n+' Demo Test खुलेगा")">Test शुरू करें</button></div>').join("")+'</div>'}
 function renderStudentSeriesPage(){let b=document.getElementById("studentSeriesPageList");if(!b)return;let names=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];b.innerHTML='<div class="grid">'+names.map(n=>'<div class="card"><h3>'+n+'</h3><p>Demo + Test Series</p><button class="btn" onclick="openExam(\''+n+'\')">Course खोलें</button></div>').join("")+'</div>'}
 </script><script id="password-toggle-script">
@@ -450,4 +455,4 @@ function renderHomeHeadline(){
  const h=(c.headline||"").trim();el.innerHTML=h?`<span>${esc(h)}</span>`:"";el.style.display=h?"block":"none";
 }
 document.addEventListener("DOMContentLoaded",renderHomeHeadline);
-</script></body></html>
+</script><script>document.addEventListener("DOMContentLoaded",function(){if(typeof updateAuthUI==="function")updateAuthUI();});</script></body></html>

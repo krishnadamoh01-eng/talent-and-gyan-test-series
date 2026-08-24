@@ -74,7 +74,7 @@ function checkAdmin(){
 }
 </script>
 <header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
-<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('plans',this)">💳 Plans</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
+<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('plans',this)">💳 Plans</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 
 <section id="tests" class="sec">
@@ -785,15 +785,59 @@ function mtManualAdd(){
  const d=mtStore(),obj=d.exams[e].tests[t];obj.questions=obj.questions||[];
  obj.questions.push({q,o:opts,answer:ans,ex,number:obj.questions.length+1});mtSaveStore(d);mtRenderQuestions();mtRenderAll();
 }
+function mtNormQuestion(x,i){
+ if(Array.isArray(x)){
+   return {q:x[0]||"",o:Array.isArray(x[1])?x[1].slice(0,4):["","","",""],answer:x[2]??"",ex:x[3]||"",number:i+1};
+ }
+ return {q:x.q||"",o:Array.isArray(x.o)?x.o.slice(0,4):["","","",""],answer:x.answer??"",ex:x.ex||x.explanation||"",number:x.number||i+1};
+}
 function mtRenderQuestions(){
  const e=document.getElementById("mtExam")?.value,t=document.getElementById("mtTest")?.value;
  const box=document.getElementById("mtQuestions"),count=document.getElementById("mtQuestionCount");if(!box)return;
- const qs=mtStore().exams?.[e]?.tests?.[t]?.questions||[];
+ const raw=mtStore().exams?.[e]?.tests?.[t]?.questions||[];
+ const qs=raw.map(mtNormQuestion);
  count.innerHTML=`कुल Questions: <b>${qs.length}</b>`;
- box.innerHTML=qs.length?qs.map((x,i)=>`<div class="card" style="margin:7px 0;padding:10px">
- <b>प्रश्न ${i+1}.</b> ${mtEsc(x.q)}
- <span style="float:right"><button class="btn danger" onclick="mtDeleteQuestion(${i})">🗑️ Delete</button></span>
+ box.innerHTML=qs.length?qs.map((x,i)=>`<div class="qrow">
+   <div><b>प्रश्न ${i+1}.</b> ${mtEsc(x.q)}</div>
+   <div style="margin:8px 0">
+    <div>(A) ${mtEsc(x.o[0])}</div><div>(B) ${mtEsc(x.o[1])}</div>
+    <div>(C) ${mtEsc(x.o[2])}</div><div>(D) ${mtEsc(x.o[3])}</div>
+   </div>
+   <div><b>सही उत्तर:</b> ${mtEsc(x.answer||"-")}</div>
+   ${x.ex?`<div><b>जानकारी/Explanation:</b> ${mtEsc(x.ex)}</div>`:""}
+   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+    <button class="btn" onclick="mtEditQuestion(${i})">✏️ Edit</button>
+    <button class="btn danger" onclick="mtDeleteQuestion(${i})">🗑️ Delete</button>
+   </div>
  </div>`).join(""):"अभी इस Test में कोई Question नहीं है।";
+}
+function mtEditQuestion(i){
+ const e=document.getElementById("mtExam").value,t=document.getElementById("mtTest").value;
+ const d=mtStore(),qs=d.exams?.[e]?.tests?.[t]?.questions||[];const x=mtNormQuestion(qs[i],i);
+ if(!qs[i])return;
+ const mb=document.getElementById("mb"),modal=document.getElementById("modal");
+ mb.innerHTML=`<h2>✏️ Question ${i+1} Edit करें</h2>
+ <label>Question</label><textarea id="eqQ" rows="4">${mtEsc(x.q)}</textarea>
+ <label>Option A</label><input id="eqA" value="${mtEsc(x.o[0])}">
+ <label>Option B</label><input id="eqB" value="${mtEsc(x.o[1])}">
+ <label>Option C</label><input id="eqC" value="${mtEsc(x.o[2])}">
+ <label>Option D</label><input id="eqD" value="${mtEsc(x.o[3])}">
+ <label>सही उत्तर</label><input id="eqAns" value="${mtEsc(x.answer)}" placeholder="A / B / C / D / अ / ब / स / द / 1 / 2 / 3 / 4">
+ <label>जानकारी / Explanation</label><textarea id="eqEx" rows="5">${mtEsc(x.ex)}</textarea>
+ <button class="btn orange" onclick="mtSaveEditedQuestion(${i})">💾 Save Changes</button>
+ <button class="btn gray" onclick="closeM()">बंद करें</button>`;
+ modal.style.display="flex";
+}
+function mtSaveEditedQuestion(i){
+ const e=document.getElementById("mtExam").value,t=document.getElementById("mtTest").value;
+ const d=mtStore(),qs=d.exams[e].tests[t].questions||[];
+ if(!qs[i])return;
+ const old=mtNormQuestion(qs[i],i);
+ const obj={q:document.getElementById("eqQ").value.trim(),o:[
+   document.getElementById("eqA").value.trim(),document.getElementById("eqB").value.trim(),
+   document.getElementById("eqC").value.trim(),document.getElementById("eqD").value.trim()
+ ],answer:document.getElementById("eqAns").value.trim(),ex:document.getElementById("eqEx").value.trim(),number:i+1};
+ qs[i]=obj;d.exams[e].tests[t].questions=qs;mtSaveStore(d);closeM();mtRenderQuestions();mtRenderAll();
 }
 function mtDeleteQuestion(i){
  const e=document.getElementById("mtExam").value,t=document.getElementById("mtTest").value;
@@ -806,7 +850,7 @@ function mtRenderAll(){
  Object.entries(d.exams||{}).forEach(([e,v])=>Object.entries(v.tests||{}).forEach(([t,x])=>rows.push(`<tr>
  <td>${mtEsc(e)}</td><td>${mtEsc(t)}</td><td>${x.questions?.length||0}</td><td>${x.time||60} min</td>
  <td>${x.published===false?"Hidden":"Active"}</td>
- <td><button class="btn" onclick="mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">Open</button>
+ <td><button class="btn" onclick="mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">👁️ Open / Edit</button>
  <button class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">Delete</button></td></tr>`)));
  box.innerHTML=rows.join("")||'<tr><td colspan="6">कोई Test नहीं है।</td></tr>';
 }
