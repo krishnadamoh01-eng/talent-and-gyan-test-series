@@ -8,7 +8,38 @@
 .student-auth-top a{color:#fff!important;text-decoration:none;padding:9px 12px;border-radius:8px;background:#1769aa;font-weight:700}
 .student-auth-top a.register{background:#f07800}
 @media(max-width:700px){.student-auth-top{width:100%;justify-content:flex-end}.student-auth-top a{padding:7px 9px;font-size:13px}}
-</style></head><body>
+</style>
+<style id="home-customizer-style">
+.hc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.hc-grid label{font-weight:700;display:block;margin-bottom:5px}
+.hc-grid input,.hc-grid textarea,.hc-grid select{width:100%;padding:10px;border:1px solid #ccd5df;border-radius:8px}
+.hc-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.hc-check{background:#f6f8fb;padding:9px;border-radius:8px}
+.hc-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media(max-width:700px){.hc-grid,.hc-checks{grid-template-columns:1fr}}
+</style>
+
+<style id="multicolor-customizer">
+:root{
+ --hc-page-bg:#f7f9fc;--hc-header-bg:#0b5ed7;--hc-header-text:#ffffff;
+ --hc-news-bg:#d90429;--hc-news-text:#ffffff;--hc-heading:#123b66;
+ --hc-card-bg:#ffffff;--hc-card-text:#222222;--hc-button-bg:#f07800;--hc-button-text:#ffffff;
+}
+body{background:var(--hc-page-bg)!important;color:var(--hc-card-text)}
+header{background:var(--hc-header-bg)!important;color:var(--hc-header-text)!important}
+header a,header .logo,header h1{color:var(--hc-header-text)!important}
+h1,h2,h3{color:var(--hc-heading)}
+.card{background:var(--hc-card-bg);color:var(--hc-card-text)}
+.btn{background:var(--hc-button-bg)!important;color:var(--hc-button-text)!important}
+#homeAnnouncement{background:var(--hc-news-bg)!important;color:var(--hc-news-text)!important}
+.hcm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.hcm-item{padding:10px;border:1px solid #d7dee8;border-radius:10px;background:#fff}
+.hcm-item label{display:block;font-weight:700;margin-bottom:6px}
+.hcm-item input[type=color]{width:100%;height:42px;padding:2px;border:0;background:none;cursor:pointer}
+.hcm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media(max-width:700px){.hcm-grid{grid-template-columns:1fr}}
+</style>
+</head><body>
 <header><div class="logo">Talent And Gyan Test Series</div><nav><a href="#home">होम</a><a href="#tests">मॉक टेस्ट</a><a href="#series">टेस्ट सीरीज</a><a href="#plans">प्राइसिंग</a><a href="#results">मेरे रिजल्ट</a><a href="#help">सहायता</a></nav><div class="student-auth-top" id="studentAuthTop"></div></header>
 <section class="hero" id="home"><h1>Talent And Gyan Test Series</h1><p>MP पटवारी और अन्य प्रतियोगी परीक्षाओं की Online Test Series। Test के दौरान उत्तर नहीं दिखेंगे। पूरा Test Submit करने के बाद Result, सही उत्तर और Explanation दिखाई देंगे।</p><button class="btn orange" onclick="document.getElementById('tests').scrollIntoView({behavior:'smooth'})">Mock Test देखें</button></section>
 <div class="container" id="series"><div class="title">📚 परीक्षाएँ</div><div class="grid">
@@ -153,4 +184,99 @@ function submitTest(){clearInterval(window.timer);let s=state,correct=0,attempte
 function renderResults(){document.getElementById("resultList").innerHTML=results.length?results.slice(0,10).map(r=>`<div class="q"><b>${esc(r.test)}</b><br>Attempt: ${r.attempted} | सही: ${r.correct} | गलत: ${r.wrong} | छोड़े: ${r.skipped} | ${r.percent}%<br><span class="muted">${esc(r.date)}</span></div>`).join(""):"अभी कोई Result नहीं है।"}
 renderResults();updateAuthUI();
 function sendHelp(){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");a.push({name:hname.value,email:hemail.value,type:htype.value,utr:hutr.value,msg:hmsg.value,date:new Date().toLocaleString(),status:"Pending"});localStorage.setItem("tgy_help",JSON.stringify(a));alert("शिकायत Submit हो गई है।");hname.value=hemail.value=hutr.value=hmsg.value=""}
-</script></body></html>
+</script>
+<script id="home-customizer-script">
+const HC_DEFAULTS={
+ title:"Talent And Gyan Test Series",
+ subtitle:"प्रतियोगी परीक्षाओं की तैयारी के लिए Test Series",
+ announcement:"",
+ examInfo:{examDate:true,applyStart:true,applyLast:true,admitCard:true,examDate2:true,pattern:true,syllabus:true,result:true},
+ courses:true, demo:true, latest:true
+};
+function hcGet(){try{return {...HC_DEFAULTS,...JSON.parse(localStorage.getItem("tgy_home_custom")||"{}")}}catch(e){return {...HC_DEFAULTS}}}
+function hcSave(v){localStorage.setItem("tgy_home_custom",JSON.stringify(v)); hcApply();}
+function hcApply(){
+ const c=hcGet();
+ const title=document.getElementById("siteTitle"); if(title&&c.title) title.textContent=c.title;
+ const sub=document.getElementById("siteSubtitle"); if(sub&&c.subtitle) sub.textContent=c.subtitle;
+ const ann=document.getElementById("homeAnnouncement"); if(ann){ann.textContent=c.announcement||"";ann.style.display=c.announcement?"block":"none";}
+ document.querySelectorAll("[data-hc-key]").forEach(el=>{const k=el.getAttribute("data-hc-key"); if(k in c.examInfo) el.style.display=c.examInfo[k]?"":"none";});
+}
+function openHomeCustomizer(){
+ const c=hcGet();
+ document.getElementById("modalContent").innerHTML=`<h2>🏠 Home Page Customize</h2>
+ <p>यहाँ से आप Home Page पर क्या दिखाना है, खुद तय कर सकते हैं।</p>
+ <div class="hc-grid">
+ <div><label>Home Title</label><input id="hcTitle" value="${esc(c.title)}"></div>
+ <div><label>Subtitle</label><input id="hcSubtitle" value="${esc(c.subtitle)}"></div>
+ </div>
+ <label style="display:block;margin-top:12px;font-weight:700">📢 Latest Announcement</label>
+ <textarea id="hcAnn" rows="3" placeholder="जैसे: MP पटवारी परीक्षा की नई जानकारी...">${esc(c.announcement||"")}</textarea>
+ <h3>Home Page पर क्या दिखाना है?</h3>
+ <div class="hc-checks">
+ ${[
+ ["examDate","परीक्षा कब होगी"],["applyStart","आवेदन कब शुरू हुआ"],["applyLast","आवेदन की अंतिम तारीख"],
+ ["admitCard","Admit Card"],["examDate2","Exam Date"],["pattern","Exam Pattern"],
+ ["syllabus","Syllabus"],["result","Result"]
+ ].map(x=>`<label class="hc-check"><input type="checkbox" id="hc_${x[0]}" ${c.examInfo[x[0]]?"checked":""}> ${x[1]}</label>`).join("")}
+ </div>
+ <div class="hc-actions">
+ <button class="btn" onclick="saveHomeCustomizer()">💾 Save Home Settings</button>
+ <button class="btn gray" onclick="closeM()">बंद करें</button>
+ </div>`;
+ document.getElementById("modal").style.display="flex";
+}
+function saveHomeCustomizer(){
+ const v=hcGet();
+ v.title=document.getElementById("hcTitle").value.trim()||HC_DEFAULTS.title;
+ v.subtitle=document.getElementById("hcSubtitle").value.trim()||HC_DEFAULTS.subtitle;
+ v.announcement=document.getElementById("hcAnn").value.trim();
+ Object.keys(v.examInfo).forEach(k=>{const el=document.getElementById("hc_"+k); if(el)v.examInfo[k]=el.checked;});
+ hcSave(v);
+ document.getElementById("modalContent").innerHTML=`<h2>✅ Home Page Update हो गया</h2><p>आपकी चुनी हुई जानकारी Home Page पर दिखाई जाएगी।</p><button class="btn" onclick="closeM()">ठीक है</button>`;
+}
+document.addEventListener("DOMContentLoaded",hcApply);
+</script>
+
+<script id="multicolor-customizer-script">
+const HC_COLORS_DEFAULT={
+ pageBg:"#f7f9fc",headerBg:"#0b5ed7",headerText:"#ffffff",
+ newsBg:"#d90429",newsText:"#ffffff",heading:"#123b66",
+ cardBg:"#ffffff",cardText:"#222222",buttonBg:"#f07800",buttonText:"#ffffff"
+};
+function hcColors(){try{return {...HC_COLORS_DEFAULT,...JSON.parse(localStorage.getItem("tgy_home_colors")||"{}")}}catch(e){return {...HC_COLORS_DEFAULT}}}
+function applyHomeColors(){
+ const c=hcColors(), root=document.documentElement;
+ const map={pageBg:"--hc-page-bg",headerBg:"--hc-header-bg",headerText:"--hc-header-text",newsBg:"--hc-news-bg",newsText:"--hc-news-text",heading:"--hc-heading",cardBg:"--hc-card-bg",cardText:"--hc-card-text",buttonBg:"--hc-button-bg",buttonText:"--hc-button-text"};
+ Object.keys(map).forEach(k=>root.style.setProperty(map[k],c[k]));
+}
+function openColorCustomizer(){
+ const c=hcColors();
+ const items=[
+  ["pageBg","पूरे Home Page का Background"],
+  ["headerBg","Header / ऊपर की पट्टी का Background"],
+  ["headerText","Header का Font Color"],
+  ["newsBg","News पट्टी का Background"],
+  ["newsText","News पट्टी का Font Color"],
+  ["heading","Heading का Font Color"],
+  ["cardBg","Course / Information Card का Background"],
+  ["cardText","Card का Font Color"],
+  ["buttonBg","Button का Background"],
+  ["buttonText","Button का Font Color"]
+ ];
+ document.getElementById("modalContent").innerHTML=`<h2>🎨 Multi-Color Home Customize</h2>
+ <p>हर हिस्से के लिए अलग-अलग रंग चुनें।</p>
+ <div class="hcm-grid">${items.map(([k,l])=>`<div class="hcm-item"><label>${l}</label><input type="color" id="hcColor_${k}" value="${c[k]}"><small>${c[k]}</small></div>`).join("")}</div>
+ <div class="hcm-actions"><button class="btn" onclick="saveHomeColors()">💾 Save Colors</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
+ document.getElementById("modal").style.display="flex";
+}
+function saveHomeColors(){
+ const c={};
+ ["pageBg","headerBg","headerText","newsBg","newsText","heading","cardBg","cardText","buttonBg","buttonText"].forEach(k=>{c[k]=document.getElementById("hcColor_"+k).value});
+ localStorage.setItem("tgy_home_colors",JSON.stringify(c));
+ applyHomeColors();
+ document.getElementById("modalContent").innerHTML=`<h2>✅ Colors Save हो गए</h2><p>अब Home Page में अलग-अलग रंग लागू हो गए हैं।</p><button class="btn" onclick="closeM()">ठीक है</button>`;
+}
+document.addEventListener("DOMContentLoaded",applyHomeColors);
+</script>
+</body></html>
