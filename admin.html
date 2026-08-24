@@ -5,7 +5,10 @@
 <style id="home-customizer-admin-style">
 .home-customize-card{background:#eef6ff;border:1px solid #c8ddf4;padding:14px;border-radius:12px;margin:12px 0}
 </style>
-</head><body><div id="homeCustomizerArea" style="margin:14px 0"><button class="btn" onclick="openHomeCustomizerAdmin()">🏠 Home Page Customize</button> <button class="btn" onclick="openMultiColorAdmin()">🎨 Multi-Color Customize</button></div>
+<style id="news-admin-style">
+.news-row{display:flex;gap:8px;align-items:center;margin:7px 0;padding:8px;border:1px solid #ddd;border-radius:8px}
+.news-row input{flex:1;padding:9px}.news-row button{padding:8px}
+</style></head><body><div id="homeCustomizerArea" style="margin:14px 0"><button class="btn" onclick="openNewsManager()">📰 News Updates</button> <button class="btn" onclick="openHomeCustomizerAdmin()">🏠 Home Page Customize</button> <button class="btn" onclick="openMultiColorAdmin()">🎨 Multi-Color Customize</button></div>
 <div id="adminLogin" style="position:fixed;inset:0;background:#f4f7fb;display:flex;align-items:center;justify-content:center;padding:20px;z-index:99999">
 <div style="background:#fff;width:min(430px,100%);padding:28px;border-radius:16px;box-shadow:0 10px 35px #173a5c22">
 <h2 style="color:#123b68;margin-top:0">🔐 Admin Login</h2>
@@ -268,4 +271,19 @@ function saveMultiColorAdmin(){
  localStorage.setItem("tgy_home_colors",JSON.stringify(c)); alert("🎨 सभी Colors Save हो गए।");
 }
 </script>
-</body></html>
+<script id="news-admin-script">
+function tgyAdminNews(){try{return JSON.parse(localStorage.getItem("tgy_news_items")||"[]")}catch(e){return[]}}
+function tgySaveAdminNews(x){localStorage.setItem("tgy_news_items",JSON.stringify(x))}
+function openNewsManager(){
+ const box=document.getElementById("homeCustomizerArea"); if(!box)return;
+ const items=tgyAdminNews();
+ box.innerHTML=`<div class="home-customize-card"><h2>📰 News / Latest Updates</h2>
+ <p>यहाँ जो लिखेंगे वही Student Home Page की चलती हुई पट्टी में दिखेगा।</p>
+ <div id="newsRows">${items.map((x,i)=>`<div class="news-row"><input id="news_${i}" value="${esc(x.text||"")}"><label><input type="checkbox" id="newsOn_${i}" ${x.enabled!==false?"checked":""}> दिखाएँ</label><button class="btn" onclick="removeNews(${i})">🗑️</button></div>`).join("")}</div>
+ <div class="news-row"><input id="newNewsText" placeholder="नई परीक्षा/करंट अपडेट लिखें"><button class="btn" onclick="addNews()">➕ जोड़ें</button></div>
+ <div style="margin-top:10px"><button class="btn" onclick="saveNews()">💾 Save Updates</button> <button class="btn gray" onclick="location.reload()">बंद करें</button></div></div>`;
+}
+function addNews(){const t=document.getElementById("newNewsText").value.trim();if(!t)return;const a=tgyAdminNews();a.push({text:t,enabled:true,date:Date.now()});tgySaveAdminNews(a);openNewsManager()}
+function removeNews(i){const a=tgyAdminNews();a.splice(i,1);tgySaveAdminNews(a);openNewsManager()}
+function saveNews(){const a=tgyAdminNews();a.forEach((x,i)=>{const t=document.getElementById("news_"+i),c=document.getElementById("newsOn_"+i);if(t)x.text=t.value.trim();if(c)x.enabled=c.checked});tgySaveAdminNews(a);alert("📰 News Updates Save हो गए। Student Home Page पर refresh करने पर दिखेंगे।")}
+</script></body></html>
