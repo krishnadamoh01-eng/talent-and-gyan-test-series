@@ -44,9 +44,26 @@ h1,h2,h3{color:var(--hc-heading)}
 #homeNewsTicker .ticker-track{display:inline-block;padding-left:100%;animation:tgyTicker 18s linear infinite}
 #homeNewsTicker .ticker-item{margin-right:80px}
 @keyframes tgyTicker{from{transform:translateX(0)}to{transform:translateX(-100%)}} 
+</style><style id="student-page-style">
+.brand-nav-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;padding:10px;background:#fff;border-bottom:1px solid #ddd;position:sticky;top:0;z-index:10}
+.brand-nav-row a{padding:9px 12px;background:#eef4ff;color:#123b68;text-decoration:none;border-radius:8px;font-weight:700}
+.student-page{position:fixed;inset:0;background:#f5f7fb;z-index:99990;overflow:auto;display:none}
+.student-page-head{background:#123b68;color:#fff;padding:14px 5%;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0}
+.student-page-head h2{margin:0;color:#fff}.student-page-body{max-width:1100px;margin:20px auto;padding:0 16px}
+.student-close{border:0;border-radius:8px;padding:8px 13px;font-weight:800}
 </style></head><body>
-<header><div class="logo">Talent And Gyan Test Series</div><nav><a href="#home">होम</a><a href="#tests">मॉक टेस्ट</a><a href="#series">टेस्ट सीरीज</a><a href="#plans">प्राइसिंग</a><a href="#results">मेरे रिजल्ट</a><a href="#help">सहायता</a></nav><div class="student-auth-top" id="studentAuthTop"></div></header><div id="homeNewsTicker" aria-label="Latest Updates"></div>
-<section class="hero" id="home"><h1>Talent And Gyan Test Series</h1><p>MP पटवारी और अन्य प्रतियोगी परीक्षाओं की Online Test Series। Test के दौरान उत्तर नहीं दिखेंगे। पूरा Test Submit करने के बाद Result, सही उत्तर और Explanation दिखाई देंगे।</p><button class="btn orange" onclick="document.getElementById('tests').scrollIntoView({behavior:'smooth'})">Mock Test देखें</button></section>
+<header><div class="logo" style="font-size:34px;font-weight:900">Talent And Gyan Test Series</div></header>
+<div class="brand-nav-row" id="studentNavigation">
+<a href="#" onclick="openStudentPage('home');return false">🏠 Home</a>
+<a href="#" onclick="openStudentPage('mock');return false">🎯 Mock Test</a>
+<a href="#" onclick="openStudentPage('series');return false">📚 Test Series</a>
+<a href="#" onclick="openStudentPage('plans');return false">💳 Plans</a>
+<a href="#" onclick="openStudentPage('results');return false">📊 Result</a>
+<a href="#" onclick="openStudentPage('info');return false">ℹ️ Exam Info</a>
+<a href="#" onclick="openStudentPage('help');return false">📞 सहायता</a>
+<span id="studentAuthTop" style="margin-left:auto"></span>
+</div><div id="homeNewsTicker" aria-label="Latest Updates"></div>
+<section class="hero" id="home"><h1>Talent And Gyan Test Series</h1><button class="btn orange" onclick="document.getElementById('tests').scrollIntoView({behavior:'smooth'})">Mock Test देखें</button></section>
 <div class="container" id="series"><div class="title">📚 परीक्षाएँ</div><div class="grid">
 <div class="card"><h3>MP पटवारी</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MP पटवारी')">देखें</button></div>
 <div class="card"><h3>MPPSC</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MPPSC')">देखें</button></div>
@@ -299,4 +316,25 @@ function tgyApplyNews(){
 }
 document.addEventListener("DOMContentLoaded",tgyApplyNews);
 window.addEventListener("storage",tgyApplyNews);
+</script><script id="student-pages-script">
+function openStudentPage(key){
+ let overlay=document.getElementById("studentPageOverlay");
+ if(!overlay){overlay=document.createElement("div");overlay.id="studentPageOverlay";overlay.className="student-page";document.body.appendChild(overlay)}
+ const titles={home:"🏠 Home",mock:"🎯 Mock Tests",series:"📚 Test Series",plans:"💳 Access Plans",results:"📊 My Results",info:"ℹ️ Exam Information",help:"📞 सहायता"};
+ let body="";
+ if(key==="home"){body='<div class="card"><h2>Talent And Gyan Test Series</h2><p>अपनी परीक्षा चुनें और Demo/Test Series देखें।</p></div>'}
+ if(key==="mock"){body='<div class="card"><h2>🎯 Mock Tests</h2><div id="studentMockPageList"></div></div>'}
+ if(key==="series"){body='<div class="card"><h2>📚 Test Series</h2><div id="studentSeriesPageList"></div></div>'}
+ if(key==="plans"){body='<div class="card"><h2>💳 Access Plans</h2><p>पहले Test Series चुनें, फिर अपना Plan चुनें और Payment करें।</p><button class="btn orange" onclick="pay()">Plan चुनें / Payment</button></div>'}
+ if(key==="results"){body='<div class="card"><h2>📊 My Results</h2><p>Login करने के बाद आपके दिए गए Tests के Results यहाँ दिखाई देंगे।</p></div>'}
+ if(key==="info"){body='<div class="card"><h2>ℹ️ Exam Information</h2><p>परीक्षा की तारीख, आवेदन, Admit Card, Exam Pattern, Syllabus, Result और Latest Updates यहाँ दिखाई देंगे।</p></div>'}
+ if(key==="help"){body='<div class="card"><h2>📞 सहायता</h2><p>Payment, Login या Test से संबंधित सहायता के लिए यहाँ जानकारी दी जाएगी।</p></div>'}
+ overlay.innerHTML='<div class="student-page-head"><h2>'+titles[key]+'</h2><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body">'+body+'</div>';
+ overlay.style.display="block"; window.scrollTo(0,0);
+ if(key==="mock") renderStudentMockPage();
+ if(key==="series") renderStudentSeriesPage();
+}
+function closeStudentPage(){let o=document.getElementById("studentPageOverlay");if(o)o.style.display="none"}
+function renderStudentMockPage(){let b=document.getElementById("studentMockPageList");if(!b)return;let names=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];b.innerHTML='<div class="grid">'+names.map(n=>'<div class="card"><h3>'+n+'</h3><p>Demo Mock Test</p><button class="btn orange" onclick="alert("'+n+' Demo Test खुलेगा")">Test शुरू करें</button></div>').join("")+'</div>'}
+function renderStudentSeriesPage(){let b=document.getElementById("studentSeriesPageList");if(!b)return;let names=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];b.innerHTML='<div class="grid">'+names.map(n=>'<div class="card"><h3>'+n+'</h3><p>Demo + Test Series</p><button class="btn" onclick="openExam(\''+n+'\')">Course खोलें</button></div>').join("")+'</div>'}
 </script></body></html>

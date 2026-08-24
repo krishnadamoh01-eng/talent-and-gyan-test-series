@@ -19,7 +19,13 @@
 .bqm-muted{color:#667085}
 @media(max-width:700px){.bqm-grid{grid-template-columns:1fr}}
 </style>
-</head><body><div id="homeCustomizerArea" style="margin:14px 0"><button class="btn" onclick="openBulkQuestionManager()">📚 Bulk Questions / PDF Import</button> <button class="btn" onclick="openNewsManager()">📰 News Updates</button> <button class="btn" onclick="openHomeCustomizerAdmin()">🏠 Home Page Customize</button> <button class="btn" onclick="openMultiColorAdmin()">🎨 Multi-Color Customize</button></div>
+<style id="admin-exam-manager-style">
+.exam-manager{background:#fff;border:1px solid #d8e1ec;border-radius:14px;padding:16px;margin:14px 0}
+.exam-manager-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.exam-manager select,.exam-manager input,.exam-manager textarea{width:100%;padding:10px;border:1px solid #ccd5df;border-radius:8px}
+.exam-test-list{margin-top:12px}.exam-test-row{display:flex;justify-content:space-between;gap:8px;padding:10px;background:#f6f8fb;border-radius:8px;margin:6px 0}
+@media(max-width:700px){.exam-manager-grid{grid-template-columns:1fr}}
+</style></head><body><div id="homeCustomizerArea" style="margin:14px 0"><button class="btn" onclick="openBulkQuestionManager()">📚 Bulk Questions / PDF Import</button> <button class="btn" onclick="openNewsManager()">📰 News Updates</button> <button class="btn" onclick="openHomeCustomizerAdmin()">🏠 Home Page Customize</button> <button class="btn" onclick="openMultiColorAdmin()">🎨 Multi-Color Customize</button></div>
 <div id="adminLogin" style="position:fixed;inset:0;background:#f4f7fb;display:flex;align-items:center;justify-content:center;padding:20px;z-index:99999">
 <div style="background:#fff;width:min(430px,100%);padding:28px;border-radius:16px;box-shadow:0 10px 35px #173a5c22">
 <h2 style="color:#123b68;margin-top:0">🔐 Admin Login</h2>
@@ -42,7 +48,25 @@ function checkAdmin(){
  if(sessionStorage.getItem('tgy_admin_logged')==='1') document.getElementById('adminLogin').style.display='none';
 }
 </script>
-<header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span></header><div class="layout"><aside>
+<section class="exam-manager" id="examManager">
+<h2>📚 Exam & Test Series Management</h2>
+<p>पहले परीक्षा चुनें → फिर Test/Series चुनें → उसी में पूरे Questions जोड़ें।</p>
+<div class="exam-manager-grid">
+<div><label>परीक्षा</label><select id="adminExamSelect"></select></div>
+<div><label>Test / Series</label><select id="adminTestSelect"></select></div>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+<button class="btn" onclick="adminAddExam()">➕ नई परीक्षा</button>
+<button class="btn" onclick="adminAddTest()">➕ नया Test/Series</button>
+</div>
+<div class="exam-manager-grid" style="margin-top:12px">
+<div><label>PDF से सभी Questions</label><input id="adminBulkPdf" type="file" accept=".pdf,application/pdf"><button class="btn orange" style="margin-top:6px" onclick="adminBulkPdfImport()">📄 PDF Preview</button></div>
+<div><label>Bulk Text से सभी Questions</label><textarea id="adminBulkText" rows="8" placeholder="पूरा Question Set यहाँ Paste करें..."></textarea><button class="btn" style="margin-top:6px" onclick="adminBulkTextPreview()">📝 Text Preview</button></div>
+</div>
+<div id="adminBulkStatus" style="margin-top:10px;font-weight:700"></div>
+<div id="adminBulkPreview" style="max-height:400px;overflow:auto;margin-top:10px"></div>
+<button class="btn orange" onclick="adminBulkImportAll()" style="margin-top:10px">✅ Preview के सभी Questions Import करें</button>
+</section><header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span></header><div class="layout"><aside>
 <button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('plans',this)">💳 Plans</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 <section id="tests" class="sec"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h1>Mock Tests</h1><div><button class="btn" onclick="newTest()">+ नया Test</button><button class="btn orange" onclick="pdfImport()">📄 PDF Import</button></div></div><div class="card" style="margin-bottom:15px">
@@ -405,4 +429,13 @@ async function bqmImportPdf(){
  document.getElementById("bqmText").value=text;bqmParseText();
 }
 </script>
-</body></html>
+<script id="admin-exam-manager-script">
+const AEX_DEFAULT=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];
+function aexGet(){try{return JSON.parse(localStorage.getItem("tgy_exam_structure")||"{}")}catch(e){return {}}}
+function aexSave(x){localStorage.setItem("tgy_exam_structure",JSON.stringify(x))}
+function aexInit(){let d=aexGet();d.exams=d.exams||{};AEX_DEFAULT.forEach(x=>d.exams[x]=d.exams[x]||{tests:{}});aexSave(d);let e=document.getElementById("adminExamSelect");if(!e)return;e.innerHTML=Object.keys(d.exams).map(x=>'<option>'+esc(x)+'</option>').join("");aexTests()}
+function aexTests(){let d=aexGet(),e=document.getElementById("adminExamSelect").value,t=document.getElementById("adminTestSelect");if(!t)return;let tests=(d.exams[e]&&d.exams[e].tests)||{};t.innerHTML=Object.keys(tests).map(x=>'<option>'+esc(x)+'</option>').join("")||'<option value="">-- पहले Test बनाएं --</option>'}
+function adminAddExam(){let n=prompt("परीक्षा का नाम:");if(!n)return;let d=aexGet();d.exams=d.exams||{};d.exams[n]={tests:{}};aexSave(d);aexInit();document.getElementById("adminExamSelect").value=n;aexTests()}
+function adminAddTest(){let e=document.getElementById("adminExamSelect").value;if(!e)return;let n=prompt("Test/Series का नाम:");if(!n)return;let d=aexGet();d.exams[e].tests[n]={questions:[]};aexSave(d);aexTests();document.getElementById("adminTestSelect").value=n}
+document.addEventListener("DOMContentLoaded",aexInit);
+</script></body></html>
