@@ -59,7 +59,54 @@ h1,h2,h3{color:var(--hc-heading)}
 .home-headline{width:100%;overflow:hidden;background:#fff;border-radius:12px;padding:18px 22px;text-align:center;font-size:30px;font-weight:800;color:#123b66}
 .home-headline span{display:inline-block;white-space:nowrap;animation:tgyHeadline 16s linear infinite}
 @keyframes tgyHeadline{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
-</style></head><body>
+</style>
+<style id="tgy-side-layout">
+body{padding-left:260px!important}
+.tgy-sidebar{
+ position:fixed;left:0;top:0;bottom:0;width:250px;background:#fff;
+ border-right:1px solid #dbe4ef;box-shadow:3px 0 18px rgba(18,59,104,.10);
+ z-index:40;padding:14px 12px;overflow:auto
+}
+.tgy-sidebar-logo{display:block;width:205px;height:205px;object-fit:contain;margin:4px auto 14px;border-radius:18px}
+.tgy-sidebar-title{text-align:center;color:#123b68;font-size:20px;font-weight:900;margin:0 0 14px}
+.tgy-side-card{border:1px solid #e1e8f0;border-radius:12px;overflow:hidden;background:#fff}
+.tgy-side-card h3{margin:0;padding:13px 14px;background:#f3f7ff;color:#123b68;font-size:18px}
+.tgy-side-link{display:block;width:100%;padding:12px 14px;border:0;border-top:1px solid #edf1f5;background:#fff;color:#17324f;text-decoration:none;font-size:16px;font-weight:700;text-align:left;cursor:pointer}
+.tgy-side-link:hover{background:#eef5ff}
+.tgy-side-social{margin-top:14px;padding:13px;border-radius:12px;background:#eef6ff;color:#123b68;font-weight:700;text-align:center}
+header{margin-left:-260px;padding-left:calc(5% + 260px)}
+#studentNavigation{margin-left:-260px;padding-left:calc(5% + 260px)}
+#homeNewsTicker{margin-left:-260px}
+@media(max-width:900px){
+ body{padding-left:0!important}
+ .tgy-sidebar{position:relative;top:auto;bottom:auto;width:100%;border-right:0;border-bottom:1px solid #dbe4ef;box-shadow:none;padding:10px}
+ .tgy-sidebar-logo{width:105px;height:105px;margin:2px auto 7px}
+ .tgy-sidebar-title{font-size:17px;margin-bottom:8px}
+ .tgy-side-card{display:flex;flex-wrap:wrap;justify-content:center}
+ .tgy-side-card h3{display:none}
+ .tgy-side-link{width:auto;border:0;border-radius:8px;padding:8px 10px;font-size:14px}
+ .tgy-side-social{display:none}
+ header{margin-left:0;padding-left:5%}
+ #studentNavigation{margin-left:0;padding-left:10px}
+ #homeNewsTicker{margin-left:0}
+}
+</style>
+</head><body>
+<aside class="tgy-sidebar" aria-label="Talent And Gyan Quick Links">
+  <img class="tgy-sidebar-logo" src="talent-and-gyan-logo.png" alt="Talent And Gyan Logo">
+  <div class="tgy-sidebar-title">Talent And Gyan</div>
+  <div class="tgy-side-card">
+    <h3>🔗 त्वरित लिंक</h3>
+    <button class="tgy-side-link" onclick="openStudentPage('home')">🏠 Home</button>
+    <button class="tgy-side-link" onclick="openStudentPage('mock')">🎯 Mock Test</button>
+    <button class="tgy-side-link" onclick="openStudentPage('series')">📚 Test Series</button>
+    <button class="tgy-side-link" onclick="openStudentPage('purchased')">🎓 मेरे खरीदे हुए Test</button>
+    <button class="tgy-side-link" onclick="openStudentPage('notes')">📄 PDF Notes</button>
+    <button class="tgy-side-link" onclick="openStudentPage('help')">📞 सहायता / संपर्क</button>
+  </div>
+  <div class="tgy-side-social">📚 Learn For The Success<br><small>Talent And Gyan</small></div>
+</aside>
+
 <header><div class="logo" style="font-size:34px;font-weight:900">Talent And Gyan Test Series</div></header>
 <div class="brand-nav-row" id="studentNavigation">
 <a href="#" onclick="openStudentPage('home');return false">🏠 Home</a>
