@@ -51,12 +51,17 @@ h1,h2,h3{color:var(--hc-heading)}
 .student-page-head{background:#123b68;color:#fff;padding:14px 5%;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0}
 .student-page-head h2{margin:0;color:#fff}.student-page-body{max-width:1100px;margin:20px auto;padding:0 16px}
 .student-close{border:0;border-radius:8px;padding:8px 13px;font-weight:800}
+</style><style id="password-toggle-style">
+.password-field-wrap{display:flex;gap:8px;align-items:center}
+.password-field-wrap input{flex:1}
+.password-toggle{white-space:nowrap;background:#667789!important}
 </style></head><body>
 <header><div class="logo" style="font-size:34px;font-weight:900">Talent And Gyan Test Series</div></header>
 <div class="brand-nav-row" id="studentNavigation">
 <a href="#" onclick="openStudentPage('home');return false">🏠 Home</a>
 <a href="#" onclick="openStudentPage('mock');return false">🎯 Mock Test</a>
 <a href="#" onclick="openStudentPage('series');return false">📚 Test Series</a>
+<a href="#" onclick="openStudentPage('purchased');return false">🎓 My Purchased Tests</a>
 <a href="#" onclick="openStudentPage('plans');return false">💳 Plans</a>
 <a href="#" onclick="openStudentPage('results');return false">📊 Result</a>
 <a href="#" onclick="openStudentPage('info');return false">ℹ️ Exam Info</a>
@@ -110,7 +115,7 @@ const demoQuestions = [
 ];
 const examDemo = ["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant","अन्य परीक्षाएँ"];
 function openExam(exam){
-  const list = tests.filter(t => t.exam === exam);
+  const list = tests.filter(t => t.exam === exam && (t.demo===true || hasPurchasedTest(t)));
   let html = `<h2>${esc(exam)}</h2><p class="muted">पहले Demo Test मुफ्त में दें। Demo के बाद Test Series खरीदने का विकल्प मिलेगा।</p>
   <div class="card" style="border:2px solid #f07800"><h3>🎁 ${esc(exam)} Demo Test</h3><p>5 Questions • Demo Test</p><button class="btn orange" onclick="startExamDemo('${esc(exam)}')">Free Demo Test दें</button></div>`;
   if(list.length){
@@ -328,13 +333,45 @@ function openStudentPage(key){
  if(key==="plans"){body='<div class="card"><h2>💳 Access Plans</h2><p>पहले Test Series चुनें, फिर अपना Plan चुनें और Payment करें।</p><button class="btn orange" onclick="pay()">Plan चुनें / Payment</button></div>'}
  if(key==="results"){body='<div class="card"><h2>📊 My Results</h2><p>Login करने के बाद आपके दिए गए Tests के Results यहाँ दिखाई देंगे।</p></div>'}
  if(key==="info"){body='<div class="card"><h2>ℹ️ Exam Information</h2><p>परीक्षा की तारीख, आवेदन, Admit Card, Exam Pattern, Syllabus, Result और Latest Updates यहाँ दिखाई देंगे।</p></div>'}
+ if(key==="purchased"){body='<div class="card"><h2>🎓 My Purchased Tests</h2><div id="myPurchasedTests"></div></div>'}
  if(key==="help"){body='<div class="card"><h2>📞 सहायता</h2><p>Payment, Login या Test से संबंधित सहायता के लिए यहाँ जानकारी दी जाएगी।</p></div>'}
  overlay.innerHTML='<div class="student-page-head"><h2>'+titles[key]+'</h2><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body">'+body+'</div>';
  overlay.style.display="block"; window.scrollTo(0,0);
  if(key==="mock") renderStudentMockPage();
  if(key==="series") renderStudentSeriesPage();
+ if(key==="purchased") renderMyPurchasedTests();
 }
 function closeStudentPage(){let o=document.getElementById("studentPageOverlay");if(o)o.style.display="none"}
 function renderStudentMockPage(){let b=document.getElementById("studentMockPageList");if(!b)return;let names=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];b.innerHTML='<div class="grid">'+names.map(n=>'<div class="card"><h3>'+n+'</h3><p>Demo Mock Test</p><button class="btn orange" onclick="alert("'+n+' Demo Test खुलेगा")">Test शुरू करें</button></div>').join("")+'</div>'}
 function renderStudentSeriesPage(){let b=document.getElementById("studentSeriesPageList");if(!b)return;let names=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];b.innerHTML='<div class="grid">'+names.map(n=>'<div class="card"><h3>'+n+'</h3><p>Demo + Test Series</p><button class="btn" onclick="openExam(\''+n+'\')">Course खोलें</button></div>').join("")+'</div>'}
-</script></body></html>
+</script><script id="password-toggle-script">
+function togglePassword(id,btn){
+  const el=document.getElementById(id);
+  if(!el)return;
+  if(el.type==="password"){
+    el.type="text";
+    btn.textContent="🙈 छिपाएँ";
+  }else{
+    el.type="password";
+    btn.textContent="👁️ दिखाएँ";
+  }
+}
+</script>
+<script id="purchased-access-student">
+function getCurrentStudent(){
+ try{return JSON.parse(localStorage.getItem("tgy_user")||"null")}catch(e){return null}
+}
+function hasPurchasedTest(t){
+ const u=getCurrentStudent(); if(!u)return false;
+ const acc=u.purchasedTests||[];
+ return acc.some(x=>x===t.name || x===t.id || x===t.course || x===t.exam);
+}
+function renderMyPurchasedTests(){
+ const b=document.getElementById("myPurchasedTests"); if(!b)return;
+ const u=getCurrentStudent();
+ if(!u){b.innerHTML='<p>पहले Login करें।</p><button class="btn" onclick="openAuth(\'login\')">🔐 Login</button>';return}
+ const purchased=u.purchasedTests||[];
+ const mine=tests.filter(t=>purchased.includes(t.name)||purchased.includes(t.exam)||purchased.includes(t.course)||purchased.includes(t.id));
+ b.innerHTML=mine.length?mine.map(t=>`<div class="card" style="margin:8px 0"><h3>${esc(t.name)}</h3><p>${t.questions.length} Questions • ${t.time} मिनट</p><button class="btn orange" onclick="openTest(${tests.indexOf(t)})">Test शुरू करें</button></div>`).join(""):'<p>अभी कोई खरीदा हुआ Test नहीं है।</p>';
+}
+</body></html>

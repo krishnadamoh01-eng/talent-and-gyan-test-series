@@ -19,59 +19,67 @@
 .bqm-muted{color:#667085}
 @media(max-width:700px){.bqm-grid{grid-template-columns:1fr}}
 </style>
-<style id="admin-exam-manager-style">
-.exam-manager{background:#fff;border:1px solid #d8e1ec;border-radius:14px;padding:16px;margin:14px 0}
-.exam-manager-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.exam-manager select,.exam-manager input,.exam-manager textarea{width:100%;padding:10px;border:1px solid #ccd5df;border-radius:8px}
-.exam-test-list{margin-top:12px}.exam-test-row{display:flex;justify-content:space-between;gap:8px;padding:10px;background:#f6f8fb;border-radius:8px;margin:6px 0}
-@media(max-width:700px){.exam-manager-grid{grid-template-columns:1fr}}
-</style></head><body><div id="adminLogin style="position:fixed;inset:0;background:#f4f7fb;display:flex;align-items:center;justify-content:center;padding:20px;z-index:99999">
-<div style="background:#fff;width:min(430px,100%);padding:28px;border-radius:16px;box-shadow:0 10px 35px #173a5c22">
-<h2 style="color:#123b68;margin-top:0">🔐 Admin Login</h2>
-<p class="muted">केवल Administrator के लिए</p>
-<label>Admin Email</label><input id="adminEmail" type="email" placeholder="Admin Email">
-<label>Password</label><input id="adminPass" type="password" placeholder="Password">
-<button class="btn" onclick="adminLogin()">Login</button>
-<p id="adminLoginMsg" style="color:#c62828"></p>
-</div></div>
+
+<style id="admin-auth-gate-style">
+body.admin-locked > header,
+body.admin-locked > .layout,
+body.admin-locked > main,
+body.admin-locked > section,
+body.admin-locked > .modal,
+body.admin-locked > .exam-manager{display:none!important}
+#adminLogin{z-index:999999!important}
+#adminLogin .login-box{width:min(430px,100%);background:#fff;padding:28px;border-radius:16px;box-shadow:0 10px 35px rgba(23,58,92,.14)}
+.admin-logout{margin-left:auto!important;background:#c62828!important;color:#fff!important}
+</style>
+<style id="password-toggle-style">
+.password-field-wrap{display:flex;gap:8px;align-items:center}
+.password-field-wrap input{flex:1}
+.password-toggle{white-space:nowrap;background:#667789!important}
+</style></head><body><div id="adminLogin" style="position:fixed;inset:0;background:#f4f7fb;display:flex;align-items:center;justify-content:center;padding:20px;z-index:999999">
+  <div class="login-box">
+    <h2 style="color:#123b68;margin-top:0">🔐 Admin Login</h2>
+    <p class="muted">केवल Administrator के लिए</p>
+    <label>Admin Email</label>
+    <input id="adminEmail" type="email" placeholder="Admin Email" autocomplete="username">
+    <label>Password</label>
+    <div class="password-field-wrap"><input id="adminPass" type="password" placeholder="Password" autocomplete="current-password"><button type="button" class="btn password-toggle" onclick="togglePassword('adminPass',this)">👁️ दिखाएँ</button></div>
+    <button class="btn" onclick="adminLogin()">Login</button>
+    <p id="adminLoginMsg" style="color:#c62828"></p>
+  </div>
+</div>
 <script>
+function setAdminAuth(on){
+  document.body.classList.toggle('admin-locked', !on);
+  const l=document.getElementById('adminLogin');
+  if(l) l.style.display=on?'none':'flex';
+}
 function adminLogin(){
  const e=document.getElementById('adminEmail').value.trim().toLowerCase();
  const p=document.getElementById('adminPass').value;
  if(e==='krishna.damoh01@gmail.com' && p==='Admintg@123'){
    sessionStorage.setItem('tgy_admin_logged','1');
-   document.getElementById('adminLogin').style.display='none';
- } else document.getElementById('adminLoginMsg').textContent='Admin Email या Password गलत है।';
+   setAdminAuth(true);
+   if(typeof renderAll==='function') renderAll();
+ } else {
+   document.getElementById('adminLoginMsg').textContent='Admin Email या Password गलत है।';
+ }
+}
+function adminLogout(){
+ sessionStorage.removeItem('tgy_admin_logged');
+ setAdminAuth(false);
+ const p=document.getElementById('adminPass'); if(p)p.value='';
 }
 function checkAdmin(){
- if(sessionStorage.getItem('tgy_admin_logged')==='1') document.getElementById('adminLogin').style.display='none';
+ setAdminAuth(sessionStorage.getItem('tgy_admin_logged')==='1');
 }
 </script>
-<section class="exam-manager" id="examManager">
-<h2>📚 Exam & Test Series Management</h2>
-<p>पहले परीक्षा चुनें → फिर Test/Series चुनें → उसी में पूरे Questions जोड़ें।</p>
-<div class="exam-manager-grid">
-<div><label>परीक्षा</label><select id="adminExamSelect"></select></div>
-<div><label>Test / Series</label><select id="adminTestSelect"></select></div>
-</div>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-<button class="btn" onclick="adminAddExam()">➕ नई परीक्षा</button>
-<button class="btn" onclick="adminAddTest()">➕ नया Test/Series</button>
-</div>
-<div class="exam-manager-grid" style="margin-top:12px">
-<div><label>PDF से सभी Questions</label><input id="adminBulkPdf" type="file" accept=".pdf,application/pdf"><button class="btn orange" style="margin-top:6px" onclick="adminBulkPdfImport()">📄 PDF Preview</button></div>
-<div><label>Bulk Text से सभी Questions</label><textarea id="adminBulkText" rows="8" placeholder="पूरा Question Set यहाँ Paste करें..."></textarea><button class="btn" style="margin-top:6px" onclick="adminBulkTextPreview()">📝 Text Preview</button></div>
-</div>
-<div id="adminBulkStatus" style="margin-top:10px;font-weight:700"></div>
-<div id="adminBulkPreview" style="max-height:400px;overflow:auto;margin-top:10px"></div>
-<button class="btn orange" onclick="adminBulkImportAll()" style="margin-top:10px">✅ Preview के सभी Questions Import करें</button>
-</section><header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span></header><div class="layout"><aside>
+<header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
 <button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('plans',this)">💳 Plans</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 
 <section id="tests" class="sec">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-    <h1>📝 Mock Tests</h1>
+    <h1>📝 Mock Tests — Questions Management</h1>
     <button class="btn" onclick="mtNewTest()">➕ नया Test / Series</button>
   </div>
 
@@ -94,7 +102,7 @@ function checkAdmin(){
 
   <div class="card">
     <h2>2️⃣ Questions एक साथ जोड़ें</h2>
-    <p class="muted">पहले ऊपर परीक्षा और Test चुनें। फिर PDF या Bulk Text से पूरे Questions एक साथ जोड़ें।</p>
+    <p class="muted">यहीं पर परीक्षा और Test चुनें और इसी Mock Test के अंदर PDF, Bulk Text या Manual तरीके से Questions जोड़ें।</p>
 
     <div class="row">
       <div>
@@ -156,7 +164,7 @@ function show(id,b){document.querySelectorAll(".sec").forEach(x=>x.classList.rem
 
 function renderUsers(){
  const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
- document.getElementById("ut").innerHTML=users.length?users.map((u,i)=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.mobile||"-")}</td><td>${esc(u.created||"-")}</td><td>${u.access?`<span class="badge">${esc(u.access)}</span>`:"No Access"}</td><td><button class="btn" onclick="giveUserAccess(${i})">Give Access</button> <button class="btn danger" onclick="removeUserAccess(${i})">Remove</button></td></tr>`).join(""):"<tr><td colspan='6'>अभी कोई User Register नहीं है।</td></tr>";
+ document.getElementById("ut").innerHTML=users.length?users.map((u,i)=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.mobile||"-")}</td><td>${esc(u.created||"-")}</td><td>${u.access?`<span class="badge">${esc(u.access)}</span>`:"No Access"}</td><td><button class="btn" onclick="giveUserAccess(${i})">Give Access</button> <button class="btn orange" onclick="managePurchasedTests(${i})">🎓 Purchased Tests</button> <button class="btn danger" onclick="removeUserAccess(${i})">Remove</button></td></tr>`).join(""):"<tr><td colspan='6'>अभी कोई User Register नहीं है।</td></tr>";
 }
 function giveUserAccess(i){
  const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
@@ -316,11 +324,24 @@ function importParsedPdf(){
   document.getElementById('pdfPreview').innerHTML=`<div class="card"><b>✅ Import सफल</b><p>${qs.length} Questions को <b>${esc(name)}</b> में जोड़ दिया गया है।</p></div>`;
 }
 function renderPayments(){let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]");document.getElementById("pt").innerHTML=a.length?a.map((x,i)=>`<tr><td>${esc(x.name||"-")}</td><td>${esc(x.email||"-")}</td><td>${esc(x.course||"-")}</td><td>${esc(x.days?x.days+" दिन":x.plan||"-")}</td><td>₹${esc(x.amount||"-")}</td><td>${esc(x.utr||"-")}</td><td>${esc(x.status||"Pending")}</td><td><button class="btn" onclick="activate(${i})">Give Access</button></td></tr>`).join(""):"<tr><td colspan='8'>अभी कोई Payment Request नहीं।</td></tr>"}
-function activate(i){let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]");a[i].status="Access Activated";localStorage.setItem("tgy_payments",JSON.stringify(a));alert("Access Activated (Demo).")}
+function activate(i){
+ let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]"),p=a[i]; if(!p)return;
+ p.status="Access Activated"; localStorage.setItem("tgy_payments",JSON.stringify(a));
+ let users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
+ const u=users.find(x=>x.email===p.email);
+ if(u){
+   u.purchasedTests=u.purchasedTests||[];
+   if(p.course && !u.purchasedTests.includes(p.course))u.purchasedTests.push(p.course);
+   u.access=`Purchased • ${u.purchasedTests.length} Access`;
+   localStorage.setItem("tgy_users",JSON.stringify(users));
+ }
+ renderPayments(); renderUsers();
+ alert("✅ Access Activated. विद्यार्थी को खरीदा हुआ Course/Test दिखेगा।");
+}
 function renderComplaints(){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");document.getElementById("badge").textContent=a.filter(x=>x.status!=="Resolved").length+" New";document.getElementById("ct").innerHTML=a.length?a.map((x,i)=>`<tr><td>${esc(x.name||"-")}</td><td>${esc(x.email||"-")}</td><td>${esc(x.type)}</td><td>${esc(x.utr||"-")}</td><td>${esc(x.msg||"-")}</td><td><button class="btn" onclick="resolve(${i})">Resolve</button></td></tr>`).join(""):"<tr><td colspan='6'>अभी कोई शिकायत नहीं।</td></tr>"}
 function resolve(i){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");a[i].status="Resolved";localStorage.setItem("tgy_help",JSON.stringify(a));renderAll()}
 function closeM(){document.getElementById("modal").style.display="none"}renderAll();
-</script><script>checkAdmin();</script>
+</script><script>document.addEventListener("DOMContentLoaded",checkAdmin);</script>
 <script id="home-customizer-admin-script">
 function openHomeCustomizerAdmin(){
  const c=JSON.parse(localStorage.getItem("tgy_home_custom")||'{"title":"Talent And Gyan Test Series","subtitle":"प्रतियोगी परीक्षाओं की तैयारी के लिए Test Series","announcement":"","examInfo":{"examDate":true,"applyStart":true,"applyLast":true,"admitCard":true,"examDate2":true,"pattern":true,"syllabus":true,"result":true}}');
@@ -484,128 +505,42 @@ async function bqmImportPdf(){
  document.getElementById("bqmText").value=text;bqmParseText();
 }
 </script>
-<script id="admin-exam-manager-script">
-const AEX_DEFAULT=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];
-function aexGet(){try{return JSON.parse(localStorage.getItem("tgy_exam_structure")||"{}")}catch(e){return {}}}
-function aexSave(x){localStorage.setItem("tgy_exam_structure",JSON.stringify(x))}
-function aexInit(){
- let d=aexGet();d.exams=d.exams||{};
- AEX_DEFAULT.forEach(x=>d.exams[x]=d.exams[x]||{tests:{}});
- aexSave(d);
- const e=document.getElementById("adminExamSelect");if(!e)return;
- e.onchange=aexTests;
- e.innerHTML=Object.keys(d.exams).map(x=>'<option>'+esc(x)+'</option>').join("");
- aexTests();
-}
-function aexTests(){
- let d=aexGet(),e=document.getElementById("adminExamSelect").value,t=document.getElementById("adminTestSelect");
- if(!t)return;
- let tests=(d.exams[e]&&d.exams[e].tests)||{};
- t.innerHTML=Object.keys(tests).map(x=>'<option>'+esc(x)+'</option>').join("")||'<option value="">-- पहले Test बनाएं --</option>';
-}
-function adminAddExam(){
- let n=prompt("परीक्षा का नाम:");if(!n)return;
- let d=aexGet();d.exams=d.exams||{};d.exams[n]={tests:{}};aexSave(d);aexInit();
- document.getElementById("adminExamSelect").value=n;aexTests();
-}
-function adminAddTest(){
- let e=document.getElementById("adminExamSelect").value;if(!e)return;
- let n=prompt("Test/Series का नाम:");if(!n)return;
- let d=aexGet();d.exams[e]=d.exams[e]||{tests:{}};d.exams[e].tests[n]={questions:[]};
- aexSave(d);aexTests();document.getElementById("adminTestSelect").value=n;
-}
 
-function bqmClean(t){
- return String(t||"").replace(/\u00a0/g," ").replace(/\r/g,"\n")
- .replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n").trim();
-}
-function bqmParseText(raw){
- let t=bqmClean(raw);
- // Recognize common question starts. If none are numbered, split on "प्रश्न"/"Question".
- let re=/(?:^|\n)\s*(?:(?:प्रश्न|प्र\.)\s*(?:क्रमांक\s*)?|Question\s*|Q\.?\s*)?(\d{1,4})\s*[\.\):-]?\s+/gi;
- let starts=[],m;
- while((m=re.exec(t))!==null) starts.push({start:m.index,end:re.lastIndex});
- if(starts.length<1){
-   const rr=/(?:^|\n)\s*(?:प्रश्न|Question|Q\.?)\s*[:.)-]?\s*/gi;
-   while((m=rr.exec(t))!==null) starts.push({start:m.index,end:rr.lastIndex});
- }
- if(starts.length<1) return [];
- const out=[];
- for(let i=0;i<starts.length;i++){
-   let block=t.slice(starts[i].end,i+1<starts.length?starts[i+1].start:t.length).trim();
-   if(!block)continue;
-   let marker=/(\(\s*A\s*\)|\bA\s*[.)-]|\(\s*अ\s*\)|\bअ\s*[.)-])/i.exec(block);
-   if(!marker)continue;
-   let q=block.slice(0,marker.index).replace(/^(?:प्रश्न|Question|Q\.?)\s*[:.)-]?\s*/i,"").trim();
-   let op=block.slice(marker.index);
-   let marks=[...op.matchAll(/(?:\(\s*([A-Da-d])\s*\)|\b([A-Da-d])\s*[.)-]|\(\s*([अ-ब])\s*\)|\b([अ-ब])\s*[.)-])/g)];
-   if(marks.length<4)continue;
-   let opts=["","","",""];
-   for(let j=0;j<4;j++){
-     let mm=marks[j], lab=(mm[1]||mm[2]||"").toUpperCase();
-     let idx=/^[A-D]$/.test(lab)?lab.charCodeAt(0)-65:j;
-     let from=mm.index+mm[0].length, to=j<3?marks[j+1].index:op.length;
-     opts[idx]=op.slice(from,to).replace(/\s+/g," ").trim();
-   }
-   let ans=(block.match(/(?:सही\s*उत्तर|उत्तर|Answer|Ans\.?|Correct\s*Answer|सही\s*विकल्प)\s*[:\-]?\s*\(?([A-Da-dअ-ब1-4IVXivx]+)\)?/i)||[])[1]||"";
-   let ex=(block.match(/(?:सामान्य\s*जानकारी|महत्वपूर्ण\s*जानकारी|जानकारी|व्याख्या|Explanation|Solution|समाधान|Note|नोट)\s*[:\-]?\s*([\s\S]*)$/i)||[])[1]||"";
-   out.push({q,o:opts,answer:ans,ex:ex.trim()});
- }
- return out;
-}
-function renderBqmPreview(qs){
- const count=document.getElementById("adminBulkStatus"), box=document.getElementById("adminBulkPreview");
- count.innerHTML=`✅ <b>${qs.length} Questions मिले</b>`;
- box.innerHTML=qs.length?qs.map((x,i)=>`<div class="card" style="margin:8px 0;padding:12px"><b>प्रश्न ${i+1}.</b> ${esc(x.q)}<br><br>(A) ${esc(x.o[0])}<br>(B) ${esc(x.o[1])}<br>(C) ${esc(x.o[2])}<br>(D) ${esc(x.o[3])}<br><b>सही उत्तर:</b> ${esc(x.answer)}${x.ex?`<br><b>जानकारी:</b> ${esc(x.ex)}`:""}</div>`).join(""):"❌ कोई Question नहीं मिला। Format जाँचें।";
- localStorage.setItem("tgy_bulk_preview",JSON.stringify(qs));
-}
-function adminBulkTextPreview(){
- const raw=document.getElementById("adminBulkText").value;
- if(!raw.trim()){alert("पहले Questions का पूरा Text डालें।");return}
- renderBqmPreview(bqmParseText(raw));
-}
-async function adminBulkPdfImport(){
- const f=document.getElementById("adminBulkPdf").files[0];
- if(!f){alert("पहले PDF चुनें।");return}
- const status=document.getElementById("adminBulkStatus");
- status.innerHTML="⏳ PDF पढ़ी जा रही है...";
- try{
-   if(!window.pdfjsLib){status.innerHTML="❌ PDF Reader उपलब्ध नहीं है।";alert("इस Admin page में PDF.js library उपलब्ध नहीं है। पहले PDF.js जोड़ना जरूरी है।");return}
-   const buf=await f.arrayBuffer();
-   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
-   let text="";
-   for(let i=1;i<=pdf.numPages;i++){
-     const page=await pdf.getPage(i),c=await page.getTextContent();
-     // Preserve item boundaries and pages.
-     text+=c.items.map(x=>x.str).join(" ")+"\\n";
-   }
-   document.getElementById("adminBulkText").value=text;
-   const qs=bqmParseText(text);
-   renderBqmPreview(qs);
- }catch(err){
-   console.error(err);status.innerHTML="❌ PDF पढ़ने में समस्या हुई।";
-   alert("PDF पढ़ने में समस्या: "+err.message);
- }
-}
-function adminBulkImportAll(){
- const e=document.getElementById("adminExamSelect").value,t=document.getElementById("adminTestSelect").value;
- if(!e||!t){alert("पहले परीक्षा और Test/Series चुनें।");return}
- const qs=JSON.parse(localStorage.getItem("tgy_bulk_preview")||"[]");
- if(!qs.length){alert("पहले PDF Preview या Text Preview चलाएँ।");return}
- let d=aexGet();d.exams[e]=d.exams[e]||{tests:{}};d.exams[e].tests[t]=d.exams[e].tests[t]||{questions:[]};
- d.exams[e].tests[t].questions=qs.map((x,i)=>({...x,number:i+1}));
- aexSave(d);
- document.getElementById("adminBulkStatus").innerHTML=`✅ <b>${qs.length} Questions ${esc(e)} → ${esc(t)} में Import हो गए।</b>`;
-}
-document.addEventListener("DOMContentLoaded",aexInit);
-</script>
 <script id="mock-test-final-system">
 const MT_DEFAULT_EXAMS=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];
-function mtStore(){try{return JSON.parse(localStorage.getItem("tgy_exam_structure")||"{}")}catch(e){return {}}}
-function mtSaveStore(x){localStorage.setItem("tgy_exam_structure",JSON.stringify(x))}
+function mtStore(){
+ let flat=[];try{flat=JSON.parse(localStorage.getItem("tgy_tests")||"[]")}catch(e){flat=[]}
+ const d={exams:{}};
+ MT_DEFAULT_EXAMS.forEach(e=>d.exams[e]={tests:{}});
+ (Array.isArray(flat)?flat:[]).forEach((t,i)=>{
+   const exam=t.exam||"MP पटवारी",key=t.name||("Test "+(i+1));
+   d.exams[exam]=d.exams[exam]||{tests:{}};
+   d.exams[exam].tests[key]={...t,name:key,exam,questions:t.questions||[],time:t.time||60,published:t.published!==false};
+ });
+ return d;
+}
+function mtSaveStore(x){
+ const flat=[];
+ Object.entries(x.exams||{}).forEach(([exam,v])=>Object.entries(v.tests||{}).forEach(([key,t])=>{
+   flat.push({...t,name:t.name||key,exam:t.exam||exam,questions:t.questions||[],time:t.time||60,published:t.published!==false});
+ }));
+ localStorage.setItem("tgy_tests",JSON.stringify(flat));
+}
 function mtEsc(v){return typeof esc==="function"?esc(v):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 
+function mtEnsureDefaults(){
+  let arr=[];
+  try{arr=JSON.parse(localStorage.getItem("tgy_tests")||"[]")}catch(e){arr=[]}
+  if(!Array.isArray(arr)||!arr.length){
+    arr=[
+      {name:"MP पटवारी Mock Test 01",exam:"MP पटवारी",time:60,published:true,questions:[]},
+      {name:"MPPSC Mock Test 01",exam:"MPPSC",time:60,published:true,questions:[]}
+    ];
+    localStorage.setItem("tgy_tests",JSON.stringify(arr));
+  }
+}
 function mtInit(){
+ mtEnsureDefaults();
  let d=mtStore(); d.exams=d.exams||{};
  MT_DEFAULT_EXAMS.forEach(e=>{d.exams[e]=d.exams[e]||{tests:{}}});
  mtSaveStore(d);
@@ -639,8 +574,10 @@ function mtAddExam(){
 function mtAddTest(){
  const e=document.getElementById("mtExam").value;if(!e){alert("पहले परीक्षा चुनें।");return}
  const n=prompt("नए Test / Test Series का नाम लिखें:");if(!n?.trim())return;
- const d=mtStore();d.exams[e].tests[n.trim()]={name:n.trim(),time:60,questions:[],published:true};
+ const d=mtStore();d.exams[e]=d.exams[e]||{tests:{}};
+ d.exams[e].tests[n.trim()]={name:n.trim(),exam:e,time:60,questions:[],published:true};
  mtSaveStore(d);mtLoadTests();document.getElementById("mtTest").value=n.trim();mtLoadSelected();mtRenderAll();
+ alert("✅ नया Test बन गया। अब इसी Test में Questions जोड़ सकते हैं।");
 }
 function mtNewTest(){mtAddTest()}
 function mtSaveMeta(){
@@ -804,4 +741,42 @@ function mtDeleteTest(e,t){
  const d=mtStore();delete d.exams[e].tests[t];mtSaveStore(d);mtLoadTests();mtRenderAll();mtRenderQuestions();
 }
 document.addEventListener("DOMContentLoaded",mtInit);
-</script></body></html>
+</script><script id="password-toggle-script">
+function togglePassword(id,btn){
+  const el=document.getElementById(id);
+  if(!el)return;
+  if(el.type==="password"){
+    el.type="text";
+    btn.textContent="🙈 छिपाएँ";
+  }else{
+    el.type="password";
+    btn.textContent="👁️ दिखाएँ";
+  }
+}
+</script>
+<script id="purchased-access-admin">
+function managePurchasedTests(i){
+ const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
+ const u=users[i]; if(!u)return;
+ const all=JSON.parse(localStorage.getItem("tgy_tests")||"[]");
+ const examNames=[...new Set(all.map(t=>t.exam).filter(Boolean))];
+ const selected=u.purchasedTests||[];
+ document.getElementById("mb").innerHTML=`<h2>🎓 ${esc(u.name)} — Purchased Tests</h2>
+ <p><b>Email:</b> ${esc(u.email)}</p>
+ <p>जिस Test/Course को यहाँ चुनकर Save करेंगे, वही विद्यार्थी को <b>My Purchased Tests</b> में दिखाई देगा।</p>
+ <label>Test/Course चुनें</label>
+ <select id="purchaseTestSelect" multiple size="8">${all.map(t=>`<option value="${esc(t.name)}" ${selected.includes(t.name)?"selected":""}>${esc(t.exam||"")} — ${esc(t.name)}</option>`).join("")}</select>
+ <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="savePurchasedTests(${i})">💾 Access Save</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
+ document.getElementById("modal").style.display="flex";
+}
+function savePurchasedTests(i){
+ const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
+ const vals=[...document.querySelectorAll("#purchaseTestSelect option:checked")].map(x=>x.value);
+ users[i].purchasedTests=vals;
+ users[i].access=vals.length?`Purchased Tests • ${vals.length} Test`:"No Access";
+ localStorage.setItem("tgy_users",JSON.stringify(users));
+ document.getElementById("modal").style.display="none";
+ renderUsers();
+ alert(`✅ ${vals.length} Test का Access दे दिया गया। अब विद्यार्थी को वही Tests दिखाई देंगे।`);
+}
+</body></html>
