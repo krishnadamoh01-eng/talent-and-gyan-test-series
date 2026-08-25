@@ -100,7 +100,7 @@ header{margin-left:-260px;padding-left:calc(5% + 260px)}
 .tgy-auth-buttons a.register{background:#f07800!important;color:#fff!important}
 .tgy-auth-buttons button{padding:8px 11px!important}
 @media(max-width:900px){.tgy-auth-buttons{width:100%;margin-left:0!important;justify-content:center}}
-</style></head><body>
+</style><style id="tgy-auth-force">#studentNavigation #studentAuthTop{display:flex!important;visibility:visible!important;opacity:1!important;margin-left:auto!important;gap:8px!important;align-items:center!important}#studentNavigation #studentAuthTop a{display:inline-block!important;color:#fff!important;background:#0b5ed7!important;padding:8px 12px!important;border-radius:7px!important;text-decoration:none!important;font-weight:800!important}.tgy-auth-buttons a.register{background:#f07800!important}</style></head><body>
 <aside class="tgy-sidebar" aria-label="Talent And Gyan Quick Links">
   <img class="tgy-sidebar-logo" src="talent-and-gyan-logo.png" alt="Talent And Gyan Logo">
   <div class="tgy-sidebar-title">Talent And Gyan</div>
@@ -128,7 +128,7 @@ header{margin-left:-260px;padding-left:calc(5% + 260px)}
 
 <a href="#" onclick="openStudentPage('help');return false">📞 सहायता</a><span id="studentAuthTop" class="tgy-auth-buttons"></span>
 
-</div><div id="homeNewsTicker" aria-label="Latest Updates"></div>
+</div>
 <section class="hero" id="home" style="min-height:150px;display:flex;align-items:center;justify-content:center;padding:20px 5%">
   <div id="homeHeadline" class="home-headline" aria-live="polite"></div>
 </section>
@@ -183,7 +183,7 @@ function openExam(exam){
  let html=`<div class="exam-inner-head"><h2>📚 ${esc(exam)}</h2><p class="muted">इस परीक्षा के Demo और उपलब्ध Test Series यहाँ दिखाई देंगे।</p></div>`;
  html+=`<div class="card" style="border:2px solid #f07800"><h3>🎁 ${esc(exam)} Demo Test</h3><p>Demo Test उपलब्ध है।</p><button class="btn orange" onclick="startExamDemo('${esc(exam)}')">Free Demo Test दें</button></div>`;
  if(list.length){
-   html+=`<h3>📚 उपलब्ध Test Series</h3>`+list.map(t=>`<div class="card"><b>${esc(t.name)}</b><p>${t.questions.length} Questions • ${t.time} मिनट</p><${hasPurchasedTest(t)?`<button class="btn" onclick="closeExam();openTest(${tests.indexOf(t)})">▶️ Test दें</button>`:`<button class="btn orange" onclick="buyTest('${esc(t.name)}',0)">💳 ₹${Number(t.pricing?.oneTest?.offer)||Number(t.pricing?.oneTest?.mrp)||"Price देखें"}</button>`}</div>`).join("");
+   html+=`<h3>📚 उपलब्ध Test Series</h3>`+list.map(t=>`<div class="card"><b>${esc(t.name)}</b><p>${t.questions.length} Questions • ${t.time} मिनट</p>${hasPurchasedTest(t)?`<button class="btn" onclick="closeExam();openTest(${tests.indexOf(t)})">▶️ Test दें</button>`:`<button class="btn orange" onclick="buyTest('${esc(t.name)}',0)">💳 ₹${Number(t.pricing?.oneTest?.offer)||Number(t.pricing?.oneTest?.mrp)||"Price देखें"}</button>`}</div>`).join("");
  }else{
    html+=`<div class="card"><h3>📚 Test Series</h3><p class="muted">इस परीक्षा की Test Series अभी <b>Coming Soon</b> है। जल्द ही यहाँ Test Series जोड़ी जाएगी।</p></div>`;
  }
@@ -501,6 +501,7 @@ function renderMyPurchasedTests(){
  }).join("");
 }
 
+</script>
 <script id="student-notes-viewer">
 function getNotes(){
  try{return JSON.parse(localStorage.getItem("tgy_pdf_notes")||"[]")}catch(e){return []}
@@ -511,7 +512,7 @@ function renderStudentNotes(){
  if(!notes.length){b.innerHTML='<p>अभी कोई PDF Notes उपलब्ध नहीं है।</p>';return}
  b.innerHTML=notes.map((n,i)=>`<div class="card" style="margin:10px 0">
  <h3>📄 ${esc(n.title||("Notes "+(i+1)))}</h3>
- <p class="muted">${esc(n.exam||"")} ${n.pages?`• ${n.pages} Pages`:""}</p>
+ <p class="muted">${esc(n.exam||"")} ${n.pages?`• ${n.pages} Pages`:""} ${Number(n.mrp)||Number(n.offer)?`• MRP ₹${n.mrp||0} ${n.offer?`• Offer ₹${n.offer}`:""}`:""}</p>
  <button class="btn" onclick="viewPdfNote(${i})">📖 साइट पर पढ़ें</button>
  </div>`).join("");
 }
@@ -545,6 +546,7 @@ document.addEventListener("keydown",e=>{
  const viewer=document.getElementById("pdfNoteViewer");
  if(viewer && (e.ctrlKey||e.metaKey) && ["s","p","u"].includes(e.key.toLowerCase())){e.preventDefault();e.stopPropagation()}
 });
+</script>
 <script id="home-headline-script">
 function renderHomeHeadline(){
  const el=document.getElementById("homeHeadline");if(!el)return;

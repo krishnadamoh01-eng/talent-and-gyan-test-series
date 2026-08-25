@@ -74,7 +74,7 @@ function checkAdmin(){
 }
 </script>
 <header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
-<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('plans',this)">💳 Plans</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
+<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('pricing',this)">💰 Pricing</button><button onclick="show('offers',this)">🎟️ Offers</button><button onclick="show('plans',this)">💳 Plans</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 
 <section id="tests" class="sec">
@@ -187,6 +187,11 @@ function checkAdmin(){
   <input id="noteTitle" placeholder="जैसे MP पटवारी Notes">
   <label>Exam</label>
   <input id="noteExam" placeholder="MP पटवारी">
+  <div class="row">
+   <div><label>💰 MRP (₹)</label><input id="noteMrp" type="number" min="0" placeholder="जैसे 50"></div>
+   <div><label>🏷️ Offer Price (₹)</label><input id="noteOffer" type="number" min="0" placeholder="जैसे 30"></div>
+   <div><label>📅 Available Till</label><input id="noteUntil" type="date"></div>
+  </div>
   <label>📄 PDF Upload करें</label>
   <input id="notePdfFile" type="file" accept="application/pdf,.pdf" style="width:100%;padding:10px">
   <div id="noteUploadStatus" class="muted" style="margin:8px 0"></div>
@@ -198,55 +203,29 @@ function checkAdmin(){
 function getAdminNotes(){try{return JSON.parse(localStorage.getItem("tgy_pdf_notes")||"[]")}catch(e){return[]}}
 function saveAdminNotes(a){localStorage.setItem("tgy_pdf_notes",JSON.stringify(a))}
 function uploadPdfNote(){
- const title=document.getElementById("noteTitle").value.trim();
- const exam=document.getElementById("noteExam").value.trim();
- const file=document.getElementById("notePdfFile").files[0];
- const st=document.getElementById("noteUploadStatus");
- if(!title){alert("Notes का नाम लिखें।");return}
- if(!file){alert("पहले PDF चुनें।");return}
- if(file.type!=="application/pdf" && !file.name.toLowerCase().endsWith(".pdf")){alert("केवल PDF file upload करें।");return}
- st.textContent="⏳ PDF तैयार हो रही है...";
- const reader=new FileReader();
- reader.onload=function(){
-   try{
-     const a=getAdminNotes();
-     a.push({title,exam,fileName:file.name,dataUrl:reader.result,pages:""});
-     saveAdminNotes(a);
-     document.getElementById("noteTitle").value="";
-     document.getElementById("noteExam").value="";
-     document.getElementById("notePdfFile").value="";
-     st.textContent="✅ PDF Upload होकर Save हो गई।";
-     renderAdminNotes();
-   }catch(e){
-     st.textContent="❌ PDF Save नहीं हो सकी।";
-     alert("PDF बहुत बड़ी हो सकती है। अभी browser storage की सीमा के कारण छोटी/मध्यम PDF इस्तेमाल करें।");
-   }
- };
- reader.onerror=function(){st.textContent="❌ PDF पढ़ी नहीं जा सकी।"};
- reader.readAsDataURL(file);
+ const title=document.getElementById("noteTitle").value.trim(),exam=document.getElementById("noteExam").value.trim();
+ const file=document.getElementById("notePdfFile").files[0],st=document.getElementById("noteUploadStatus");
+ if(!title){alert("Notes का नाम लिखें।");return} if(!file){alert("पहले PDF चुनें।");return}
+ const r=new FileReader();r.onload=function(){let a=getAdminNotes();
+ a.push({title,exam,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:document.getElementById("noteUntil").value});
+ saveAdminNotes(a);["noteTitle","noteExam","notePdfFile","noteMrp","noteOffer","noteUntil"].forEach(id=>document.getElementById(id).value="");
+ st.textContent="✅ PDF Notes Save हो गई।";renderAdminNotes()};r.readAsDataURL(file);
 }
-function renderAdminNotes(){
- const b=document.getElementById("adminNotesList");if(!b)return;
- const a=getAdminNotes();
- b.innerHTML=a.map((n,i)=>`<div class="card" style="margin:10px 0">
-   <b>📄 ${esc(n.title)}</b> — ${esc(n.exam||"")}<br>
-   <span class="muted">${esc(n.fileName||"PDF")}</span>
-   <button class="btn" onclick="previewAdminPdfNote(${i})">👁️ Preview</button>
-   <button class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button>
- </div>`).join("")||"<p>अभी कोई PDF Notes नहीं हैं।</p>";
+function editPdfNote(i){
+ const n=getAdminNotes()[i];if(!n)return;
+ document.getElementById("noteTitle").value=n.title||"";document.getElementById("noteExam").value=n.exam||"";
+ document.getElementById("noteMrp").value=n.mrp??"";document.getElementById("noteOffer").value=n.offer??"";document.getElementById("noteUntil").value=n.availableUntil||"";
+ const b=document.getElementById("adminNotesList");b.dataset.editIndex=i;
+ const btn=document.querySelector('#notes button[onclick*="uploadPdfNote"]');if(btn)btn.textContent="💾 Update Notes";
+ btn.onclick=function(){let a=getAdminNotes(),x=a[i];x.title=document.getElementById("noteTitle").value.trim();x.exam=document.getElementById("noteExam").value.trim();x.mrp=Number(document.getElementById("noteMrp").value)||0;x.offer=Number(document.getElementById("noteOffer").value)||0;x.availableUntil=document.getElementById("noteUntil").value;saveAdminNotes(a);renderAdminNotes();alert("✅ Notes की जानकारी Update हो गई।");btn.textContent="⬆️ PDF Upload करके Save करें";btn.onclick=uploadPdfNote};
 }
-function previewAdminPdfNote(i){
- const n=getAdminNotes()[i];if(!n?.dataUrl)return;
- const w=window.open("","_blank");
- if(!w)return;
- w.document.write(`<title>${esc(n.title)}</title><iframe src="${n.dataUrl}#toolbar=0&navpanes=0" style="width:100%;height:100vh;border:0"></iframe>`);
- w.document.close();
+function renderAdminNotes(){const b=document.getElementById("adminNotesList");if(!b)return;const a=getAdminNotes();
+ b.innerHTML=a.map((n,i)=>`<div class="card" style="margin:10px 0"><b>📄 ${esc(n.title)}</b> — ${esc(n.exam||"")}<br><span class="muted">${esc(n.fileName||"PDF")}</span><br><b>MRP:</b> ₹${n.mrp||0} &nbsp; <b>Offer:</b> ₹${n.offer||0} ${n.availableUntil?`&nbsp; <b>Valid Till:</b> ${esc(n.availableUntil)}`:""}<br>
+ <button class="btn" onclick="previewAdminPdfNote(${i})">👁️ Preview</button><button class="btn" onclick="editPdfNote(${i})">✏️ Edit</button><button class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी कोई PDF Notes नहीं हैं।</p>";
 }
-function deletePdfNote(i){
- const a=getAdminNotes();a.splice(i,1);saveAdminNotes(a);renderAdminNotes();
-}
-document.addEventListener("DOMContentLoaded",renderAdminNotes);
-</script>
+function previewAdminPdfNote(i){const n=getAdminNotes()[i];if(!n?.dataUrl)return;const w=window.open("","_blank");if(!w)return;w.document.write(`<title>${esc(n.title)}</title><iframe src="${n.dataUrl}#toolbar=0&navpanes=0" style="width:100%;height:100vh;border:0"></iframe>`);w.document.close()}
+function deletePdfNote(i){let a=getAdminNotes();a.splice(i,1);saveAdminNotes(a);renderAdminNotes()}
+document.addEventListener("DOMContentLoaded",renderAdminNotes);</script>
 <section id="headline-manager" class="sec">
 <h1>📢 Home Headline</h1>
 <div class="card"><p>यह Headline Home Page के सफेद हिस्से में चलेगी।</p>
@@ -262,7 +241,55 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
 <tbody id="ut"></tbody></table></section>
 <section id="payments" class="sec"><h1>Payments</h1><p>Merchant UPI: <b>paytm.s2uiv58@pty</b><br>Email: <b>krishna.damoh01@gmail.com</b></p><img src="upi_qr.jpeg" alt="UPI QR" style="width:180px;max-width:100%"><table><thead><tr><th>User</th><th>Email</th><th>Test Series</th><th>Plan</th><th>Amount</th><th>UTR</th><th>Status</th><th>Action</th></tr></thead><tbody id="pt"></tbody></table></section>
 <section id="ads" class="sec"><h1>Advertisements</h1><div class="card"><p>Advertisement जोड़ने/बदलने का section।</p><button class="btn orange" onclick="alert('Final online version में यहाँ Ad management form रहेगा।')">+ नया Advertisement</button></div></section>
-<section id="plans" class="sec"><h1>Plans</h1><table><tr><th>अवधि</th><th>कीमत</th></tr><tr><td>1 दिन</td><td>₹10</td></tr><tr><td>2 दिन</td><td>₹15</td></tr><tr><td>5 दिन</td><td>₹30</td></tr><tr><td>7 दिन</td><td>₹50</td></tr><tr><td>15 दिन</td><td>₹80</td></tr></table></section>
+
+<section id="pricing" class="sec">
+<h1>💰 Pricing — Test के हिसाब से</h1>
+<div class="card">
+<p>यहाँ हर परीक्षा/Test के लिए अपनी कीमत रखें। MRP और Offer Price अलग-अलग रखें।</p>
+<div class="row">
+<div><label>परीक्षा / Test का नाम</label><input id="prName" placeholder="जैसे MP पटवारी Mock Test 01"></div>
+<div><label>MRP (₹)</label><input id="prMrp" type="number" min="0"></div>
+<div><label>Offer Price (₹)</label><input id="prOffer" type="number" min="0"></div>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+<button class="btn orange" onclick="savePricingItem()">💾 Save / Update</button>
+<button class="btn gray" onclick="clearPricingForm()">✖ Clear</button>
+</div>
+</div>
+<div class="card"><h3>📋 Saved Pricing</h3><div id="pricingList"></div></div>
+</section>
+
+<section id="offers" class="sec">
+<h1>🎟️ Offers / Redeem Code</h1>
+<div class="card">
+<p>किसी भी Test के लिए अलग Offer Code और Discount रखें और उसकी अंतिम तारीख तय करें।</p>
+<div class="row">
+<div><label>परीक्षा / Test का नाम</label><input id="ofName" placeholder="Test का नाम"></div>
+<div><label>Redeem Code</label><input id="ofCode" placeholder="जैसे TG20"></div>
+<div><label>Discount (%)</label><input id="ofDiscount" type="number" min="0" max="100"></div>
+<div><label>Valid Till</label><input id="ofUntil" type="date"></div>
+<div><label>Offer Available Till</label><input id="ofAvail" type="date"></div>
+</div>
+<button class="btn orange" onclick="saveOfferItem()">💾 Save / Update Offer</button>
+</div>
+<div class="card"><h3>📋 Saved Offers</h3><div id="offersList"></div></div>
+</section>
+
+<section id="plans" class="sec"><h1>💳 Plans — समय के हिसाब से</h1>
+<div class="card">
+<p>यहाँ से आप तय करेंगे कि कौन-सा Plan कितने समय के लिए होगा और उसकी MRP/Offer Price क्या होगी।</p>
+<div class="row">
+<div><label>Plan का नाम</label><input id="plName" placeholder="जैसे 7 दिन Plan"></div>
+<div><label>समय (दिन)</label><input id="plDays" type="number" min="1" placeholder="7"></div>
+<div><label>MRP (₹)</label><input id="plMrp" type="number" min="0"></div>
+<div><label>Offer Price (₹)</label><input id="plOffer" type="number" min="0"></div>
+<div><label>Available Till</label><input id="plUntil" type="date"></div>
+</div>
+<button class="btn orange" onclick="savePlanItem()">💾 Save / Update Plan</button>
+<button class="btn gray" onclick="clearPlanForm()">✖ Clear</button>
+</div>
+<div class="card"><h3>📋 All Plans</h3><div id="plansList"></div></div>
+</section>
 <section id="support" class="sec"><h1>🛠️ Support / Complaints <span id="badge"></span></h1><table><thead><tr><th>नाम</th><th>Email</th><th>समस्या</th><th>UTR</th><th>विवरण</th><th>स्थिति</th></tr></thead><tbody id="ct"></tbody></table></section>
 </main></div>
 <div class="modal" id="modal"><div class="box" id="mb"></div></div>
@@ -929,6 +956,24 @@ function togglePassword(id,btn){
     btn.textContent="👁️ दिखाएँ";
   }
 }
+
+function getAdminList(key){try{return JSON.parse(localStorage.getItem(key)||"[]")}catch(e){return[]}}
+function setAdminList(key,v){localStorage.setItem(key,JSON.stringify(v))}
+function savePricingItem(){const n=document.getElementById("prName").value.trim();if(!n)return alert("नाम लिखें।");let a=getAdminList("tgy_pricing");const obj={name:n,mrp:Number(document.getElementById("prMrp").value)||0,offer:Number(document.getElementById("prOffer").value)||0};let i=a.findIndex(x=>x.name===n);if(i>=0)a[i]=obj;else a.push(obj);setAdminList("tgy_pricing",a);renderPricing();alert("✅ Pricing Save हो गई।")}
+function editPricing(i){let x=getAdminList("tgy_pricing")[i];document.getElementById("prName").value=x.name;document.getElementById("prMrp").value=x.mrp;document.getElementById("prOffer").value=x.offer}
+function deletePricing(i){let a=getAdminList("tgy_pricing");a.splice(i,1);setAdminList("tgy_pricing",a);renderPricing()}
+function clearPricingForm(){["prName","prMrp","prOffer"].forEach(id=>document.getElementById(id).value="")}
+function renderPricing(){const b=document.getElementById("pricingList");if(!b)return;const a=getAdminList("tgy_pricing");b.innerHTML=a.map((x,i)=>`<div class="card"><b>${esc(x.name)}</b> — MRP ₹${x.mrp||0} / Offer ₹${x.offer||0} <button class="btn" onclick="editPricing(${i})">✏️ Edit</button><button class="btn danger" onclick="deletePricing(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी Pricing नहीं है।</p>"}
+function saveOfferItem(){const n=document.getElementById("ofName").value.trim(),code=document.getElementById("ofCode").value.trim().toUpperCase();if(!n||!code)return alert("Test नाम और Redeem Code लिखें।");let a=getAdminList("tgy_offers"),obj={name:n,code,discount:Number(document.getElementById("ofDiscount").value)||0,until:document.getElementById("ofUntil").value,availableUntil:document.getElementById("ofAvail").value};let i=a.findIndex(x=>x.name===n);if(i>=0)a[i]=obj;else a.push(obj);setAdminList("tgy_offers",a);renderOffers();alert("✅ Offer Save हो गया।")}
+function editOffer(i){let x=getAdminList("tgy_offers")[i];document.getElementById("ofName").value=x.name;document.getElementById("ofCode").value=x.code;document.getElementById("ofDiscount").value=x.discount;document.getElementById("ofUntil").value=x.until||"";document.getElementById("ofAvail").value=x.availableUntil||""}
+function deleteOffer(i){let a=getAdminList("tgy_offers");a.splice(i,1);setAdminList("tgy_offers",a);renderOffers()}
+function renderOffers(){const b=document.getElementById("offersList");if(!b)return;const a=getAdminList("tgy_offers");b.innerHTML=a.map((x,i)=>`<div class="card"><b>${esc(x.name)}</b> — Code: <b>${esc(x.code)}</b> — ${x.discount||0}% — Valid Till: ${esc(x.until||"-")} <button class="btn" onclick="editOffer(${i})">✏️ Edit</button><button class="btn danger" onclick="deleteOffer(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी Offers नहीं हैं।</p>"}
+function savePlanItem(){const n=document.getElementById("plName").value.trim();if(!n)return alert("Plan का नाम लिखें।");let a=getAdminList("tgy_plans");const obj={name:n,days:Number(document.getElementById("plDays").value)||1,mrp:Number(document.getElementById("plMrp").value)||0,offer:Number(document.getElementById("plOffer").value)||0,until:document.getElementById("plUntil").value};let i=a.findIndex(x=>x.name===n);if(i>=0)a[i]=obj;else a.push(obj);setAdminList("tgy_plans",a);renderPlans();alert("✅ Plan Save हो गया।")}
+function editPlan(i){let x=getAdminList("tgy_plans")[i];document.getElementById("plName").value=x.name;document.getElementById("plDays").value=x.days;document.getElementById("plMrp").value=x.mrp;document.getElementById("plOffer").value=x.offer;document.getElementById("plUntil").value=x.until||""}
+function deletePlan(i){let a=getAdminList("tgy_plans");a.splice(i,1);setAdminList("tgy_plans",a);renderPlans()}
+function clearPlanForm(){["plName","plDays","plMrp","plOffer","plUntil"].forEach(id=>document.getElementById(id).value="")}
+function renderPlans(){const b=document.getElementById("plansList");if(!b)return;const a=getAdminList("tgy_plans");b.innerHTML=a.map((x,i)=>`<div class="card"><b>${esc(x.name)}</b> — ${x.days} दिन — MRP ₹${x.mrp||0} / Offer ₹${x.offer||0} — Till: ${esc(x.until||"-")} <button class="btn" onclick="editPlan(${i})">✏️ Edit</button><button class="btn danger" onclick="deletePlan(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी कोई Plan नहीं है।</p>"}
+document.addEventListener("DOMContentLoaded",()=>{renderPricing();renderOffers();renderPlans()});
 </script>
 <script id="purchased-access-admin">
 function managePurchasedTests(i){
