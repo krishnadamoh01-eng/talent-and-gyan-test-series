@@ -929,14 +929,22 @@ function mtRenderAll(){
  const d=mtStore(),rows=[];
  Object.entries(d.exams||{}).forEach(([e,v])=>Object.entries(v.tests||{}).forEach(([t,x])=>rows.push(`<tr>
  <td>${mtEsc(e)}</td><td>${mtEsc(t)}</td><td>${x.questions?.length||0}</td><td>${x.time||60} min</td>
- <td>${x.published===false?"Hidden":"Active"}</td>
+ <td>${x.published===false?"🙈 Hidden":"👁️ Active"}</td>
  <td><button class="btn" onclick="mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">👁️ Open / Edit</button>
+ <button class="btn ${x.published===false?"":"gray"}" onclick="mtTogglePublish('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">${x.published===false?"👁️ Show":"🙈 Hide"}</button>
  <button class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">Delete</button></td></tr>`)));
  box.innerHTML=rows.join("")||'<tr><td colspan="6">कोई Test नहीं है।</td></tr>';
 }
 function mtSelectTest(e,t){
  e=decodeURIComponent(e);t=decodeURIComponent(t);
  document.getElementById("mtExam").value=e;mtLoadTests();document.getElementById("mtTest").value=t;mtLoadSelected();
+}
+function mtTogglePublish(e,t){
+ e=decodeURIComponent(e);t=decodeURIComponent(t);
+ const d=mtStore(),obj=d.exams?.[e]?.tests?.[t]; if(!obj)return;
+ obj.published=obj.published===false;
+ mtSaveStore(d);mtRenderAll();mtLoadTests();
+ alert(obj.published===false?"🙈 Test Hide कर दिया गया है।":"👁️ Test फिर से Show कर दिया गया है।");
 }
 function mtDeleteTest(e,t){
  e=decodeURIComponent(e);t=decodeURIComponent(t);

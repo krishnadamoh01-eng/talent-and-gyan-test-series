@@ -180,12 +180,20 @@ const demoQuestions = [
 const examDemo = ["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant","अन्य परीक्षाएँ"];
 function openExam(exam){
  const list=tests.filter(t=>t.exam===exam && t.visible!==false && tgyDateValid(t.availableUntil) && (t.demo===true || hasPurchasedTest(t)));
- let html=`<div class="exam-inner-head"><h2>📚 ${esc(exam)}</h2><p class="muted">इस परीक्षा के Demo और उपलब्ध Test Series यहाँ दिखाई देंगे।</p></div>`;
+ let html=`<div class="exam-inner-head"><h2>📚 ${esc(exam)}</h2><p class="muted">इस परीक्षा के Test एक ही Test Series Folder में दिखेंगे।</p></div>`;
  html+=`<div class="card" style="border:2px solid #f07800"><h3>🎁 ${esc(exam)} Demo Test</h3><p>Demo Test उपलब्ध है।</p><button class="btn orange" onclick="startExamDemo('${esc(exam)}')">Free Demo Test दें</button></div>`;
  if(list.length){
-   html+=`<h3>📚 उपलब्ध Test Series</h3>`+list.map(t=>`<div class="card"><b>${esc(t.name)}</b><p>${t.questions.length} Questions • ${t.time} मिनट</p>${hasPurchasedTest(t)?`<button class="btn" onclick="closeExam();openTest(${tests.indexOf(t)})">▶️ Test दें</button>`:`<button class="btn orange" onclick="buyTest('${esc(t.name)}',0)">💳 ₹${Number(t.pricing?.oneTest?.offer)||Number(t.pricing?.oneTest?.mrp)||"Price देखें"}</button>`}</div>`).join("");
+   html+=`<div class="card" style="border:2px solid #1d65a6;margin-top:14px">
+     <h3>📁 ${esc(exam)} Test Series</h3>
+     <p class="muted">इस Folder में इस परीक्षा के सभी उपलब्ध Tests हैं — कुल <b>${list.length}</b> Tests.</p>
+     <div class="grid">${list.map(t=>`<div class="card" style="margin:0">
+       <h3>📝 ${esc(t.name)}</h3>
+       <p>${t.questions.length} Questions • ${t.time} मिनट</p>
+       ${hasPurchasedTest(t)?`<button class="btn" onclick="closeExam();openTest(${tests.indexOf(t)})">▶️ Test दें</button>`:`<button class="btn orange" onclick="buyTest('${esc(t.name)}',0)">💳 ₹${Number(t.pricing?.oneTest?.offer)||Number(t.pricing?.oneTest?.mrp)||"Price देखें"}</button>`}
+     </div>`).join("")}</div>
+   </div>`;
  }else{
-   html+=`<div class="card"><h3>📚 Test Series</h3><p class="muted">इस परीक्षा की Test Series अभी <b>Coming Soon</b> है। जल्द ही यहाँ Test Series जोड़ी जाएगी।</p></div>`;
+   html+=`<div class="card"><h3>📁 ${esc(exam)} Test Series</h3><p class="muted">इस Folder में अभी कोई Test नहीं है। <b>Coming Soon</b> — जल्द ही Test Series जोड़ी जाएगी।</p></div>`;
  }
  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn gray" onclick="closeExam()">← पीछे</button><button class="btn" onclick="closeExam();window.scrollTo({top:0,behavior:'smooth'})">🏠 Home</button><button class="btn gray" onclick="closeExam()">✕ बंद करें</button></div>`;
  document.getElementById("examContent").innerHTML=html;
@@ -320,7 +328,44 @@ function closeTestModal(){if(window.timer)clearInterval(window.timer);const m=do
 function renderQ(){let s=state,q=s.t.questions[s.idx];document.getElementById("qarea").innerHTML=`<div class="q"><b>प्रश्न ${s.idx+1}. ${esc(q[0])}</b>${q[1].map((o,j)=>`<label><input type="radio" name="ans" value="${j}" ${s.answers[s.idx]===j?"checked":""} onchange="state.answers[state.idx]=+this.value"> ${String.fromCharCode(65+j)}. ${esc(o)}</label>`).join("")}</div>`;document.getElementById("prev").style.visibility=s.idx?"visible":"hidden";document.getElementById("next").textContent=s.idx===s.t.questions.length-1?"Submit Test":"Next →"}
 function nextQ(){if(state.answers[state.idx]===null){alert("पहले कोई एक विकल्प चुनें।");return}if(state.idx===state.t.questions.length-1)submitTest();else{state.idx++;renderQ()}}
 function prevQ(){if(state.idx){state.idx--;renderQ()}}
-function submitTest(){clearInterval(window.timer);let s=state,correct=0,attempted=s.answers.filter(x=>x!==null).length;s.t.questions.forEach((q,i)=>{if(s.answers[i]===q[2])correct++});let wrong=attempted-correct,skipped=s.t.questions.length-attempted,percent=(correct/s.t.questions.length*100).toFixed(2);results.unshift({test:s.t.name,total:s.t.questions.length,attempted,correct,wrong,skipped,percent,date:new Date().toLocaleString()});localStorage.setItem("tgy_results",JSON.stringify(results));let rows=s.t.questions.map((q,i)=>`<div class="q"><b>${i+1}. ${esc(q[0])}</b><p>आपका उत्तर: ${s.answers[i]===null?"नहीं दिया":esc(q[1][s.answers[i]])} ${s.answers[i]===q[2]?"✅":"❌"}</p><p><b>सही उत्तर:</b> ${esc(q[1][q[2]])}</p><p class="muted">${esc(q[3]||"")}</p></div>`).join("");document.getElementById("modalContent").innerHTML=`<h2>🎉 आपका Result</h2><div class="result"><b>कुल प्रश्न:</b> ${s.t.questions.length}<br><b>Attempt किए:</b> ${attempted}<br><b>सही:</b> ${correct} ✅<br><b>गलत:</b> ${wrong} ❌<br><b>छोड़े:</b> ${skipped}<br><b>अंक:</b> ${correct}/${s.t.questions.length}<br><b>Percentage:</b> ${percent}%</div><h3>Answer Key & Explanation</h3>${rows}<button class="btn" onclick="closeM();renderResults()">बंद करें</button>`;renderResults()}
+function getNextSeriesTest(current){
+ const exam=current?.exam||"";
+ const series=tests.filter(t=>t.exam===exam && t.visible!==false && tgyDateValid(t.availableUntil) && t.name!==current.name);
+ if(!series.length)return null;
+ const ci=tests.indexOf(current);
+ const ordered=tests.filter(t=>t.exam===exam && t.visible!==false && tgyDateValid(t.availableUntil));
+ const pos=ordered.findIndex(t=>t.name===current.name);
+ return pos>=0?ordered[pos+1]||null:null;
+}
+function submitTest(){
+ clearInterval(window.timer);
+ let s=state,correct=0,attempted=s.answers.filter(x=>x!==null).length;
+ s.t.questions.forEach((q,i)=>{if(s.answers[i]===q[2])correct++});
+ let wrong=attempted-correct,skipped=s.t.questions.length-attempted,percent=(correct/s.t.questions.length*100).toFixed(2);
+ results.unshift({test:s.t.name,total:s.t.questions.length,attempted,correct,wrong,skipped,percent,date:new Date().toLocaleString()});
+ localStorage.setItem("tgy_results",JSON.stringify(results));
+ let rows=s.t.questions.map((q,i)=>`<div class="q"><b>${i+1}. ${esc(q[0])}</b><p>आपका उत्तर: ${s.answers[i]===null?"नहीं दिया":esc(q[1][s.answers[i]])} ${s.answers[i]===q[2]?"✅":"❌"}</p><p><b>सही उत्तर:</b> ${esc(q[1][q[2]])}</p><p class="muted">${esc(q[3]||"")}</p></div>`).join("");
+ const next=getNextSeriesTest(s.t);
+ let nextHtml="";
+ if(next){
+   const purchased=hasPurchasedTest(next);
+   nextHtml=`<div class="card" style="margin-top:18px;border:2px solid #1d65a6">
+     <h3>➡️ अगला Test</h3>
+     <p><b>${esc(next.name)}</b></p>
+     <p class="muted">${next.questions.length} Questions • ${next.time} मिनट</p>
+     ${purchased
+       ? `<button class="btn orange" onclick="closeM();openTest(${tests.indexOf(next)})">▶️ अगला Test दें</button>`
+       : `<button class="btn orange" onclick="buyTest('${esc(next.name)}',0)">💳 अगला Test लें</button>`}
+   </div>`;
+ }else{
+   nextHtml=`<div class="card" style="margin-top:18px"><h3>🎉 Test Series Complete</h3><p class="muted">इस परीक्षा की उपलब्ध Test Series में अभी कोई अगला Test नहीं है।</p></div>`;
+ }
+ document.getElementById("modalContent").innerHTML=`<h2>🎉 आपका Result</h2>
+ <div class="result"><b>कुल प्रश्न:</b> ${s.t.questions.length}<br><b>Attempt किए:</b> ${attempted}<br><b>सही:</b> ${correct} ✅<br><b>गलत:</b> ${wrong} ❌<br><b>छोड़े:</b> ${skipped}<br><b>अंक:</b> ${correct}/${s.t.questions.length}<br><b>Percentage:</b> ${percent}%</div>
+ <h3>Answer Key & Explanation</h3>${rows}${nextHtml}
+ <div style="margin-top:12px"><button class="btn" onclick="closeM();renderResults()">बंद करें</button></div>`;
+ renderResults();
+}
 function renderResults(){document.getElementById("resultList").innerHTML=results.length?results.slice(0,10).map(r=>`<div class="q"><b>${esc(r.test)}</b><br>Attempt: ${r.attempted} | सही: ${r.correct} | गलत: ${r.wrong} | छोड़े: ${r.skipped} | ${r.percent}%<br><span class="muted">${esc(r.date)}</span></div>`).join(""):"अभी कोई Result नहीं है।"}
 renderResults();updateAuthUI();
 function sendHelp(){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");a.push({name:hname.value,email:hemail.value,type:htype.value,utr:hutr.value,msg:hmsg.value,date:new Date().toLocaleString(),status:"Pending"});localStorage.setItem("tgy_help",JSON.stringify(a));alert("शिकायत Submit हो गई है।");hname.value=hemail.value=hutr.value=hmsg.value=""}
@@ -510,10 +555,17 @@ function renderStudentNotes(){
  const b=document.getElementById("studentNotesList"); if(!b)return;
  const notes=getNotes();
  if(!notes.length){b.innerHTML='<p>अभी कोई PDF Notes उपलब्ध नहीं है।</p>';return}
- b.innerHTML=notes.map((n,i)=>`<div class="card" style="margin:10px 0">
- <h3>📄 ${esc(n.title||("Notes "+(i+1)))}</h3>
- <p class="muted">${esc(n.exam||"")} ${n.pages?`• ${n.pages} Pages`:""} ${Number(n.mrp)||Number(n.offer)?`• MRP ₹${n.mrp||0} ${n.offer?`• Offer ₹${n.offer}`:""}`:""}</p>
- <button class="btn" onclick="viewPdfNote(${i})">📖 साइट पर पढ़ें</button>
+ const groups={};
+ notes.forEach((n,i)=>{const exam=(n.exam||"अन्य Notes").trim()||"अन्य Notes";(groups[exam]||(groups[exam]=[])).push({...n,_i:i})});
+ b.innerHTML=`<p class="muted">हर परीक्षा के PDF Notes एक ही Folder में दिखेंगे।</p>`+
+ Object.entries(groups).map(([exam,items])=>`<div class="card" style="border:2px solid #1d65a6;margin:12px 0">
+   <h2>📁 ${esc(exam)} — PDF Notes</h2>
+   <p class="muted">इस Folder में <b>${items.length}</b> Notes हैं।</p>
+   <div class="grid">${items.map(n=>`<div class="card" style="margin:0">
+     <h3>📄 ${esc(n.title||("Notes "+(n._i+1)))}</h3>
+     <p class="muted">${n.pages?`${n.pages} Pages • `:""}${Number(n.mrp)||Number(n.offer)?`MRP ₹${n.mrp||0} ${n.offer?`• Offer ₹${n.offer}`:""}`:""}</p>
+     <button class="btn" onclick="viewPdfNote(${n._i})">📖 साइट पर पढ़ें</button>
+   </div>`).join("")}</div>
  </div>`).join("");
 }
 function viewPdfNote(i){
