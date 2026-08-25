@@ -133,12 +133,12 @@ header{margin-left:-260px;padding-left:calc(5% + 260px)}
   <div id="homeHeadline" class="home-headline" aria-live="polite"></div>
 </section>
 <div class="container" id="series"><div class="title">📚 परीक्षाएँ</div><div class="grid">
-<div class="card"><h3>MP पटवारी</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MP पटवारी')">देखें</button></div>
-<div class="card"><h3>MPPSC</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MPPSC')">देखें</button></div>
-<div class="card"><h3>MP पुलिस</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('MP पुलिस')">देखें</button></div>
-<div class="card"><h3>ग्रुप 4</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('ग्रुप 4')">देखें</button></div>
-<div class="card"><h3>Hospital Assistant</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" onclick="openExam('Hospital Assistant')">देखें</button></div>
-<div class="card"><h3>अन्य परीक्षाएँ</h3><p class="muted">बाद में परीक्षा जोड़ें</p><button class="btn" onclick="openExam('अन्य परीक्षाएँ')">देखें</button></div></div></div>
+<div class="card"><h3>MP पटवारी</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" class="exam-open-btn" data-exam="MP पटवारी" onclick="window.openExam('MP पटवारी')">देखें</button></div>
+<div class="card"><h3>MPPSC</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" class="exam-open-btn" data-exam="MPPSC" onclick="window.openExam('MPPSC')">देखें</button></div>
+<div class="card"><h3>MP पुलिस</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" class="exam-open-btn" data-exam="MP पुलिस" onclick="window.openExam('MP पुलिस')">देखें</button></div>
+<div class="card"><h3>ग्रुप 4</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" class="exam-open-btn" data-exam="ग्रुप 4" onclick="window.openExam('ग्रुप 4')">देखें</button></div>
+<div class="card"><h3>Hospital Assistant</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" class="exam-open-btn" data-exam="Hospital Assistant" onclick="window.openExam('Hospital Assistant')">देखें</button></div>
+<div class="card"><h3>अन्य परीक्षाएँ</h3><p class="muted">बाद में परीक्षा जोड़ें</p><button class="btn" class="exam-open-btn" data-exam="अन्य परीक्षाएँ" onclick="window.openExam('अन्य परीक्षाएँ')">देखें</button></div></div></div>
 <div class="container" id="tests"><div class="title">📝 उपलब्ध Mock Tests</div><div class="grid" id="testCards"></div></div>
 <div class="modal" id="authModal"><div class="box" id="authContent"></div></div>
 <div class="modal" id="examModal"><div class="box" id="examContent"></div></div>
@@ -216,6 +216,7 @@ function openExam(exam){
  document.getElementById("examContent").innerHTML=html;
  document.getElementById("examModal").style.display="flex";
 }
+window.openExam = openExam;
 function closeExam(){document.getElementById("examModal").style.display="none"}
 function startExamDemo(exam){
   closeExam();
@@ -623,4 +624,15 @@ function renderHomeHeadline(){
  const h=(c.headline||"").trim();el.innerHTML=h?`<span>${esc(h)}</span>`:"";el.style.display=h?"block":"none";
 }
 document.addEventListener("DOMContentLoaded",renderHomeHeadline);
-</script><script>document.addEventListener("DOMContentLoaded",function(){if(typeof updateAuthUI==="function")updateAuthUI();});</script><script>document.addEventListener("DOMContentLoaded",function(){if(typeof updateAuthUI==="function")updateAuthUI();});</script></body></html>
+</script><script>document.addEventListener("DOMContentLoaded",function(){if(typeof updateAuthUI==="function")updateAuthUI();});</script><script>document.addEventListener("DOMContentLoaded",function(){if(typeof updateAuthUI==="function")updateAuthUI();});</script><script id="exam-open-fallback">
+document.addEventListener("DOMContentLoaded",()=>{
+ document.querySelectorAll(".exam-open-btn").forEach(btn=>{
+   btn.addEventListener("click",(ev)=>{
+     ev.preventDefault();
+     const exam=btn.getAttribute("data-exam");
+     if(exam && typeof window.openExam==="function") window.openExam(exam);
+   });
+ });
+});
+</script>
+</body></html>

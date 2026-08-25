@@ -91,7 +91,7 @@ function checkAdmin(){
 </section>
 <section id="tests" class="sec">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-    <h1>📝 Mock Tests — Questions Management</h1>
+    <h1>📝 Mock Tests — केवल Questions Management</h1>
     <button class="btn" onclick="mtNewTest()">➕ नया Test / Series</button>
   </div>
 
@@ -182,7 +182,7 @@ function checkAdmin(){
   <label>Notes का नाम</label>
   <input id="noteTitle" placeholder="जैसे MP पटवारी Notes">
   <label>Exam</label>
-  <select id="noteExam"></select>
+  <select id="noteExam"></select><small id="noteExamHelp" class="muted">📋 सूची से परीक्षा चुनें या नीचे से नई परीक्षा जोड़ें।</small>
   <div class="row">
    <div><label>💰 MRP (₹)</label><input id="noteMrp" type="number" min="0" placeholder="जैसे 50"></div>
    <div><label>🏷️ Offer Price (₹)</label><input id="noteOffer" type="number" min="0" placeholder="जैसे 30"></div>
@@ -239,11 +239,11 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
 <section id="ads" class="sec"><h1>Advertisements</h1><div class="card"><p>Advertisement जोड़ने/बदलने का section।</p><button class="btn orange" onclick="alert('Final online version में यहाँ Ad management form रहेगा।')">+ नया Advertisement</button></div></section>
 
 <section id="pricing" class="sec">
-<h1>💰 Pricing — Test के हिसाब से</h1>
+<h1>💰 Test Pricing — केवल Test की कीमत</h1>
 <div class="card">
-<p>यहाँ हर परीक्षा/Test के लिए अपनी कीमत रखें। MRP और Offer Price अलग-अलग रखें।</p>
+<p>यहाँ केवल Test की कीमत रखें। MRP और Offer Price अलग-अलग रखें। Mock Test/Questions section में Price नहीं होगी।</p>
 <div class="row">
-<div><label>परीक्षा</label><select id="prExam" onchange="populateExamTests('prExam','prTest')"></select></div>
+<div><label>📋 परीक्षा चुनें</label><select id="prExam" onchange="populateExamTests('prExam','prTest')"></select></div>
 <div><label>Test / Test Series</label><select id="prTest"></select></div>
 <div><label>MRP (₹)</label><input id="prMrp" type="number" min="0"></div>
 <div><label>Offer Price (₹)</label><input id="prOffer" type="number" min="0"></div>
@@ -261,7 +261,7 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
 <div class="card">
 <p>किसी भी Test के लिए अलग Offer Code और Discount रखें और उसकी अंतिम तारीख तय करें।</p>
 <div class="row">
-<div><label>परीक्षा</label><select id="ofExam" onchange="populateExamTests('ofExam','ofTest')"></select></div>
+<div><label>📋 परीक्षा चुनें</label><select id="ofExam" onchange="populateExamTests('ofExam','ofTest')"></select></div>
 <div><label>Test / Test Series</label><select id="ofTest"></select></div>
 <div><label>Redeem Code</label><input id="ofCode" placeholder="जैसे TG20"></div>
 <div><label>Discount (%)</label><input id="ofDiscount" type="number" min="0" max="100"></div>
