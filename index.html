@@ -195,6 +195,13 @@ const demoQuestions = [
 ["'कमल' का पर्यायवाची है?",["पंकज","पवन","पर्वत","पल्लव"],0,"पंकज कमल का पर्यायवाची है।"]
 ];
 const examDemo = ["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant","अन्य परीक्षाएँ"];
+function getFolderVisibilityStudent(exam){
+ try{
+   const a=JSON.parse(localStorage.getItem("tgy_exams")||"[]");
+   const x=a.find(v=>(typeof v==="string"?v:v.name)===exam);
+   return !x || x.visible!==false;
+ }catch(e){return true}
+}
 function requireStudentLogin(action){
  const u=getCurrentStudent();
  if(u)return true;
@@ -213,18 +220,35 @@ function resumePendingStudentAction(){
 }
 function openExam(exam){
  if(!requireStudentLogin({type:"exam",exam}))return;
- const list=tests.filter(t=>t.exam===exam && t.visible!==false && tgyDateValid(t.availableUntil));
- let html=`<div class="exam-inner-head"><h2>📚 ${esc(exam)}</h2><p class="muted">इस परीक्षा के सभी Tests एक ही Test Series Folder में हैं।</p></div>`;
- html+=`<div class="card" style="border:2px solid #f07800"><h3>🎁 ${esc(exam)} Demo Test</h3><p>यह Free Demo है।</p><button class="btn orange" onclick="startExamDemo('${esc(exam)}')">Free Demo Test दें</button></div>`;
+ const folderVisible=getFolderVisibilityStudent(exam);
+ const list=tests.filter(t=>t.exam===exam && folderVisible && t.published!==false && t.visible!==false && tgyDateValid(t.availableUntil));
+ const pricing=getSeriesPricing(exam);
+ let html=`<div class="exam-inner-head"><h2>📚 ${esc(exam)} Test Series</h2><p class="muted">पहले अपनी जरूरत का Test Series Access चुनें।</p></div>`;
+ if(pricing.length){
+   html+=`<div class="card" style="border:2px solid #1d65a6"><h3>🔓 Test Series Access</h3><div class="grid">`;
+   pricing.forEach((x,n)=>{
+     const complete=Number(x.count)===100;
+     html+=`<div class="card" style="margin:0;border:2px solid ${complete?"#f07800":"#d9e2ec"};${complete?"background:#fff8ee":""}">
+       <h2 style="margin:0">${complete?"⭐ ":""}${x.count} Tests</h2>
+       ${complete?"<p style='color:#d65b00;font-weight:700'>COMPLETE TEST SERIES</p>":""}
+       <div style="margin:8px 0">${seriesPriceText(x)}</div>
+       <p>⏳ ${accessDurationTextStudent(x)}</p>
+       <button class="btn ${complete?"orange":""}" onclick="buySeriesAccess('${esc(exam)}',${n})">🛒 Access लें</button>
+     </div>`;
+   });
+   html+=`</div></div>`;
+ } else {
+   html+=`<div class="card"><h3>💳 Access Pricing</h3><p>इस Test Series की Pricing अभी Admin Panel में सेट नहीं की गई है।</p></div>`;
+ }
+ html+=`<div class="card" style="border:2px solid #f07800;margin-top:14px"><h3>🎁 ${esc(exam)} Demo Test</h3><p>यह Free Demo है।</p><button class="btn orange" onclick="startExamDemo('${esc(exam)}')">Free Demo Test दें</button></div>`;
  if(list.length){
-   html+=`<div class="card" style="border:2px solid #1d65a6;margin-top:14px"><h3>📁 ${esc(exam)} Test Series</h3><p class="muted">कुल <b>${list.length}</b> Tests</p><div class="grid">
-   ${list.map(t=>{
-      const idx=tests.indexOf(t),free=t.demo===true,purchased=hasPurchasedTest(t);
-      const action=(free||purchased)
-        ? `<button class="btn" onclick="closeExam();openTest(${idx})">▶️ Test दें</button>`
-        : `<button class="btn orange" onclick="buyTest('${esc(t.name)}',0)">💳 Test खरीदें</button>`;
-      return `<div class="card" style="margin:0"><h3>📝 ${esc(t.name)}</h3><p>${t.questions.length} Questions • ${t.time} मिनट</p>${free?'<p style="color:green;font-weight:700">FREE</p>':purchased?'<p style="color:green;font-weight:700">आपके Account में उपलब्ध</p>':'<p class="muted">Paid Test</p>'}${action}</div>`;
-   }).join("")}</div></div>`;
+   html+=`<div class="card" style="margin-top:14px"><h3>📝 उपलब्ध Tests</h3><p class="muted">कुल ${list.length} Tests</p><div class="grid">`;
+   list.forEach(t=>{
+      const idx=tests.indexOf(t),purchased=hasPurchasedTest(t),free=t.demo===true;
+      const action=(free||purchased)?`<button class="btn" onclick="closeExam();openTest(${idx})">▶️ Test दें</button>`:`<button class="btn orange" onclick="window.scrollTo(0,0);alert('ऊपर से अपना Test Series Access चुनें।')">🔒 Access लें</button>`;
+      html+=`<div class="card" style="margin:0"><h3>📝 ${esc(t.name)}</h3><p>${t.questions.length} Questions • ${t.time} मिनट</p>${purchased?'<p style="color:green;font-weight:700">✅ आपके Access में</p>':free?'<p style="color:green;font-weight:700">FREE</p>':'<p class="muted">🔒 Locked</p>'}${action}</div>`;
+   });
+   html+=`</div></div>`;
  }else html+=`<div class="card"><h3>📁 ${esc(exam)} Test Series</h3><p class="muted">अभी कोई Test नहीं है। <b>Coming Soon</b></p></div>`;
  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn gray" onclick="closeExam()">← पीछे</button><button class="btn gray" onclick="closeExam()">✕ बंद करें</button></div>`;
  document.getElementById("examContent").innerHTML=html;
@@ -244,7 +268,7 @@ function submitDemo(){
   s.t.questions.forEach((q,i)=>{if(s.answers[i]===q[2])correct++});
   let wrong=attempted-correct, skipped=s.t.questions.length-attempted, percent=(correct/s.t.questions.length*100).toFixed(0);
   document.getElementById("modalContent").innerHTML=`<h2>🎉 Demo Result</h2><div class="result"><b>कुल:</b> ${s.t.questions.length} | <b>Attempt:</b> ${attempted} | <b>सही:</b> ${correct} | <b>गलत:</b> ${wrong} | <b>छोड़े:</b> ${skipped}<br><b>Percentage:</b> ${percent}%</div>
-  <div class="card" style="margin-top:15px"><h3>🚀 आगे Test Series लें</h3><p>आपने Demo पूरा कर लिया है। अब पूरी Test Series में उपलब्ध सभी Tests देने के लिए Access Plan चुनें।</p><button class="btn orange" onclick="closeM();document.getElementById('plans').scrollIntoView({behavior:'smooth'})">Test Series खरीदें</button></div><button class="btn gray" onclick="closeM()">बंद करें</button>`;
+  <div class="card" style="margin-top:15px"><h3>🚀 आगे Test Series लें</h3><p>आपने Demo पूरा कर लिया है। अब पूरी Test Series में उपलब्ध सभी Tests देने के लिए Access Plan चुनें।</p><button class="btn orange" onclick="closeM();openStudentPage('series')">Test Series खरीदें</button></div><button class="btn gray" onclick="closeM()">बंद करें</button>`;
 }
 
 function openAuth(mode){
@@ -542,13 +566,13 @@ function studentGoHome(){closeStudentPage();window.scrollTo({top:0,behavior:"smo
 function studentGoBack(){closeStudentPage();window.scrollTo({top:0,behavior:"smooth"});}
 function renderStudentMockPage(){
  const b=document.getElementById("studentMockPageList");if(!b)return;
- const names=[...new Set(tests.map(t=>t.exam||"अन्य परीक्षाएँ"))];
+ const names=[...new Set(tests.filter(t=>getFolderVisibilityStudent(t.exam||"") && t.published!==false).map(t=>t.exam||"अन्य परीक्षाएँ"))];
  b.innerHTML='<div class="grid">'+names.map(n=>`<div class="card"><h3>🎯 ${esc(n)}</h3><p>Mock Tests / Demo</p><button class="btn orange" onclick="window.openExam('${esc(n)}')">🎯 Test खोलें</button></div>`).join('')+'</div>';
 }
 function renderStudentSeriesPage(){
  const b=document.getElementById("studentSeriesPageList");if(!b)return;
  const groups={};
- tests.filter(t=>t.visible!==false && tgyDateValid(t.availableUntil)).forEach((t,idx)=>{
+ tests.filter(t=>getFolderVisibilityStudent(t.exam||"") && t.published!==false && t.visible!==false && tgyDateValid(t.availableUntil)).forEach((t,idx)=>{
    const ex=(t.exam||"अन्य परीक्षाएँ").trim()||"अन्य परीक्षाएँ";
    (groups[ex]||(groups[ex]=[])).push({...t,_idx:idx});
  });
@@ -563,14 +587,70 @@ function renderStudentSeriesPage(){
 
 </script>
 <script id="purchased-access-student">
+function getAccessPricing(){
+ try{return JSON.parse(localStorage.getItem("tgy_access_pricing")||"[]")}catch(e){return[]}
+}
+function getSeriesPricing(exam){
+ return getAccessPricing().filter(x=>x.type==="testseries" && x.exam===exam && Number(x.count)>0)
+   .sort((a,b)=>Number(a.count)-Number(b.count));
+}
+function seriesAccessForUser(exam){
+ const u=getCurrentStudent(); if(!u)return [];
+ const now=Date.now(),arr=u.seriesAccess||[];
+ const changed=arr.filter(x=>!x.expiresAt || new Date(x.expiresAt).getTime()>now);
+ if(changed.length!==arr.length){u.seriesAccess=changed;localStorage.setItem("tgy_user",JSON.stringify(u))}
+ return changed.filter(x=>x.exam===exam);
+}
+function hasSeriesAccess(exam,testIndex){
+ const t=tests[testIndex];if(!t)return false;
+ const accesses=seriesAccessForUser(exam);
+ const ordered=tests.filter(x=>x.exam===exam && x.published!==false && x.visible!==false && tgyDateValid(x.availableUntil));
+ const pos=ordered.findIndex(x=>x.name===t.name);
+ return accesses.some(x=>Number(x.count)>=pos+1);
+}
+function seriesPriceText(x){
+ const final=Number(x.offer)||Number(x.mrp)||0;
+ return x.offer?`<span style="text-decoration:line-through;color:#777">₹${x.mrp}</span> <b style="font-size:22px">₹${x.offer}</b>`:`<b style="font-size:22px">₹${x.mrp}</b>`;
+}
+function buySeriesAccess(exam,pricingIndex){
+ const options=getSeriesPricing(exam),x=options[pricingIndex];if(!x)return;
+ if(!requireStudentLogin({type:"series",exam,pricing:x}))return;
+ const amount=Number(x.offer)||Number(x.mrp)||0;
+ const duration=accessDurationTextStudent(x);
+ document.getElementById("modalContent").innerHTML=`<h2>💳 ${esc(exam)} Test Series</h2>
+ <div class="pay"><h3>📝 ${x.count===100?"100 Tests — Complete Series":x.count+" Tests"}</h3>
+ <p><b>Access:</b> ${duration}</p><p><b>Price:</b> ${seriesPriceText(x)}</p>
+ <img class="qr" src="upi_qr.jpeg" alt="UPI QR Code">
+ <p>📱 QR Code स्कैन करके Payment करें। Payment के बाद नीचे Transaction ID / UTR Number डालकर Submit करें।</p>
+ <label>नाम</label><input id="pn" value="${esc(getCurrentStudent()?.name||"")}">
+ <label>Email</label><input id="pemail" type="email" value="${esc(getCurrentStudent()?.email||"")}">
+ <label>Transaction / UTR Number</label><input id="utr" placeholder="Payment के बाद UTR Number">
+ <button class="btn orange" onclick="submitSeriesPayment('${esc(exam)}',${x.count},${amount},${x.days||accessDaysStudent(x)},'${esc(x.name)}')">Payment Details Submit करें</button>
+ <button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
+ document.getElementById("modal").style.display="flex";
+}
+function accessDurationTextStudent(x){
+ const v=Number(x.durationValue||x.days||0),u=x.unit||"days";
+ return u==="months"?`${v} ${v===1?"महीना":"महीने"}`:`${v} दिन`;
+}
+function accessDaysStudent(x){return (x.unit||"days")==="months"?Number(x.durationValue||x.days||0)*30:Number(x.durationValue||x.days||0)}
+function submitSeriesPayment(exam,count,amount,days,accessName){
+ let p=JSON.parse(localStorage.getItem("tgy_payments")||"[]");
+ p.push({name:document.getElementById("pn")?.value||"",email:document.getElementById("pemail")?.value||"",course:exam+" • "+count+" Tests",exam,seriesCount:count,accessName,days,amount,utr:document.getElementById("utr")?.value||"",date:new Date().toLocaleString(),status:"Pending",type:"testseries"});
+ localStorage.setItem("tgy_payments",JSON.stringify(p));
+ document.getElementById("modalContent").innerHTML=`<h2>✅ Payment Details प्राप्त हो गई हैं</h2><div class="result"><b>${esc(exam)}</b><br><b>Access:</b> ${count} Tests • ${days} दिन<br><b>Amount:</b> ₹${amount}<br><b>UTR:</b> ${esc(document.getElementById("utr")?.value||"")}<br><b>Status:</b> 🟡 Pending</div><p>Payment verify होने के बाद Admin Access चालू करेगा। Access चालू होते ही Validity अपने-आप गिनी जाएगी।</p><button class="btn" onclick="closeM()">ठीक है</button>`;
+}
 function getCurrentStudent(){
  try{return JSON.parse(localStorage.getItem("tgy_user")||"null")}catch(e){return null}
 }
 function hasPurchasedTest(t){
  const u=getCurrentStudent(); if(!u)return false;
  const acc=u.purchasedTests||[];
- return acc.some(x=>x===t.name || x===t.id || x===t.course || x===t.exam);
+ if(acc.some(x=>x===t.name||x===t.id||x===t.course||x===t.exam))return true;
+ const idx=tests.indexOf(t);
+ return hasSeriesAccess(t.exam||"",idx);
 }
+
 function renderMyPurchasedTests(){
  const b=document.getElementById("myPurchasedTests"); if(!b)return;
  const u=getCurrentStudent();

@@ -74,7 +74,7 @@ function checkAdmin(){
 }
 </script>
 <header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
-<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('pricing',this)">💰 Pricing</button><button onclick="show('offers',this)">🎟️ Offers</button><button onclick="show('plans',this)">💳 Plans</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
+<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('pricing',this)">💰 Pricing</button><button onclick="show('offers',this)">🎟️ Offers</button><button onclick="show('accessPricing',this)">📁 Access Pricing</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 
 <section id="exams" class="sec">
@@ -91,33 +91,37 @@ function checkAdmin(){
 </section>
 <section id="tests" class="sec">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-    <h1>📝 Mock Tests — केवल Questions Management</h1>
-    <button class="btn" onclick="mtNewTest()">➕ नया Test / Series</button>
+    <h1>📝 Mock Tests — Questions Management</h1>
+    
   </div>
 
   <div class="card" style="margin-bottom:15px">
-    <h2>1️⃣ परीक्षा और Test चुनें</h2>
+    <h2>1️⃣ Test की जानकारी</h2>
     <div class="row">
-      <div><label>परीक्षा</label><select id="mtExam" onchange="mtLoadTests()"></select></div>
-      <div><label>Test / Test Series</label><select id="mtTest" onchange="mtLoadSelected()"></select></div>
+      <div>
+        <label>📋 परीक्षा</label>
+        <select id="mtExam" onchange="mtLoadTests()"></select>
+      </div>
+      <div>
+        <label>📝 Test का नाम</label>
+        <input id="mtName" placeholder="जैसे Mock Test 01 / Mock Test 02">
+      </div>
+      <div>
+        <label>⏱️ समय (मिनट)</label>
+        <input id="mtTime" type="number" min="1" value="60">
+      </div>
     </div>
-    <div class="row" style="margin-top:10px">
-      <div><label>Test का नाम</label><input id="mtName" placeholder="जैसे MP पटवारी Mock Test 01"></div>
-      <div><label>समय (मिनट)</label><input id="mtTime" type="number" min="1" value="60"></div>
-      <div><label>📅 Test Available Till</label><input id="mtAvailableUntil" type="date"></div>
-      <div><label>👁️ Student Site पर दिखाएँ</label><select id="mtVisible"><option value="true">हाँ</option><option value="false">नहीं / Hide</option></select></div>
-    </div>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-      <button class="btn" onclick="mtAddExam()">➕ नई परीक्षा</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn" onclick="mtAddExam()">➕ नई परीक्षा जोड़ें</button>
       <button class="btn" onclick="mtAddTest()">➕ नया Test</button>
-      <button class="btn" onclick="mtSaveMeta()">💾 Test Details Save</button>
+      <button class="btn orange" onclick="mtSaveMeta()">💾 Test Save करें</button>
     </div>
+    <p class="muted" style="margin-top:8px">यहाँ केवल परीक्षा, Test का नाम और समय रहेगा। Test को दिखाना/Hide करना नीचे “सभी Test Folders” में किया जाएगा।</p>
   </div>
 
   <div class="card">
-    <h2>2️⃣ Questions एक साथ जोड़ें</h2>
-    <p class="muted">यहीं पर परीक्षा और Test चुनें और इसी Mock Test के अंदर PDF, Bulk Text या Manual तरीके से Questions जोड़ें।</p>
-
+    <h2>2️⃣ Questions जोड़ें — Bulk / PDF / Manual</h2>
+    <p class="muted">पहले परीक्षा चुनें, फिर Test का नाम और समय रखें। इसके बाद Bulk Text या PDF से Questions डालें, Preview देखें, गलत Questions हटाएँ और अंत में Import/Submit करें।</p>
     <div class="row">
       <div>
         <label>📄 PDF से Questions</label>
@@ -138,13 +142,11 @@ function checkAdmin(){
         <button class="btn" style="margin-top:7px" onclick="mtTextPreview()">📝 Bulk Text Preview</button>
       </div>
     </div>
-
     <div style="margin-top:12px">
       <button class="btn" onclick="mtManualAdd()">✏️ Manual Question Add</button>
-      <button class="btn orange" onclick="mtImportPreview()">✅ Preview के सभी Questions Import करें</button>
+      <button class="btn orange" onclick="mtImportPreview()">✅ Submit / Questions Save करें</button>
       <button class="btn gray" onclick="mtClearPreview()">🗑️ Preview साफ करें</button>
     </div>
-
     <div id="mtStatus" class="muted" style="margin-top:12px"></div>
     <div id="mtPreview" style="margin-top:12px;max-height:520px;overflow:auto"></div>
   </div>
@@ -156,9 +158,9 @@ function checkAdmin(){
   </div>
 
   <div class="card">
-    <h2>📋 सभी Tests</h2>
-    <table><thead><tr><th>परीक्षा</th><th>Test</th><th>Questions</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody id="mtAllTests"></tbody></table>
+    <h2>📁 सभी Test Folders</h2>
+    <p class="muted">हर परीक्षा एक Folder है। Folder के अंदर उस परीक्षा के सभी Tests रहेंगे। यहाँ Folder और हर Test को अलग-अलग Show/Hide कर सकते हैं।</p>
+    <div id="mtAllTests"></div>
   </div>
 </section>
 
@@ -203,14 +205,14 @@ function uploadPdfNote(){
  const file=document.getElementById("notePdfFile").files[0],st=document.getElementById("noteUploadStatus");
  if(!title){alert("Notes का नाम लिखें।");return} if(!file){alert("पहले PDF चुनें।");return}
  const r=new FileReader();r.onload=function(){let a=getAdminNotes();
- a.push({title,exam,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:document.getElementById("noteUntil").value});
- saveAdminNotes(a);["noteTitle","noteExam","notePdfFile","noteMrp","noteOffer","noteUntil"].forEach(id=>document.getElementById(id).value="");
+ a.push({title,exam,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:""});
+ saveAdminNotes(a);["noteTitle","noteExam","notePdfFile","noteMrp","noteOffer"].forEach(id=>document.getElementById(id).value="");
  st.textContent="✅ PDF Notes Save हो गई।";renderAdminNotes()};r.readAsDataURL(file);
 }
 function editPdfNote(i){
  const n=getAdminNotes()[i];if(!n)return;
  document.getElementById("noteTitle").value=n.title||"";document.getElementById("noteExam").value=n.exam||"";
- document.getElementById("noteMrp").value=n.mrp??"";document.getElementById("noteOffer").value=n.offer??"";document.getElementById("noteUntil").value=n.availableUntil||"";
+ document.getElementById("noteMrp").value=n.mrp??"";document.getElementById("noteOffer").value=n.offer??"";
  const b=document.getElementById("adminNotesList");b.dataset.editIndex=i;
  const btn=document.querySelector('#notes button[onclick*="uploadPdfNote"]');if(btn)btn.textContent="💾 Update Notes";
  btn.onclick=function(){let a=getAdminNotes(),x=a[i];x.title=document.getElementById("noteTitle").value.trim();x.exam=document.getElementById("noteExam").value.trim();x.mrp=Number(document.getElementById("noteMrp").value)||0;x.offer=Number(document.getElementById("noteOffer").value)||0;x.availableUntil=document.getElementById("noteUntil").value;saveAdminNotes(a);renderAdminNotes();alert("✅ Notes की जानकारी Update हो गई।");btn.textContent="⬆️ PDF Upload करके Save करें";btn.onclick=uploadPdfNote};
@@ -239,54 +241,61 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
 <section id="ads" class="sec"><h1>Advertisements</h1><div class="card"><p>Advertisement जोड़ने/बदलने का section।</p><button class="btn orange" onclick="alert('Final online version में यहाँ Ad management form रहेगा।')">+ नया Advertisement</button></div></section>
 
 <section id="pricing" class="sec">
-<h1>💰 Test Pricing — केवल Test की कीमत</h1>
+<h1>💰 Test Pricing</h1>
 <div class="card">
-<p>यहाँ केवल Test की कीमत रखें। MRP और Offer Price अलग-अलग रखें। Mock Test/Questions section में Price नहीं होगी।</p>
+<p>किसी एक Test की कीमत यहाँ रखें। Offer Price जरूरी नहीं है। खाली छोड़ेंगे तो MRP ही final price होगी।</p>
 <div class="row">
-<div><label>📋 परीक्षा चुनें</label><select id="prExam" onchange="populateExamTests('prExam','prTest')"></select></div>
-<div><label>Test / Test Series</label><select id="prTest"></select></div>
+<div><label>📋 परीक्षा</label><select id="prExam" onchange="populateExamTests('prExam','prTest')"></select></div>
+<div><label>📝 Test</label><select id="prTest"></select></div>
 <div><label>MRP (₹)</label><input id="prMrp" type="number" min="0"></div>
-<div><label>Offer Price (₹)</label><input id="prOffer" type="number" min="0"></div>
+<div><label>Offer Price (₹) — Optional</label><input id="prOffer" type="number" min="0" placeholder="खाली भी छोड़ सकते हैं"></div>
 </div>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-<button class="btn orange" onclick="savePricingItem()">💾 Save / Update</button>
-<button class="btn gray" onclick="clearPricingForm()">✖ Clear</button>
+<button class="btn orange" onclick="savePricingItem()">💾 Save</button>
 </div>
-</div>
-<div class="card"><h3>📋 Saved Pricing</h3><div id="pricingList"></div></div>
+<div class="card"><h3>📋 Saved Test Prices</h3><div id="pricingList"></div></div>
 </section>
 
 <section id="offers" class="sec">
-<h1>🎟️ Offers / Redeem Code</h1>
+<h1>🎟️ Offers</h1>
 <div class="card">
-<p>किसी भी Test के लिए अलग Offer Code और Discount रखें और उसकी अंतिम तारीख तय करें।</p>
+<p>केवल Redeem Code और Discount यहाँ रखें। Pricing अलग रहेगी।</p>
 <div class="row">
-<div><label>📋 परीक्षा चुनें</label><select id="ofExam" onchange="populateExamTests('ofExam','ofTest')"></select></div>
-<div><label>Test / Test Series</label><select id="ofTest"></select></div>
 <div><label>Redeem Code</label><input id="ofCode" placeholder="जैसे TG20"></div>
 <div><label>Discount (%)</label><input id="ofDiscount" type="number" min="0" max="100"></div>
 <div><label>Valid Till</label><input id="ofUntil" type="date"></div>
-<div><label>Offer Available Till</label><input id="ofAvail" type="date"></div>
 </div>
-<button class="btn orange" onclick="saveOfferItem()">💾 Save / Update Offer</button>
+<button class="btn orange" onclick="saveOfferItem()">💾 Save</button>
 </div>
 <div class="card"><h3>📋 Saved Offers</h3><div id="offersList"></div></div>
 </section>
 
-<section id="plans" class="sec"><h1>💳 Plans — समय के हिसाब से</h1>
+<section id="accessPricing" class="sec">
+<h1>📁 Access Pricing</h1>
 <div class="card">
-<p>यहाँ से आप तय करेंगे कि कौन-सा Plan कितने समय के लिए होगा और उसकी MRP/Offer Price क्या होगी।</p>
+<p>यहाँ Test Series के Access को बहुत सरल तरीके से सेट करें। 10, 20, 30, 50, 80 या 100 Tests चुनें। 100 Tests को Complete Series माना जाएगा। Validity दिन या महीने में रखें; अधिकतम 6 महीने। Offer Price optional है।</p>
 <div class="row">
-<div><label>Plan का नाम</label><input id="plName" placeholder="जैसे 7 दिन Plan"></div>
-<div><label>समय (दिन)</label><input id="plDays" type="number" min="1" placeholder="7"></div>
-<div><label>MRP (₹)</label><input id="plMrp" type="number" min="0"></div>
-<div><label>Offer Price (₹)</label><input id="plOffer" type="number" min="0"></div>
-<div><label>Available Till</label><input id="plUntil" type="date"></div>
+<div><label>📋 परीक्षा</label><select id="apExam"></select></div>
+<div><label>Access Type</label>
+<select id="apType" onchange="apTypeChanged()">
+<option value="testseries">📝 Test Series</option>
+<option value="folder">📁 पूरा Folder</option>
+<option value="topic">📚 Topic / Subject</option>
+<option value="single">📄 Single PDF / Test</option>
+</select></div>
+<div id="apCountWrap"><label>📝 कितने Tests</label>
+<select id="apCount">
+<option value="10">10 Tests</option><option value="20">20 Tests</option><option value="30">30 Tests</option>
+<option value="50">50 Tests</option><option value="80">80 Tests</option><option value="100">100 Tests — Complete</option>
+</select></div>
+<div><label>नाम</label><input id="apName" placeholder="जैसे MP पटवारी Test Series"></div>
+<div><label>Validity</label><input id="apDuration" type="number" min="1" max="6" value="15" placeholder="15"></div>
+<div><label>Unit</label><select id="apUnit"><option value="days">दिन</option><option value="months">महीना</option></select></div>
+<div><label>MRP (₹)</label><input id="apMrp" type="number" min="0"></div>
+<div><label>Offer Price (₹) — Optional</label><input id="apOffer" type="number" min="0" placeholder="खाली छोड़ सकते हैं"></div>
 </div>
-<button class="btn orange" onclick="savePlanItem()">💾 Save / Update Plan</button>
-<button class="btn gray" onclick="clearPlanForm()">✖ Clear</button>
+<button class="btn orange" onclick="saveAccessPricing()">💾 Save</button>
 </div>
-<div class="card"><h3>📋 All Plans</h3><div id="plansList"></div></div>
+<div class="card"><h3>📋 Saved Access Prices</h3><div id="accessPricingList"></div></div>
 </section>
 <section id="support" class="sec"><h1>🛠️ Support / Complaints <span id="badge"></span></h1><table><thead><tr><th>नाम</th><th>Email</th><th>समस्या</th><th>UTR</th><th>विवरण</th><th>स्थिति</th></tr></thead><tbody id="ct"></tbody></table></section>
 </main></div>
@@ -457,26 +466,33 @@ function importParsedPdf(){
   save(); renderAll();
   document.getElementById('pdfPreview').innerHTML=`<div class="card"><b>✅ Import सफल</b><p>${qs.length} Questions को <b>${esc(name)}</b> में जोड़ दिया गया है।</p></div>`;
 }
-function renderPayments(){let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]");document.getElementById("pt").innerHTML=a.length?a.map((x,i)=>`<tr><td>${esc(x.name||"-")}</td><td>${esc(x.email||"-")}</td><td>${esc(x.course||"-")}</td><td>${esc(x.days?x.days+" दिन":x.plan||"-")}</td><td>₹${esc(x.amount||"-")}</td><td>${esc(x.utr||"-")}</td><td>${esc(x.status||"Pending")}</td><td><button class="btn" onclick="activate(${i})">Give Access</button></td></tr>`).join(""):"<tr><td colspan='8'>अभी कोई Payment Request नहीं।</td></tr>"}
+function renderPayments(){let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]");document.getElementById("pt").innerHTML=a.length?a.map((x,i)=>`<tr><td>${esc(x.name||"-")}</td><td>${esc(x.email||"-")}</td><td>${esc(x.course||"-")}</td><td>${x.seriesCount?esc(x.seriesCount+" Tests"):esc(x.days?x.days+" दिन":x.plan||"-")}</td><td>₹${esc(x.amount||"-")}</td><td>${esc(x.utr||"-")}</td><td>${esc(x.status||"Pending")}</td><td><button class="btn" onclick="activate(${i})">Give Access</button></td></tr>`).join(""):"<tr><td colspan='8'>अभी कोई Payment Request नहीं।</td></tr>"}
 function activate(i){
- let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]"),p=a[i]; if(!p)return;
- p.status="Access Activated"; localStorage.setItem("tgy_payments",JSON.stringify(a));
- let users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
- const u=users.find(x=>x.email===p.email);
+ let a=JSON.parse(localStorage.getItem("tgy_payments")||"[]"),p=a[i];if(!p)return;
+ p.status="Access Activated";p.activatedAt=new Date().toISOString();
+ localStorage.setItem("tgy_payments",JSON.stringify(a));
+ let users=JSON.parse(localStorage.getItem("tgy_users")||"[]"),u=users.find(x=>x.email===p.email);
  if(u){
    if(String(p.course||"").startsWith("PDF:")){
      u.purchasedNotes=u.purchasedNotes||[];
      const noteTitle=String(p.course).replace(/^PDF:\s*/,"");
-     if(noteTitle && !u.purchasedNotes.includes(noteTitle))u.purchasedNotes.push(noteTitle);
+     if(noteTitle&&!u.purchasedNotes.includes(noteTitle))u.purchasedNotes.push(noteTitle);
+   }else if(p.type==="testseries" || p.seriesCount){
+     u.seriesAccess=u.seriesAccess||[];
+     const days=Number(p.days)||0;
+     const expires=new Date(Date.now()+days*86400000).toISOString();
+     const item={exam:p.exam||p.course, count:Number(p.seriesCount)||100, amount:Number(p.amount)||0, accessName:p.accessName||p.course, activatedAt:p.activatedAt, expiresAt:expires};
+     u.seriesAccess=u.seriesAccess.filter(x=>!(x.exam===item.exam&&Number(x.count)===Number(item.count)&&x.accessName===item.accessName));
+     u.seriesAccess.push(item);
    }else{
      u.purchasedTests=u.purchasedTests||[];
-     if(p.course && !u.purchasedTests.includes(p.course))u.purchasedTests.push(p.course);
+     if(p.course&&!u.purchasedTests.includes(p.course))u.purchasedTests.push(p.course);
    }
-   u.access=`Purchased • ${(u.purchasedTests||[]).length} Tests • ${(u.purchasedNotes||[]).length} Notes`;
+   u.access=`Tests: ${(u.purchasedTests||[]).length} • Series Access: ${(u.seriesAccess||[]).length} • Notes: ${(u.purchasedNotes||[]).length}`;
    localStorage.setItem("tgy_users",JSON.stringify(users));
  }
- renderPayments(); renderUsers();
- alert("✅ Access Activated. विद्यार्थी को खरीदा हुआ Course/Test दिखेगा।");
+ renderPayments();renderUsers();
+ alert("✅ Access Activated. Validity अब अपने-आप चलेगी और समय पूरा होने पर Access Expire हो जाएगा।");
 }
 function renderComplaints(){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");document.getElementById("badge").textContent=a.filter(x=>x.status!=="Resolved").length+" New";document.getElementById("ct").innerHTML=a.length?a.map((x,i)=>`<tr><td>${esc(x.name||"-")}</td><td>${esc(x.email||"-")}</td><td>${esc(x.type)}</td><td>${esc(x.utr||"-")}</td><td>${esc(x.msg||"-")}</td><td><button class="btn" onclick="resolve(${i})">Resolve</button></td></tr>`).join(""):"<tr><td colspan='6'>अभी कोई शिकायत नहीं।</td></tr>"}
 function resolve(i){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");a[i].status="Resolved";localStorage.setItem("tgy_help",JSON.stringify(a));renderAll()}
@@ -702,13 +718,13 @@ function mtLoadSelected(){
  const d=mtStore(),e=document.getElementById("mtExam")?.value,t=document.getElementById("mtTest")?.value;
  const obj=d.exams?.[e]?.tests?.[t];
  if(obj){
-   document.getElementById("mtName").value=obj.name||t;
-   document.getElementById("mtTime").value=obj.time||60;
-   document.getElementById("mtAvailableUntil").value=obj.availableUntil||"";
-   document.getElementById("mtVisible").value=(obj.visible!==false).toString();
+   const nameEl=document.getElementById("mtName"),timeEl=document.getElementById("mtTime");
+   if(nameEl)nameEl.value=obj.name||t;
+   if(timeEl)timeEl.value=obj.time||60;
  }
  mtRenderQuestions();
 }
+
 function mtAddExam(){
  const n=prompt("नई परीक्षा का नाम लिखें:"); if(!n?.trim())return;
  saveNewExamMaster(n.trim(),true);
@@ -725,16 +741,17 @@ function mtAddTest(){
 }
 function mtNewTest(){mtAddTest()}
 function mtSaveMeta(){
- const e=document.getElementById("mtExam").value,t=document.getElementById("mtTest").value;
+ const e=document.getElementById("mtExam")?.value,t=document.getElementById("mtTest")?.value;
  if(!e||!t){alert("पहले परीक्षा और Test चुनें।");return}
- const d=mtStore(),obj=d.exams[e].tests[t];
+ const d=mtStore(),obj=d.exams?.[e]?.tests?.[t];
+ if(!obj){alert("पहले Test बनाएं।");return}
  obj.name=document.getElementById("mtName").value.trim()||t;
  obj.time=Number(document.getElementById("mtTime").value)||60;
- obj.visible=document.getElementById("mtVisible").value!=="false";
- obj.availableUntil=document.getElementById("mtAvailableUntil")?.value||"";
  d.exams[e].tests[t]=obj;
- mtSaveStore(d);mtRenderAll();alert("✅ Test Details Save हो गई। Pricing अलग Pricing section में सेट करें।");
+ mtSaveStore(d);mtLoadTests();document.getElementById("mtTest").value=obj.name;mtLoadSelected();mtRenderAll();
+ alert("✅ Test का नाम और समय Save हो गया।");
 }
+
 function mtParse(raw){
  let text=String(raw||"").replace(/\u00a0/g," ").replace(/\r/g,"\n");
  // Preserve line boundaries enough for OCR/text PDFs but also handle one-line PDFs.
@@ -911,17 +928,64 @@ function mtDeleteQuestion(i){
  if(!confirm("यह Question हटाएँ?"))return;
  const d=mtStore(),qs=d.exams[e].tests[t].questions||[];qs.splice(i,1);qs.forEach((x,j)=>x.number=j+1);mtSaveStore(d);mtRenderQuestions();mtRenderAll();
 }
+function getFolderVisibility(exam){
+ try{
+   const a=JSON.parse(localStorage.getItem("tgy_exams")||"[]");
+   const x=a.find(v=>(typeof v==="string"?v:v.name)===exam);
+   return !x || x.visible!==false;
+ }catch(e){return true}
+}
+function setFolderVisibility(exam,visible){
+ let a=[];try{a=JSON.parse(localStorage.getItem("tgy_exams")||"[]")}catch(e){a=[]}
+ if(!Array.isArray(a))a=[];
+ let x=a.find(v=>(typeof v==="string"?v:v.name)===exam);
+ if(!x || typeof x==="string"){
+   a=a.filter(v=>(typeof v==="string"?v:v.name)!==exam);
+   x={name:exam,visible};
+   a.push(x);
+ }else x.visible=visible;
+ localStorage.setItem("tgy_exams",JSON.stringify(a));
+}
+function mtToggleFolder(exam){
+ const now=!getFolderVisibility(exam);
+ setFolderVisibility(exam,now);
+ mtRenderAll();
+ alert(now?"👁️ Folder Student Site पर Show कर दिया गया है।":"🙈 पूरा Exam Folder Hide कर दिया गया है।");
+}
 function mtRenderAll(){
  const box=document.getElementById("mtAllTests");if(!box)return;
- const d=mtStore(),rows=[];
- Object.entries(d.exams||{}).forEach(([e,v])=>Object.entries(v.tests||{}).forEach(([t,x])=>rows.push(`<tr>
- <td>${mtEsc(e)}</td><td>${mtEsc(t)}</td><td>${x.questions?.length||0}</td><td>${x.time||60} min</td>
- <td>${x.published===false?"🙈 Hidden":"👁️ Active"}</td>
- <td><button class="btn" onclick="mtOpenTestEditor('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">👁️ Open / Edit</button>
- <button class="btn ${x.published===false?"":"gray"}" onclick="mtTogglePublish('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">${x.published===false?"👁️ Show":"🙈 Hide"}</button>
- <button class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">Delete</button></td></tr>`)));
- box.innerHTML=rows.join("")||'<tr><td colspan="6">कोई Test नहीं है।</td></tr>';
+ const d=mtStore(),groups={};
+ Object.entries(d.exams||{}).forEach(([e,v])=>{
+   const arr=Object.entries(v.tests||{});
+   if(arr.length)(groups[e]||(groups[e]=[])).push(...arr);
+ });
+ const exams=Object.keys(groups);
+ if(!exams.length){box.innerHTML='<div class="card"><h3>📭 अभी कोई Test नहीं है।</h3></div>';return}
+ box.innerHTML=exams.map(e=>{
+   const folderVisible=getFolderVisibility(e);
+   const tests=groups[e];
+   return `<div class="card" style="margin:14px 0;border:2px solid #1d65a6">
+     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+       <div><h2 style="margin:0">📁 ${mtEsc(e)}</h2><p class="muted" style="margin:4px 0">${tests.length} Test • Folder ${folderVisible?"दिख रहा है":"Hidden है"}</p></div>
+       <button class="btn ${folderVisible?"gray":"orange"}" onclick="mtToggleFolder('${encodeURIComponent(e)}')">${folderVisible?"🙈 Folder Hide":"👁️ Folder Show"}</button>
+     </div>
+     <div style="overflow:auto;margin-top:10px">
+     <table><thead><tr><th>Test</th><th>Questions</th><th>Time</th><th>Status</th><th>Action</th></tr></thead><tbody>
+     ${tests.map(([t,x])=>`<tr>
+       <td>${mtEsc(x.name||t)}</td><td>${x.questions?.length||0}</td><td>${x.time||60} min</td>
+       <td>${x.published===false?"🙈 Hidden":"👁️ Show"}</td>
+       <td>
+        <button class="btn" onclick="mtOpenTestEditor('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">👁️ देखें / Edit</button>
+        <button class="btn" onclick="mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}');document.getElementById('mtQuestions').scrollIntoView({behavior:'smooth'})">➕ Questions</button>
+        <button class="btn ${x.published===false?"orange":"gray"}" onclick="mtTogglePublish('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">${x.published===false?"👁️ Test Show":"🙈 Test Hide"}</button>
+        <button class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">Delete</button>
+       </td>
+     </tr>`).join("")}
+     </tbody></table></div>
+   </div>`;
+ }).join("");
 }
+
 function mtSelectTest(e,t){
  e=decodeURIComponent(e);t=decodeURIComponent(t);
  document.getElementById("mtExam").value=e;mtLoadTests();document.getElementById("mtTest").value=t;mtLoadSelected();
@@ -1105,37 +1169,93 @@ function editPricing(i){let x=getAdminList("tgy_pricing")[i];populateExamSelect(
 function deletePricing(i){let a=getAdminList("tgy_pricing");a.splice(i,1);setAdminList("tgy_pricing",a);renderPricing()}
 function clearPricingForm(){["prMrp","prOffer"].forEach(id=>document.getElementById(id).value="");populateExamSelect("prExam");populateExamTests("prExam","prTest")}
 function renderPricing(){const b=document.getElementById("pricingList");if(!b)return;const a=getAdminList("tgy_pricing");b.innerHTML=a.map((x,i)=>`<div class="card"><b>${esc(x.exam||"")}</b> — <b>${esc(x.test||x.name||"")}</b> — MRP ₹${x.mrp||0} / Offer ₹${x.offer||0} <button class="btn" onclick="editPricing(${i})">✏️ Edit</button><button class="btn danger" onclick="deletePricing(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी Pricing नहीं है।</p>"}
+function apTypeChanged(){
+ const type=document.getElementById("apType")?.value;
+ const wrap=document.getElementById("apCountWrap");
+ if(wrap)wrap.style.display=type==="testseries"?"block":"none";
+ const name=document.getElementById("apName");
+ if(name && type==="testseries" && !name.value)name.placeholder="जैसे MP पटवारी Test Series";
+}
+function accessDurationText(x){
+ const unit=x.unit||"days",v=Number(x.durationValue||x.days||0);
+ return unit==="months"?`${v} ${v===1?"महीना":"महीने"}`:`${v} ${v===1?"दिन":"दिन"}`;
+}
+function accessDays(x){
+ const v=Number(x.durationValue||x.days||0);
+ return (x.unit||"days")==="months"?v*30:v;
+}
+function saveAccessPricing(){
+ const exam=document.getElementById("apExam").value;
+ const type=document.getElementById("apType").value;
+ const count=type==="testseries"?Number(document.getElementById("apCount").value):0;
+ const name=document.getElementById("apName").value.trim();
+ const durationValue=Number(document.getElementById("apDuration").value)||0;
+ const unit=document.getElementById("apUnit").value;
+ const mrp=Number(document.getElementById("apMrp").value)||0;
+ const offer=Number(document.getElementById("apOffer").value)||0;
+ const max=(unit==="months"?durationValue<=6:durationValue<=180);
+ if(!exam||!name||durationValue<1||!max||mrp<=0)return alert("परीक्षा, नाम, Validity (अधिकतम 6 महीने/180 दिन) और MRP भरें।");
+ let a=getAdminList("tgy_access_pricing");
+ const obj={exam,type,count,name,durationValue,unit,days:accessDays({durationValue,unit}),mrp,offer};
+ const n=a.findIndex(x=>x.exam===exam&&x.type===type&&Number(x.count||0)===count&&x.name===name&&x.durationValue===durationValue&&x.unit===unit);
+ if(n>=0)a[n]=obj;else a.push(obj);
+ setAdminList("tgy_access_pricing",a);renderAccessPricing();alert("✅ Access Pricing Save हो गई।");
+}
+function editAccessPricing(n){
+ const x=getAdminList("tgy_access_pricing")[n];if(!x)return;
+ populateExamSelect("apExam",x.exam);
+ document.getElementById("apType").value=x.type||"testseries";
+ apTypeChanged();
+ if(document.getElementById("apCount"))document.getElementById("apCount").value=x.count||"10";
+ document.getElementById("apName").value=x.name||"";
+ document.getElementById("apDuration").value=x.durationValue||x.days||"";
+ document.getElementById("apUnit").value=x.unit||"days";
+ document.getElementById("apMrp").value=x.mrp||"";
+ document.getElementById("apOffer").value=x.offer||"";
+}
+function deleteAccessPricing(n){
+ let a=getAdminList("tgy_access_pricing");a.splice(n,1);setAdminList("tgy_access_pricing",a);renderAccessPricing();
+}
+function renderAccessPricing(){
+ const b=document.getElementById("accessPricingList");if(!b)return;
+ let a=getAdminList("tgy_access_pricing");
+ a=a.slice().sort((x,y)=>{
+   if(x.exam!==y.exam)return String(x.exam).localeCompare(String(y.exam));
+   if(x.type==="testseries"&&y.type==="testseries")return Number(x.count||0)-Number(y.count||0);
+   return 0;
+ });
+ b.innerHTML=a.map((x,n)=>{
+   const typ=x.type==="testseries"?`📝 ${x.count||0} Tests`:x.type==="folder"?"📁 Folder":x.type==="topic"?"📚 Topic":"📄 Single";
+   const price=x.offer?`MRP ₹${x.mrp} / Offer ₹${x.offer}`:`MRP ₹${x.mrp}`;
+   return `<div class="card" style="margin:8px 0"><b>${esc(x.exam)}</b> — ${typ} — <b>${esc(x.name)}</b> — ${accessDurationText(x)} — ${price}
+   <button class="btn" onclick="editAccessPricing(${n})">✏️ Edit</button>
+   <button class="btn danger" onclick="deleteAccessPricing(${n})">🗑️ Delete</button></div>`;
+ }).join("")||"<p>अभी कोई Access Pricing नहीं है।</p>";
+}
+
 function saveOfferItem(){
- const exam=document.getElementById("ofExam").value,test=document.getElementById("ofTest").value,code=document.getElementById("ofCode").value.trim().toUpperCase();
- if(!exam||!test||!code)return alert("परीक्षा, Test और Redeem Code चुनें/लिखें।");
- let a=getAdminList("tgy_offers"),obj={exam,test,name:test,code,discount:Number(document.getElementById("ofDiscount").value)||0,until:document.getElementById("ofUntil").value,availableUntil:document.getElementById("ofAvail").value};
- let i=a.findIndex(x=>(x.exam||"")+"||"+(x.test||x.name||"")===exam+"||"+test);if(i>=0)a[i]=obj;else a.push(obj);setAdminList("tgy_offers",a);renderOffers();alert("✅ Offer Save हो गया।");
+ const code=document.getElementById("ofCode").value.trim().toUpperCase();
+ const discount=Number(document.getElementById("ofDiscount").value)||0;
+ const until=document.getElementById("ofUntil").value;
+ if(!code||discount<=0)return alert("Redeem Code और Discount भरें।");
+ let a=getAdminList("tgy_offers"),obj={code,discount,until};
+ const i=a.findIndex(x=>x.code===code);if(i>=0)a[i]=obj;else a.push(obj);
+ setAdminList("tgy_offers",a);renderOffers();alert("✅ Offer Save हो गया।");
 }
-function editOffer(i){let x=getAdminList("tgy_offers")[i];populateExamSelect("ofExam",x.exam);populateExamTests("ofExam","ofTest",x.test||x.name);document.getElementById("ofCode").value=x.code;document.getElementById("ofDiscount").value=x.discount;document.getElementById("ofUntil").value=x.until||"";document.getElementById("ofAvail").value=x.availableUntil||""}
+function editOffer(i){
+ const x=getAdminList("tgy_offers")[i];if(!x)return;
+ document.getElementById("ofCode").value=x.code;
+ document.getElementById("ofDiscount").value=x.discount;
+ document.getElementById("ofUntil").value=x.until||"";
+}
 function deleteOffer(i){let a=getAdminList("tgy_offers");a.splice(i,1);setAdminList("tgy_offers",a);renderOffers()}
-function renderOffers(){const b=document.getElementById("offersList");if(!b)return;const a=getAdminList("tgy_offers");b.innerHTML=a.map((x,i)=>`<div class="card"><b>${esc(x.exam||"")}</b> — <b>${esc(x.test||x.name||"")}</b> — Code: <b>${esc(x.code)}</b> — ${x.discount||0}% — Valid Till: ${esc(x.until||"-")} <button class="btn" onclick="editOffer(${i})">✏️ Edit</button><button class="btn danger" onclick="deleteOffer(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी Offers नहीं हैं।</p>"}
-function savePlanItem(){const n=document.getElementById("plName").value.trim();if(!n)return alert("Plan का नाम लिखें।");let a=getAdminList("tgy_plans");const obj={name:n,days:Number(document.getElementById("plDays").value)||1,mrp:Number(document.getElementById("plMrp").value)||0,offer:Number(document.getElementById("plOffer").value)||0,until:document.getElementById("plUntil").value};let i=a.findIndex(x=>x.name===n);if(i>=0)a[i]=obj;else a.push(obj);setAdminList("tgy_plans",a);renderPlans();alert("✅ Plan Save हो गया।")}
-function editPlan(i){let x=getAdminList("tgy_plans")[i];document.getElementById("plName").value=x.name;document.getElementById("plDays").value=x.days;document.getElementById("plMrp").value=x.mrp;document.getElementById("plOffer").value=x.offer;document.getElementById("plUntil").value=x.until||""}
-function deletePlan(i){let a=getAdminList("tgy_plans");a.splice(i,1);setAdminList("tgy_plans",a);renderPlans()}
-function clearPlanForm(){["plName","plDays","plMrp","plOffer","plUntil"].forEach(id=>document.getElementById(id).value="")}
-function renderPlans(){const b=document.getElementById("plansList");if(!b)return;const a=getAdminList("tgy_plans");b.innerHTML=a.map((x,i)=>`<div class="card"><b>${esc(x.name)}</b> — ${x.days} दिन — MRP ₹${x.mrp||0} / Offer ₹${x.offer||0} — Till: ${esc(x.until||"-")} <button class="btn" onclick="editPlan(${i})">✏️ Edit</button><button class="btn danger" onclick="deletePlan(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी कोई Plan नहीं है।</p>"}
-document.addEventListener("DOMContentLoaded",()=>{renderPricing();renderOffers();renderPlans()});
-</script>
-<script id="purchased-access-admin">
-function managePurchasedTests(i){
- const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
- const u=users[i]; if(!u)return;
- const all=JSON.parse(localStorage.getItem("tgy_tests")||"[]");
- const examNames=[...new Set(all.map(t=>t.exam).filter(Boolean))];
- const selected=u.purchasedTests||[];
- document.getElementById("mb").innerHTML=`<h2>🎓 ${esc(u.name)} — Purchased Tests</h2>
- <p><b>Email:</b> ${esc(u.email)}</p>
- <p>जिस Test/Course को यहाँ चुनकर Save करेंगे, वही विद्यार्थी को <b>My Purchased Tests</b> में दिखाई देगा।</p>
- <label>Test/Course चुनें</label>
- <select id="purchaseTestSelect" multiple size="8">${all.map(t=>`<option value="${esc(t.name)}" ${selected.includes(t.name)?"selected":""}>${esc(t.exam||"")} — ${esc(t.name)}</option>`).join("")}</select>
- <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="savePurchasedTests(${i})">💾 Access Save</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
- document.getElementById("modal").style.display="flex";
+function renderOffers(){
+ const b=document.getElementById("offersList");if(!b)return;
+ const a=getAdminList("tgy_offers");
+ b.innerHTML=a.map((x,i)=>`<div class="card"><b>${esc(x.code)}</b> — ${x.discount}% Discount — Valid Till: ${esc(x.until||"-")} <button class="btn" onclick="editOffer(${i})">✏️ Edit</button><button class="btn danger" onclick="deleteOffer(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी कोई Offer नहीं है।</p>";
 }
+
+function savePlanItem(){} function editPlan(){} function deletePlan(){} function clearPlanForm(){} function renderPlans(){}
 function savePurchasedTests(i){
  const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
  const vals=[...document.querySelectorAll("#purchaseTestSelect option:checked")].map(x=>x.value);
@@ -1158,7 +1278,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  populateExamTests("ofExam","ofTest");
  populateExamSelect("noteExam");
  if(typeof mtInit==="function"){mtInit();}
- renderPricing();renderOffers();renderPlans();renderAdminNotes();
+ populateExamSelect("apExam");renderPricing();renderOffers();renderAccessPricing();renderAdminNotes();
 });
 </script>
 </body></html>
