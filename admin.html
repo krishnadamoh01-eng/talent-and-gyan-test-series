@@ -74,7 +74,7 @@ function checkAdmin(){
 }
 </script>
 <header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
-<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('plans',this)">💳 Plans</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
+<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('plans',this)">💳 Plans</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 
 <section id="tests" class="sec">
@@ -92,8 +92,26 @@ function checkAdmin(){
     <div class="row" style="margin-top:10px">
       <div><label>Test का नाम</label><input id="mtName" placeholder="जैसे MP पटवारी Mock Test 01"></div>
       <div><label>समय (मिनट)</label><input id="mtTime" type="number" min="1" value="60"></div>
+      <div><label>💰 1 Test MRP (₹)</label><input id="mtOneMrp" type="number" min="0" placeholder="जैसे 10"></div>
+      <div><label>🏷️ 1 Test Offer Rate (₹)</label><input id="mtOneOffer" type="number" min="0" placeholder="जैसे 5"></div>
+      <div><label>🎟️ Redeem Code</label><input id="mtRedeemCode" placeholder="जैसे TG10"></div>
+      <div><label>📉 Discount %</label><input id="mtRedeemDiscount" type="number" min="0" max="100" placeholder="10"></div>
+      <div><label>📅 Redeem Code Valid Till</label><input id="mtRedeemUntil" type="date"></div>
+      <div><label>📅 Test/Offer Available Till</label><input id="mtAvailableUntil" type="date"></div>
+      <div><label>👁️ Student Site पर दिखाएँ</label><select id="mtVisible"><option value="true">हाँ</option><option value="false">नहीं / Hide</option></select></div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+    <div class="card" style="margin-top:12px;background:#f7f9fc">
+      <h3>⏱️ समय के हिसाब से Plan Rate</h3>
+      <p class="muted">हर Test के लिए अलग-अलग समय का MRP और Offer Rate रखें। खाली छोड़ने पर वह Plan Student को नहीं दिखेगा।</p>
+      <div class="row">
+       <div><label>1 दिन MRP / Offer</label><div style="display:flex;gap:5px"><input id="p1m" type="number" placeholder="MRP"><input id="p1o" type="number" placeholder="Offer"></div></div>
+       <div><label>2 दिन MRP / Offer</label><div style="display:flex;gap:5px"><input id="p2m" type="number" placeholder="MRP"><input id="p2o" type="number" placeholder="Offer"></div></div>
+       <div><label>5 दिन MRP / Offer</label><div style="display:flex;gap:5px"><input id="p5m" type="number" placeholder="MRP"><input id="p5o" type="number" placeholder="Offer"></div></div>
+       <div><label>7 दिन MRP / Offer</label><div style="display:flex;gap:5px"><input id="p7m" type="number" placeholder="MRP"><input id="p7o" type="number" placeholder="Offer"></div></div>
+       <div><label>15 दिन MRP / Offer</label><div style="display:flex;gap:5px"><input id="p15m" type="number" placeholder="MRP"><input id="p15o" type="number" placeholder="Offer"></div></div>
+       <div><label>30 दिन MRP / Offer</label><div style="display:flex;gap:5px"><input id="p30m" type="number" placeholder="MRP"><input id="p30o" type="number" placeholder="Offer"></div></div>
+      </div>
+     </div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
       <button class="btn" onclick="mtAddExam()">➕ नई परीक्षा</button>
       <button class="btn" onclick="mtAddTest()">➕ नया Test</button>
       <button class="btn" onclick="mtSaveMeta()">💾 Test Details Save</button>
@@ -148,6 +166,19 @@ function checkAdmin(){
   </div>
 </section>
 
+<section id="importantInfo" class="sec">
+  <h1>📢 महत्वपूर्ण जानकारी</h1>
+  <div class="card">
+    <p>यहाँ जो जानकारी लिखेंगे, वह Student Website में <b>नीली पट्टी के ठीक नीचे</b> चलती हुई पट्टी में दिखाई देगी।</p>
+    <button class="btn orange" onclick="openNewsManager()">📰 महत्वपूर्ण जानकारी जोड़ें / Edit करें</button>
+    <div style="margin-top:12px;padding:12px;background:#f7f9fc;border-radius:10px">
+      <label><b>नई महत्वपूर्ण जानकारी</b></label>
+      <input id="quickImportantInfo" placeholder="जैसे: MP पटवारी Admit Card जारी हो गया है..." style="width:100%;padding:10px;border:1px solid #ccd5df;border-radius:8px">
+      <button class="btn" style="margin-top:8px" onclick="quickAddImportantInfo()">➕ तुरंत जोड़ें</button>
+    </div>
+    <div id="importantInfoPreview" style="margin-top:14px"></div>
+  </div>
+</section>
 <section id="notes" class="sec">
  <h1>📄 PDF Notes</h1>
  <div class="card">
@@ -467,8 +498,8 @@ function tgySaveAdminNews(x){localStorage.setItem("tgy_news_items",JSON.stringif
 function openNewsManager(){
  const box=document.getElementById("homeCustomizerArea"); if(!box)return;
  const items=tgyAdminNews();
- box.innerHTML=`<div class="home-customize-card"><h2>📰 News / Latest Updates</h2>
- <p>यहाँ जो लिखेंगे वही Student Home Page की चलती हुई पट्टी में दिखेगा।</p>
+ box.innerHTML=`<div class="home-customize-card"><h2>📢 महत्वपूर्ण जानकारी</h2>
+ <p>यहाँ जो लिखेंगे वही Student Website में नीली पट्टी के ठीक नीचे चलती हुई पट्टी में दिखेगा।</p>
  <div id="newsRows">${items.map((x,i)=>`<div class="news-row"><input id="news_${i}" value="${esc(x.text||"")}"><label><input type="checkbox" id="newsOn_${i}" ${x.enabled!==false?"checked":""}> दिखाएँ</label><button class="btn" onclick="removeNews(${i})">🗑️</button></div>`).join("")}</div>
  <div class="news-row"><input id="newNewsText" placeholder="नई परीक्षा/करंट अपडेट लिखें"><button class="btn" onclick="addNews()">➕ जोड़ें</button></div>
  <div style="margin-top:10px"><button class="btn" onclick="saveNews()">💾 Save Updates</button> <button class="btn gray" onclick="location.reload()">बंद करें</button></div></div>`;
@@ -642,6 +673,15 @@ function mtLoadSelected(){
  if(obj){
    document.getElementById("mtName").value=obj.name||t;
    document.getElementById("mtTime").value=obj.time||60;
+   const pr=obj.pricing||{}, one=pr.oneTest||{};
+   document.getElementById("mtOneMrp").value=one.mrp??"";
+   document.getElementById("mtOneOffer").value=one.offer??"";
+   document.getElementById("mtRedeemCode").value=pr.redeemCode||"";
+   document.getElementById("mtRedeemDiscount").value=pr.redeemDiscount??"";
+   document.getElementById("mtRedeemUntil").value=pr.redeemUntil||"";
+   document.getElementById("mtAvailableUntil").value=pr.availableUntil||"";
+   document.getElementById("mtVisible").value=(obj.visible!==false).toString();
+   const ps=pr.plans||{}; ["1","2","5","7","15","30"].forEach(d=>{const z=ps[d]||{};document.getElementById("p"+d+"m").value=z.mrp??"";document.getElementById("p"+d+"o").value=z.offer??""});
  }
  mtRenderQuestions();
 }
@@ -665,7 +705,20 @@ function mtSaveMeta(){
  const d=mtStore(),obj=d.exams[e].tests[t];
  obj.name=document.getElementById("mtName").value.trim()||t;
  obj.time=Number(document.getElementById("mtTime").value)||60;
- d.exams[e].tests[t]=obj;mtSaveStore(d);mtRenderAll();alert("Test की जानकारी Save हो गई।");
+ obj.visible=document.getElementById("mtVisible").value!=="false";
+ obj.pricing={oneTest:{
+   mrp:Number(document.getElementById("mtOneMrp").value)||0,
+   offer:Number(document.getElementById("mtOneOffer").value)||0
+ },redeemCode:document.getElementById("mtRedeemCode").value.trim().toUpperCase(),
+ redeemDiscount:Number(document.getElementById("mtRedeemDiscount").value)||0,
+ redeemUntil:document.getElementById("mtRedeemUntil").value,
+ availableUntil:document.getElementById("mtAvailableUntil").value,
+ plans:{}};
+ ["1","2","5","7","15","30"].forEach(dy=>{
+   const mrp=Number(document.getElementById("p"+dy+"m").value)||0,offer=Number(document.getElementById("p"+dy+"o").value)||0;
+   if(mrp||offer)obj.pricing.plans[dy]={mrp,offer};
+ });
+ d.exams[e].tests[t]=obj;mtSaveStore(d);mtRenderAll();alert("✅ Test की जानकारी और Pricing Save हो गई।");
 }
 
 function mtParse(raw){
