@@ -464,9 +464,15 @@ function activate(i){
  let users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
  const u=users.find(x=>x.email===p.email);
  if(u){
-   u.purchasedTests=u.purchasedTests||[];
-   if(p.course && !u.purchasedTests.includes(p.course))u.purchasedTests.push(p.course);
-   u.access=`Purchased • ${u.purchasedTests.length} Access`;
+   if(String(p.course||"").startsWith("PDF:")){
+     u.purchasedNotes=u.purchasedNotes||[];
+     const noteTitle=String(p.course).replace(/^PDF:\s*/,"");
+     if(noteTitle && !u.purchasedNotes.includes(noteTitle))u.purchasedNotes.push(noteTitle);
+   }else{
+     u.purchasedTests=u.purchasedTests||[];
+     if(p.course && !u.purchasedTests.includes(p.course))u.purchasedTests.push(p.course);
+   }
+   u.access=`Purchased • ${(u.purchasedTests||[]).length} Tests • ${(u.purchasedNotes||[]).length} Notes`;
    localStorage.setItem("tgy_users",JSON.stringify(users));
  }
  renderPayments(); renderUsers();

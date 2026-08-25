@@ -106,7 +106,7 @@ header{margin-left:-260px;padding-left:calc(5% + 260px)}
   <div class="tgy-sidebar-title">Talent And Gyan</div>
   <div class="tgy-side-card">
     <h3>🔗 त्वरित लिंक</h3>
-    <button class="tgy-side-link" onclick="openStudentPage('home')">🏠 Home</button>
+    <button class="tgy-side-link" onclick="studentGoHome()">🏠 Home</button>
     <button class="tgy-side-link" onclick="openStudentPage('mock')">🎯 Mock Test</button>
     <button class="tgy-side-link" onclick="openStudentPage('series')">📚 Test Series</button>
     <button class="tgy-side-link" onclick="openStudentPage('purchased')">🎓 मेरे खरीदे हुए Test</button>
@@ -119,7 +119,7 @@ header{margin-left:-260px;padding-left:calc(5% + 260px)}
 <header><div class="logo" style="font-size:34px;font-weight:900">Talent And Gyan Test Series</div>
 <a href="https://www.youtube.com/@TGMOTIVATION70?sub_confirmation=1" target="_blank" rel="noopener" style="display:inline-block;background:#e60000;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:800;white-space:nowrap">▶️ YouTube Subscribe करें</a></header><div id="homeNewsTicker" aria-label="महत्वपूर्ण जानकारी"></div>
 <div class="brand-nav-row" id="studentNavigation">
-<a href="#" onclick="openStudentPage('home');return false">🏠 Home</a>
+<a href="#" onclick="studentGoHome();return false">🏠 Home</a>
 <a href="#" onclick="openStudentPage('mock');return false">🎯 Mock Test</a>
 <a href="#" onclick="openStudentPage('series');return false">📚 Test Series</a>
 <a href="#" onclick="openStudentPage('purchased');return false">🎓 My Purchased Tests</a><a href="#" onclick="openStudentPage('notes');return false">📄 PDF Notes</a>
@@ -195,28 +195,41 @@ const demoQuestions = [
 ["'कमल' का पर्यायवाची है?",["पंकज","पवन","पर्वत","पल्लव"],0,"पंकज कमल का पर्यायवाची है।"]
 ];
 const examDemo = ["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant","अन्य परीक्षाएँ"];
+function requireStudentLogin(action){
+ const u=getCurrentStudent();
+ if(u)return true;
+ try{localStorage.setItem("tgy_pending_action",JSON.stringify(action))}catch(e){}
+ openAuth("login");
+ return false;
+}
+function resumePendingStudentAction(){
+ let a=null;try{a=JSON.parse(localStorage.getItem("tgy_pending_action")||"null");localStorage.removeItem("tgy_pending_action")}catch(e){}
+ if(!a)return;
+ setTimeout(()=>{
+   if(a.type==="exam"&&a.exam)window.openExam(a.exam);
+   else if(a.type==="test"&&Number.isInteger(a.index))openTest(a.index);
+   else if(a.type==="note"&&Number.isInteger(a.index))viewPdfNote(a.index);
+ },50);
+}
 function openExam(exam){
- const list=tests.filter(t=>t.exam===exam && t.visible!==false && tgyDateValid(t.availableUntil) && (t.demo===true || hasPurchasedTest(t)));
- let html=`<div class="exam-inner-head"><h2>📚 ${esc(exam)}</h2><p class="muted">इस परीक्षा के Test एक ही Test Series Folder में दिखेंगे।</p></div>`;
- html+=`<div class="card" style="border:2px solid #f07800"><h3>🎁 ${esc(exam)} Demo Test</h3><p>Demo Test उपलब्ध है।</p><button class="btn orange" onclick="startExamDemo('${esc(exam)}')">Free Demo Test दें</button></div>`;
+ if(!requireStudentLogin({type:"exam",exam}))return;
+ const list=tests.filter(t=>t.exam===exam && t.visible!==false && tgyDateValid(t.availableUntil));
+ let html=`<div class="exam-inner-head"><h2>📚 ${esc(exam)}</h2><p class="muted">इस परीक्षा के सभी Tests एक ही Test Series Folder में हैं।</p></div>`;
+ html+=`<div class="card" style="border:2px solid #f07800"><h3>🎁 ${esc(exam)} Demo Test</h3><p>यह Free Demo है।</p><button class="btn orange" onclick="startExamDemo('${esc(exam)}')">Free Demo Test दें</button></div>`;
  if(list.length){
-   html+=`<div class="card" style="border:2px solid #1d65a6;margin-top:14px">
-     <h3>📁 ${esc(exam)} Test Series</h3>
-     <p class="muted">इस Folder में इस परीक्षा के सभी उपलब्ध Tests हैं — कुल <b>${list.length}</b> Tests.</p>
-     <div class="grid">${list.map(t=>`<div class="card" style="margin:0">
-       <h3>📝 ${esc(t.name)}</h3>
-       <p>${t.questions.length} Questions • ${t.time} मिनट</p>
-       ${hasPurchasedTest(t)?`<button class="btn" onclick="closeExam();openTest(${tests.indexOf(t)})">▶️ Test दें</button>`:`<button class="btn orange" onclick="buyTest('${esc(t.name)}',0)">💳 ₹${getSeparateTestPrice(t).offer||getSeparateTestPrice(t).mrp||"Price देखें"}</button>`}
-     </div>`).join("")}</div>
-   </div>`;
- }else{
-   html+=`<div class="card"><h3>📁 ${esc(exam)} Test Series</h3><p class="muted">इस Folder में अभी कोई Test नहीं है। <b>Coming Soon</b> — जल्द ही Test Series जोड़ी जाएगी।</p></div>`;
- }
- html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn gray" onclick="closeExam()">← पीछे</button><button class="btn" onclick="closeExam();window.scrollTo({top:0,behavior:'smooth'})">🏠 Home</button><button class="btn gray" onclick="closeExam()">✕ बंद करें</button></div>`;
+   html+=`<div class="card" style="border:2px solid #1d65a6;margin-top:14px"><h3>📁 ${esc(exam)} Test Series</h3><p class="muted">कुल <b>${list.length}</b> Tests</p><div class="grid">
+   ${list.map(t=>{
+      const idx=tests.indexOf(t),free=t.demo===true,purchased=hasPurchasedTest(t);
+      const action=(free||purchased)
+        ? `<button class="btn" onclick="closeExam();openTest(${idx})">▶️ Test दें</button>`
+        : `<button class="btn orange" onclick="buyTest('${esc(t.name)}',0)">💳 Test खरीदें</button>`;
+      return `<div class="card" style="margin:0"><h3>📝 ${esc(t.name)}</h3><p>${t.questions.length} Questions • ${t.time} मिनट</p>${free?'<p style="color:green;font-weight:700">FREE</p>':purchased?'<p style="color:green;font-weight:700">आपके Account में उपलब्ध</p>':'<p class="muted">Paid Test</p>'}${action}</div>`;
+   }).join("")}</div></div>`;
+ }else html+=`<div class="card"><h3>📁 ${esc(exam)} Test Series</h3><p class="muted">अभी कोई Test नहीं है। <b>Coming Soon</b></p></div>`;
+ html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn gray" onclick="closeExam()">← पीछे</button><button class="btn gray" onclick="closeExam()">✕ बंद करें</button></div>`;
  document.getElementById("examContent").innerHTML=html;
  document.getElementById("examModal").style.display="flex";
 }
-window.openExam = openExam;
 function closeExam(){document.getElementById("examModal").style.display="none"}
 function startExamDemo(exam){
   closeExam();
@@ -262,7 +275,7 @@ function doLogin(){
  const users=JSON.parse(localStorage.getItem("tgy_users")||"[]");
  const u=users.find(x=>x.email===email&&x.password===pass);
  if(!u){alert("Email या Password गलत है।");return}
- localStorage.setItem("tgy_user",JSON.stringify(u)); closeAuth(); updateAuthUI(); if(typeof renderMyPurchasedTests==="function")renderMyPurchasedTests();
+ localStorage.setItem("tgy_user",JSON.stringify(u)); closeAuth(); updateAuthUI(); if(typeof renderMyPurchasedTests==="function")renderMyPurchasedTests(); resumePendingStudentAction();
 }
 function logout(){localStorage.removeItem("tgy_user");closeAuth();updateAuthUI()}
 function updateAuthUI(){
@@ -337,11 +350,17 @@ function submitPayment(course,days,amount,redeemCode=""){
 }
 function closeM(){document.getElementById("modal").style.display="none";clearInterval(window.timer)}
 function openTest(i){
- const tCheck=tests[i],uCheck=getCurrentStudent();
+ const tCheck=tests[i];
+ if(!requireStudentLogin({type:"test",index:i}))return;
  if(tCheck && tCheck.demo!==true && !hasPurchasedTest(tCheck)){
-   alert("यह Test आपके Account में खरीदा/Activate नहीं हुआ है।");
+   buyTest(tCheck.name,0);
    return;
- }const t=tests[i];window.state={t,idx:0,answers:Array(t.questions.length).fill(null)};document.getElementById("modalContent").innerHTML=`<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap"><div class="timer" id="timer"></div><div><button class="btn gray" onclick="closeTestModal()">← पीछे</button> <button class="btn" onclick="closeTestModal();window.scrollTo({top:0,behavior:'smooth'})">🏠 Home</button></div></div><h2>${esc(t.name)}</h2><p class="muted">Option चुनना जरूरी है। Previous से वापस जाकर उत्तर बदल सकते हैं।</p><div id="qarea"></div><button class="btn gray" id="prev" onclick="prevQ()">← Previous</button> <button class="btn" id="next" onclick="nextQ()">Next →</button>`;document.getElementById("modal").style.display="flex";renderQ();let sec=t.time*60;window.timer=setInterval(()=>{sec--;let e=document.getElementById("timer");if(e)e.textContent=`⏱️ ${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;if(sec<=0)submitTest()},1000)}
+ }
+ const t=tests[i];if(!t)return;
+ window.state={t,idx:0,answers:Array(t.questions.length).fill(null)};
+ document.getElementById("modalContent").innerHTML=`<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap"><div class="timer" id="timer"></div><div><button class="btn gray" onclick="closeTestModal()">← पीछे</button></div></div><h2>${esc(t.name)}</h2><p class="muted">Option चुनना जरूरी है। Previous से वापस जाकर उत्तर बदल सकते हैं।</p><div id="qarea"></div><button class="btn gray" id="prev" onclick="prevQ()">← Previous</button> <button class="btn" id="next" onclick="nextQ()">Next →</button>`;
+ document.getElementById("modal").style.display="flex";renderQ();let sec=t.time*60;window.timer=setInterval(()=>{sec--;let e=document.getElementById("timer");if(e)e.textContent=`⏱️ ${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;if(sec<=0)submitTest()},1000)
+}
 function closeTestModal(){if(window.timer)clearInterval(window.timer);const m=document.getElementById("modal");if(m)m.style.display="none";}
 function renderQ(){let s=state,q=s.t.questions[s.idx];document.getElementById("qarea").innerHTML=`<div class="q"><b>प्रश्न ${s.idx+1}. ${esc(q[0])}</b>${q[1].map((o,j)=>`<label><input type="radio" name="ans" value="${j}" ${s.answers[s.idx]===j?"checked":""} onchange="state.answers[state.idx]=+this.value"> ${String.fromCharCode(65+j)}. ${esc(o)}</label>`).join("")}</div>`;document.getElementById("prev").style.visibility=s.idx?"visible":"hidden";document.getElementById("next").textContent=s.idx===s.t.questions.length-1?"Submit Test":"Next →"}
 function nextQ(){if(state.answers[state.idx]===null){alert("पहले कोई एक विकल्प चुनें।");return}if(state.idx===state.t.questions.length-1)submitTest();else{state.idx++;renderQ()}}
@@ -498,38 +517,50 @@ document.addEventListener("DOMContentLoaded",tgyApplyNews);
 window.addEventListener("storage",tgyApplyNews);
 </script><script id="student-pages-script">
 function openStudentPage(key){
+ if(key==="home"){studentGoHome();return}
  let overlay=document.getElementById("studentPageOverlay");
  if(!overlay){overlay=document.createElement("div");overlay.id="studentPageOverlay";overlay.className="student-page";document.body.appendChild(overlay)}
- const titles={home:"🏠 Home",mock:"🎯 Mock Tests",series:"📚 Test Series",plans:"💳 Access Plans",results:"📊 My Results",info:"ℹ️ Exam Information",help:"📞 सहायता"};
+ const titles={mock:"🎯 Mock Tests",series:"📚 Test Series",plans:"💳 Access Plans",results:"📊 My Results",info:"ℹ️ Exam Information",help:"📞 सहायता",purchased:"🎓 My Purchased Tests",notes:"📄 PDF Notes"};
  let body="";
- if(key==="home"){body='<div class="card"><h2>Talent And Gyan Test Series</h2><p>अपनी परीक्षा चुनें और Demo/Test Series देखें।</p></div>'}
- if(key==="mock"){body='<div class="card"><h2>🎯 Mock Tests</h2><div id="studentMockPageList"></div></div>'}
- if(key==="series"){body='<div class="card"><h2>📚 Test Series</h2><div id="studentSeriesPageList"></div></div>'}
- if(key==="plans"){body='<div class="card"><h2>💳 Access Plans</h2><p>पहले Test Series चुनें, फिर अपना Plan चुनें और Payment करें।</p><button class="btn orange" onclick="pay()">Plan चुनें / Payment</button></div>'}
- if(key==="results"){body='<div class="card"><h2>📊 My Results</h2><p>Login करने के बाद आपके दिए गए Tests के Results यहाँ दिखाई देंगे।</p></div>'}
- if(key==="info"){body='<div class="card"><h2>ℹ️ Exam Information</h2><p>परीक्षा की तारीख, आवेदन, Admit Card, Exam Pattern, Syllabus, Result और Latest Updates यहाँ दिखाई देंगे।</p></div>'}
- if(key==="purchased"){body='<div class="card"><h2>🎓 My Purchased Tests</h2><div id="myPurchasedTests"></div></div>'}
- if(key==="notes"){body='<div class="card"><h2>📄 PDF Notes</h2><p>यहाँ Notes साइट पर पढ़े जा सकते हैं। Notes को डाउनलोड करने का विकल्प उपलब्ध नहीं होगा।</p><div id="studentNotesList"></div></div>'}
- if(key==="help"){body='<div class="card"><h2>📞 सहायता</h2><p>Payment, Login या Test से संबंधित सहायता के लिए यहाँ जानकारी दी जाएगी।</p></div>'}
- overlay.innerHTML='<div class="student-page-head"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="student-close" onclick="studentGoBack()">← पीछे</button><button class="student-close" onclick="studentGoHome()">🏠 Home</button><h2>'+titles[key]+'</h2></div><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body">'+body+'</div>';
+ if(key==="mock")body='<div class="card"><h2>🎯 Mock Tests</h2><p class="muted">Test देखने के लिए नीचे परीक्षा चुनें। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentMockPageList"></div></div>';
+ if(key==="series")body='<div class="card"><h2>📚 Test Series</h2><p class="muted">हर परीक्षा की पूरी Test Series एक ही Folder में मिलेगी। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentSeriesPageList"></div></div>';
+ if(key==="plans")body='<div class="card"><h2>💳 Access Plans</h2><p>पहले Test Series चुनें, फिर अपना Plan चुनें और Payment करें।</p><button class="btn orange" onclick="pay()">Plan चुनें / Payment</button></div>';
+ if(key==="results")body='<div class="card"><h2>📊 My Results</h2><p>Login करने के बाद आपके दिए गए Tests के Results यहाँ दिखाई देंगे।</p></div>';
+ if(key==="info")body='<div class="card"><h2>ℹ️ Exam Information</h2><p>परीक्षा की तारीख, आवेदन, Admit Card, Exam Pattern, Syllabus, Result और Latest Updates यहाँ दिखाई देंगे।</p></div>';
+ if(key==="purchased")body='<div class="card"><h2>🎓 My Purchased Tests</h2><div id="myPurchasedTests"></div></div>';
+ if(key==="notes")body='<div class="card"><h2>📄 PDF Notes</h2><p>Notes दिखाई देंगे। Open करने के लिए Login/Register जरूरी होगा। Paid Notes के लिए पहले खरीदना होगा।</p><div id="studentNotesList"></div></div>';
+ if(key==="help")body='<div class="card"><h2>📞 सहायता</h2><p>Payment, Login या Test से संबंधित सहायता के लिए यहाँ जानकारी दी जाएगी।</p></div>';
+ overlay.innerHTML='<div class="student-page-head"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="student-close" onclick="studentGoBack()">← पीछे</button><h2>'+titles[key]+'</h2></div><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body">'+body+'</div>';
  overlay.style.display="block"; window.scrollTo(0,0);
- if(key==="mock") renderStudentMockPage();
- if(key==="series") renderStudentSeriesPage();
- if(key==="purchased") renderMyPurchasedTests();
- if(key==="notes") renderStudentNotes();
+ if(key==="mock")renderStudentMockPage();
+ if(key==="series")renderStudentSeriesPage();
+ if(key==="purchased")renderMyPurchasedTests();
+ if(key==="notes")renderStudentNotes();
 }
 function closeStudentPage(){let o=document.getElementById("studentPageOverlay");if(o)o.style.display="none";document.body.style.overflow=""}
 function studentGoHome(){closeStudentPage();window.scrollTo({top:0,behavior:"smooth"});}
-function studentGoBack(){
- const o=document.getElementById("studentPageOverlay");
- if(o){o.style.display="none";}
- window.scrollTo({top:0,behavior:"smooth"});
-}
+function studentGoBack(){closeStudentPage();window.scrollTo({top:0,behavior:"smooth"});}
 function renderStudentMockPage(){
- let b=document.getElementById("studentMockPageList");if(!b)return;
- let names=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];
- b.innerHTML='<div class="grid">'+names.map(n=>`<div class="card"><h3>${esc(n)}</h3><p>Demo Mock Test</p><button class="btn orange" onclick="openExam('${esc(n)}')">🎯 Test खोलें</button></div>`).join('')+'</div>';
+ const b=document.getElementById("studentMockPageList");if(!b)return;
+ const names=[...new Set(tests.map(t=>t.exam||"अन्य परीक्षाएँ"))];
+ b.innerHTML='<div class="grid">'+names.map(n=>`<div class="card"><h3>🎯 ${esc(n)}</h3><p>Mock Tests / Demo</p><button class="btn orange" onclick="window.openExam('${esc(n)}')">🎯 Test खोलें</button></div>`).join('')+'</div>';
 }
+function renderStudentSeriesPage(){
+ const b=document.getElementById("studentSeriesPageList");if(!b)return;
+ const groups={};
+ tests.filter(t=>t.visible!==false && tgyDateValid(t.availableUntil)).forEach((t,idx)=>{
+   const ex=(t.exam||"अन्य परीक्षाएँ").trim()||"अन्य परीक्षाएँ";
+   (groups[ex]||(groups[ex]=[])).push({...t,_idx:idx});
+ });
+ const names=Object.keys(groups);
+ if(!names.length){b.innerHTML='<div class="card"><h3>📭 अभी कोई Test Series नहीं है।</h3><p>Coming Soon</p></div>';return}
+ b.innerHTML=names.map(ex=>`<div class="card" style="border:2px solid #1d65a6;margin:12px 0">
+   <h3>📁 ${esc(ex)} Test Series</h3>
+   <p class="muted">इस Folder में ${groups[ex].length} Test हैं।</p>
+   <button class="btn orange" onclick="window.openExam('${esc(ex)}')">📂 Series खोलें</button>
+ </div>`).join("");
+}
+
 </script>
 <script id="purchased-access-student">
 function getCurrentStudent(){
@@ -569,48 +600,50 @@ function renderMyPurchasedTests(){
 function getNotes(){
  try{return JSON.parse(localStorage.getItem("tgy_pdf_notes")||"[]")}catch(e){return []}
 }
+function hasPurchasedNote(n){
+ const u=getCurrentStudent();if(!u)return false;
+ const a=u.purchasedNotes||[];
+ return a.some(x=>x===n.title||x===n.id||x===n.fileName);
+}
 function renderStudentNotes(){
- const b=document.getElementById("studentNotesList"); if(!b)return;
+ const b=document.getElementById("studentNotesList");if(!b)return;
  const notes=getNotes();
  if(!notes.length){b.innerHTML='<p>अभी कोई PDF Notes उपलब्ध नहीं है।</p>';return}
  const groups={};
  notes.forEach((n,i)=>{const exam=(n.exam||"अन्य Notes").trim()||"अन्य Notes";(groups[exam]||(groups[exam]=[])).push({...n,_i:i})});
- b.innerHTML=`<p class="muted">हर परीक्षा के PDF Notes एक ही Folder में दिखेंगे।</p>`+
+ b.innerHTML=`<p class="muted">हर परीक्षा के PDF Notes एक ही Folder में दिखेंगे। Open करने के लिए Login जरूरी है।</p>`+
  Object.entries(groups).map(([exam,items])=>`<div class="card" style="border:2px solid #1d65a6;margin:12px 0">
-   <h2>📁 ${esc(exam)} — PDF Notes</h2>
-   <p class="muted">इस Folder में <b>${items.length}</b> Notes हैं।</p>
-   <div class="grid">${items.map(n=>`<div class="card" style="margin:0">
-     <h3>📄 ${esc(n.title||("Notes "+(n._i+1)))}</h3>
-     <p class="muted">${n.pages?`${n.pages} Pages • `:""}${Number(n.mrp)||Number(n.offer)?`MRP ₹${n.mrp||0} ${n.offer?`• Offer ₹${n.offer}`:""}`:""}</p>
-     <button class="btn" onclick="viewPdfNote(${n._i})">📖 साइट पर पढ़ें</button>
-   </div>`).join("")}</div>
- </div>`).join("");
+ <h2>📁 ${esc(exam)} — PDF Notes</h2><p class="muted">इस Folder में <b>${items.length}</b> Notes हैं।</p>
+ <div class="grid">${items.map(n=>{
+   const price=Number(n.offer)||Number(n.mrp)||0,owned=hasPurchasedNote(n);
+   const btn=owned||!price
+    ? `<button class="btn" onclick="viewPdfNote(${n._i})">📖 साइट पर पढ़ें</button>`
+    : `<button class="btn orange" onclick="buyPdfNote(${n._i})">💳 ₹${price} — खरीदें</button>`;
+   return `<div class="card" style="margin:0"><h3>📄 ${esc(n.title||("Notes "+(n._i+1)))}</h3><p class="muted">${n.pages?`${n.pages} Pages • `:""}${price?`MRP ₹${n.mrp||0}${n.offer?` • Offer ₹${n.offer}`:""}`:"FREE"}</p>${btn}</div>`;
+ }).join("")}</div></div>`).join("");
+}
+function buyPdfNote(i){
+ const n=getNotes()[i];if(!n)return;
+ if(!requireStudentLogin({type:"note",index:i}))return;
+ const price=Number(n.offer)||Number(n.mrp)||0;
+ const u=getCurrentStudent()||{};
+ document.getElementById("modalContent").innerHTML=`<h2>💳 PDF Notes खरीदें</h2><div class="pay"><p><b>Notes:</b> ${esc(n.title||"PDF Notes")}</p><p><b>Price:</b> ₹${price}</p><input id="pn" value="${esc(u.name||"")}" placeholder="नाम"><input id="pemail" value="${esc(u.email||"")}" placeholder="Email"><input id="utr" placeholder="Payment UTR / Transaction ID"><button class="btn orange" onclick="submitPayment('PDF: ${esc(n.title||"PDF Notes")}',0,${price})">Payment Details भेजें</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
+ document.getElementById("modal").style.display="flex";
 }
 function viewPdfNote(i){
- const n=getNotes()[i]; if(!n)return;
+ const n=getNotes()[i];if(!n)return;
+ if(!requireStudentLogin({type:"note",index:i}))return;
+ if((Number(n.offer)||Number(n.mrp)||0)>0 && !hasPurchasedNote(n)){buyPdfNote(i);return;}
  const o=document.getElementById("studentPageOverlay");
- const viewer=`<div style="background:#fff;border-radius:12px;padding:10px">
- <div style="display:flex;justify-content:space-between;align-items:center"><h3>📄 ${esc(n.title||"PDF Notes")}</h3><button class="btn" onclick="closeNoteViewer()">✕ बंद करें</button></div>
- <div id="pdfNoteViewer" style="height:75vh;overflow:auto;background:#555"></div></div>`;
+ const viewer=`<div style="background:#fff;border-radius:12px;padding:10px"><div style="display:flex;justify-content:space-between;align-items:center"><h3>📄 ${esc(n.title||"PDF Notes")}</h3><button class="btn" onclick="closeNoteViewer()">✕ बंद करें</button></div><div id="pdfNoteViewer" style="height:75vh;overflow:auto;background:#555"></div></div>`;
  o.querySelector(".student-page-body").innerHTML=viewer;
  const box=document.getElementById("pdfNoteViewer");
- if(n.url){
-   const iframe=document.createElement("iframe");
-   iframe.src=n.url+"#toolbar=0&navpanes=0&scrollbar=1";
-   iframe.style.cssText="width:100%;height:100%;border:0;background:white";
-   iframe.setAttribute("sandbox","allow-same-origin allow-scripts");
-   box.appendChild(iframe);
- }else if(n.dataUrl){
-   const iframe=document.createElement("iframe");
-   iframe.src=n.dataUrl+"#toolbar=0&navpanes=0&scrollbar=1";
-   iframe.style.cssText="width:100%;height:100%;border:0;background:white";
-   iframe.setAttribute("sandbox","allow-same-origin");
-   box.appendChild(iframe);
- }else{
-   box.innerHTML="<p style='color:white;padding:20px'>PDF उपलब्ध नहीं है।</p>";
- }
+ if(n.url){const iframe=document.createElement("iframe");iframe.src=n.url+"#toolbar=0&navpanes=0&scrollbar=1";iframe.style.cssText="width:100%;height:100%;border:0;background:white";iframe.setAttribute("sandbox","allow-same-origin allow-scripts");box.appendChild(iframe)}
+ else if(n.dataUrl){const iframe=document.createElement("iframe");iframe.src=n.dataUrl+"#toolbar=0&navpanes=0&scrollbar=1";iframe.style.cssText="width:100%;height:100%;border:0;background:white";iframe.setAttribute("sandbox","allow-same-origin");box.appendChild(iframe)}
+ else box.innerHTML="<p style='color:white;padding:20px'>PDF उपलब्ध नहीं है।</p>";
  box.addEventListener("contextmenu",e=>e.preventDefault());
 }
+
 function closeNoteViewer(){openStudentPage("notes")}
 document.addEventListener("keydown",e=>{
  const viewer=document.getElementById("pdfNoteViewer");
