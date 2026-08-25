@@ -156,6 +156,23 @@ header{margin-left:-260px;padding-left:calc(5% + 260px)}
 <a href="https://www.youtube.com/@TGMOTIVATION70?sub_confirmation=1" target="_blank" rel="noopener" style="display:inline-block;margin:12px 5px;padding:10px 16px;background:#c00;color:#fff;text-decoration:none;border-radius:8px;font-weight:700">🔔 Subscribe करें</a><br>
 Contact Email: <b>krishna.damoh01@gmail.com</b></footer>
 <div class="modal" id="modal"><div class="box" id="modalContent"></div></div>
+
+function getSeparateTestPrice(t){
+ try{
+  const a=JSON.parse(localStorage.getItem("tgy_pricing")||"[]");
+  const x=a.find(p=>(p.exam||"")==(t.exam||"") && (p.test||p.name||"")===(t.name||""));
+  if(x)return {mrp:Number(x.mrp)||0,offer:Number(x.offer)||0};
+ }catch(e){}
+ return {mrp:Number(t.pricing?.oneTest?.mrp)||0,offer:Number(t.pricing?.oneTest?.offer)||0};
+}
+
+<script id="tgy-escape-helper">
+function esc(v){
+  return String(v ?? "").replace(/[&<>"']/g, function(ch){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch];
+  });
+}
+</script>
 <script>
 const defaultTests=[
 {name:"MP Patwari Mock Test - 01",time:60,questions:[
@@ -189,7 +206,7 @@ function openExam(exam){
      <div class="grid">${list.map(t=>`<div class="card" style="margin:0">
        <h3>📝 ${esc(t.name)}</h3>
        <p>${t.questions.length} Questions • ${t.time} मिनट</p>
-       ${hasPurchasedTest(t)?`<button class="btn" onclick="closeExam();openTest(${tests.indexOf(t)})">▶️ Test दें</button>`:`<button class="btn orange" onclick="buyTest('${esc(t.name)}',0)">💳 ₹${Number(t.pricing?.oneTest?.offer)||Number(t.pricing?.oneTest?.mrp)||"Price देखें"}</button>`}
+       ${hasPurchasedTest(t)?`<button class="btn" onclick="closeExam();openTest(${tests.indexOf(t)})">▶️ Test दें</button>`:`<button class="btn orange" onclick="buyTest('${esc(t.name)}',0)">💳 ₹${getSeparateTestPrice(t).offer||getSeparateTestPrice(t).mrp||"Price देखें"}</button>`}
      </div>`).join("")}</div>
    </div>`;
  }else{
