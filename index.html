@@ -214,12 +214,12 @@ function resumePendingStudentAction(){
  if(!a)return;
  setTimeout(()=>{
    if(a.type==="exam"&&a.exam)window.openExam(a.exam);
+   else if(a.type==="series"&&a.exam)buySeriesAccess(a.exam,Number(a.pricingIndex)||0);
    else if(a.type==="test"&&Number.isInteger(a.index))openTest(a.index);
    else if(a.type==="note"&&Number.isInteger(a.index))viewPdfNote(a.index);
  },50);
 }
 function openExam(exam){
- if(!requireStudentLogin({type:"exam",exam}))return;
  const folderVisible=getFolderVisibilityStudent(exam);
  const list=tests.filter(t=>t.exam===exam && folderVisible && t.published!==false && t.visible!==false && tgyDateValid(t.availableUntil));
  const pricing=getSeriesPricing(exam);
@@ -233,7 +233,7 @@ function openExam(exam){
        ${complete?"<p style='color:#d65b00;font-weight:700'>COMPLETE TEST SERIES</p>":""}
        <div style="margin:8px 0">${seriesPriceText(x)}</div>
        <p>⏳ ${accessDurationTextStudent(x)}</p>
-       <button class="btn ${complete?"orange":""}" onclick="buySeriesAccess('${esc(exam)}',${n})">🛒 Access लें</button>
+       <button class="btn ${complete?"orange":""}" onclick="buySeriesAccess('${esc(exam)}',${n})">🛒 Access लें / खरीदें</button>
      </div>`;
    });
    html+=`</div></div>`;
@@ -572,17 +572,33 @@ function renderStudentMockPage(){
 function renderStudentSeriesPage(){
  const b=document.getElementById("studentSeriesPageList");if(!b)return;
  const groups={};
- tests.filter(t=>getFolderVisibilityStudent(t.exam||"") && t.published!==false && t.visible!==false && tgyDateValid(t.availableUntil)).forEach((t,idx)=>{
-   const ex=(t.exam||"अन्य परीक्षाएँ").trim()||"अन्य परीक्षाएँ";
-   (groups[ex]||(groups[ex]=[])).push({...t,_idx:idx});
+ const addExam=(ex)=>{
+   ex=(ex||"").trim();if(!ex)return;
+   if(getFolderVisibilityStudent(ex)!==false)groups[ex]=groups[ex]||[];
+ };
+ // Exam master keeps empty folders visible; tests and pricing can also introduce an exam.
+ try{(JSON.parse(localStorage.getItem("tgy_exams")||"[]")||[]).forEach(x=>addExam(typeof x==="string"?x:x.name))}catch(e){}
+ tests.forEach(t=>{if(t.exam)addExam(t.exam)});
+ getAccessPricing().forEach(x=>{if(x.exam)addExam(x.exam)});
+ Object.keys(groups).forEach(ex=>{
+   groups[ex]=tests.filter(t=>t.exam===ex && t.published!==false && t.visible!==false && tgyDateValid(t.availableUntil));
  });
  const names=Object.keys(groups);
- if(!names.length){b.innerHTML='<div class="card"><h3>📭 अभी कोई Test Series नहीं है।</h3><p>Coming Soon</p></div>';return}
- b.innerHTML=names.map(ex=>`<div class="card" style="border:2px solid #1d65a6;margin:12px 0">
-   <h3>📁 ${esc(ex)} Test Series</h3>
-   <p class="muted">इस Folder में ${groups[ex].length} Test हैं।</p>
-   <button class="btn orange" onclick="window.openExam('${esc(ex)}')">📂 Series खोलें</button>
- </div>`).join("");
+ if(!names.length){
+   b.innerHTML='<div class="card"><h3>📭 अभी कोई Test Series Folder नहीं है।</h3><p>Admin Panel में परीक्षा जोड़ें।</p></div>';
+   return;
+ }
+ b.innerHTML=names.map(ex=>{
+   const count=groups[ex].length;
+   const pricing=getSeriesPricing(ex);
+   const priceHint=pricing.length?`<p class="muted">🔓 ${pricing.length} Access Options उपलब्ध हैं।</p>`:'<p class="muted">💳 Pricing Admin Panel में सेट की जा सकती है।</p>';
+   return `<div class="card" style="border:2px solid #1d65a6;margin:12px 0">
+     <h3>📁 ${esc(ex)} Test Series</h3>
+     <p class="muted">इस Folder में ${count} Test${count===1?"":"s"} हैं।</p>
+     ${priceHint}
+     <button class="btn orange" onclick="window.openExam('${esc(ex)}')">📂 Series खोलें</button>
+   </div>`;
+ }).join("");
 }
 
 </script>
@@ -614,7 +630,7 @@ function seriesPriceText(x){
 }
 function buySeriesAccess(exam,pricingIndex){
  const options=getSeriesPricing(exam),x=options[pricingIndex];if(!x)return;
- if(!requireStudentLogin({type:"series",exam,pricing:x}))return;
+ if(!getCurrentStudent()){try{localStorage.setItem("tgy_pending_action",JSON.stringify({type:"series",exam,pricingIndex}))}catch(e){} openAuth("login"); return;}
  const amount=Number(x.offer)||Number(x.mrp)||0;
  const duration=accessDurationTextStudent(x);
  document.getElementById("modalContent").innerHTML=`<h2>💳 ${esc(exam)} Test Series</h2>
