@@ -149,6 +149,28 @@ header{margin-left:0!important;padding-left:5%!important}
 #studentNavigation{margin-left:0!important;padding-left:5%!important}
 #homeNewsTicker{margin-left:0!important}
 </style>
+
+<style id="tgy-final-animations">
+@media (prefers-reduced-motion: no-preference){
+  .modal, .student-page{
+    opacity:0;
+    transition:opacity .22s ease;
+  }
+  .modal.tgy-visible, .student-page.tgy-visible{opacity:1}
+  .modal .box, .student-page-body, .student-page-head{
+    transform:translateY(14px) scale(.985);
+    transition:transform .24s ease, opacity .24s ease;
+  }
+  .modal.tgy-visible .box, .student-page.tgy-visible .student-page-body,
+  .student-page.tgy-visible .student-page-head{transform:translateY(0) scale(1)}
+  .card, .btn, .brand-nav-row a{transition:transform .18s ease, box-shadow .18s ease, opacity .18s ease}
+  .card:hover{transform:translateY(-2px)}
+  .btn:hover, .brand-nav-row a:hover{transform:translateY(-1px)}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
 </head><body>
 <aside class="tgy-sidebar" aria-label="Talent And Gyan Logo">
   <img class="tgy-sidebar-logo" src="talent-and-gyan-logo.png" alt="Talent And Gyan Logo">
@@ -170,13 +192,10 @@ header{margin-left:0!important;padding-left:5%!important}
 <section class="hero" id="home" style="min-height:150px;display:flex;align-items:center;justify-content:center;padding:20px 5%">
   <div id="homeHeadline" class="home-headline" aria-live="polite"></div>
 </section>
-<div class="container" id="series"><div class="title">📚 परीक्षाएँ</div><div class="grid">
-<div class="card"><h3>MP पटवारी</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" class="exam-open-btn" data-exam="MP पटवारी" onclick="window.openExam('MP पटवारी')">देखें</button></div>
-<div class="card"><h3>MPPSC</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" class="exam-open-btn" data-exam="MPPSC" onclick="window.openExam('MPPSC')">देखें</button></div>
-<div class="card"><h3>MP पुलिस</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" class="exam-open-btn" data-exam="MP पुलिस" onclick="window.openExam('MP पुलिस')">देखें</button></div>
-<div class="card"><h3>ग्रुप 4</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" class="exam-open-btn" data-exam="ग्रुप 4" onclick="window.openExam('ग्रुप 4')">देखें</button></div>
-<div class="card"><h3>Hospital Assistant</h3><p class="muted">Demo + Online Mock Tests</p><button class="btn" class="exam-open-btn" data-exam="Hospital Assistant" onclick="window.openExam('Hospital Assistant')">देखें</button></div>
-<div class="card"><h3>अन्य परीक्षाएँ</h3><p class="muted">बाद में परीक्षा जोड़ें</p><button class="btn" class="exam-open-btn" data-exam="अन्य परीक्षाएँ" onclick="window.openExam('अन्य परीक्षाएँ')">देखें</button></div></div></div>
+<div class="container" id="series">
+ <div class="title">📚 परीक्षाएँ</div>
+ <div class="grid" id="studentExamCards"></div>
+</div>
 <div class="container" id="tests"><div class="title">📝 उपलब्ध Mock Tests</div><div class="grid" id="testCards"></div></div>
 <div class="modal" id="authModal"><div class="box" id="authContent"></div></div>
 <div class="modal" id="examModal"><div class="box" id="examContent"></div></div>
@@ -200,22 +219,33 @@ function getSeparateTestPrice(t){
 }
 
 <script id="tgy-escape-helper">
+function tgyNormalizeFormula(s){
+ let x=String(s??"");
+ x=x.replace(/\$\$?([\s\S]*?)\$\$?/g,"$1");
+ x=x.replace(/\\text\s*\{([^{}]*)\}/g,"$1");
+ x=x.replace(/\\mathrm\s*\{([^{}]*)\}/g,"$1");
+ x=x.replace(/\\operatorname\s*\{([^{}]*)\}/g,"$1");
+ const sym={"\\Omega":"Ω","\\omega":"ω","\\alpha":"α","\\beta":"β","\\gamma":"γ","\\delta":"δ","\\theta":"θ","\\lambda":"λ","\\mu":"μ","\\pi":"π","\\rho":"ρ","\\sigma":"σ","\\phi":"φ","\\Delta":"Δ","\\Sigma":"Σ","\\times":"×","\\div":"÷","\\pm":"±","\\le":"≤","\\ge":"≥","\\neq":"≠","\\approx":"≈","\\infty":"∞"};
+ for(const k in sym)x=x.split(k).join(sym[k]);
+ const subs={"0":"₀","1":"₁","2":"₂","3":"₃","4":"₄","5":"₅","6":"₆","7":"₇","8":"₈","9":"₉","+":"₊","-":"₋","n":"ₙ","m":"ₘ","x":"ₓ"};
+ x=x.replace(/_\{([^{}]+)\}/g,(_,v)=>String(v).split("").map(c=>subs[c]||c).join(""));
+ x=x.replace(/_([0-9A-Za-z+\-])/g,(_,c)=>subs[c]||c);
+ const sups={"0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹","+":"⁺","-":"⁻","n":"ⁿ","x":"ˣ"};
+ x=x.replace(/\^\{([^{}]+)\}/g,(_,v)=>String(v).split("").map(c=>sups[c]||c).join(""));
+ x=x.replace(/\^([0-9A-Za-z+\-])/g,(_,c)=>sups[c]||c);
+ x=x.replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g,"$1/$2");
+ x=x.replace(/\\(?:left|right|displaystyle|,|;|!|quad|qquad)\b/g,"");
+ return x;
+}
 function esc(v){
-  return String(v ?? "").replace(/[&<>"']/g, function(ch){
+  const s=tgyNormalizeFormula(v);
+  return String(s ?? "").replace(/[&<>"']/g, function(ch){
     return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch];
   });
 }
 </script>
 <script>
-const defaultTests=[
-{name:"MP Patwari Mock Test - 01",time:60,questions:[
-["मध्य प्रदेश की राजधानी क्या है?",["इंदौर","भोपाल","उज्जैन","जबलपुर"],1,"भोपाल मध्य प्रदेश की राजधानी है।"],
-["भारत का संविधान कब लागू हुआ?",["15 अगस्त 1947","26 जनवरी 1950","26 नवंबर 1949","2 अक्टूबर 1950"],1,"भारत का संविधान 26 जनवरी 1950 को लागू हुआ।"],
-["2 + 8 × 3 = ?",["30","26","24","18"],1,"गुणा पहले होगा: 8×3=24, फिर 2 जोड़ने पर 26।"]]},
-{name:"MP Patwari Practice Set - 02",time:30,questions:[
-["सांची स्तूप किस जिले में स्थित है?",["भोपाल","रायसेन","सीहोर","विदिशा"],1,"सांची स्तूप रायसेन जिले में स्थित है।"],
-["'कमल' का पर्यायवाची कौन सा है?",["पंकज","पवन","पर्वत","पल्लव"],0,"पंकज कमल का पर्यायवाची है।"]]}
-];
+const defaultTests=[];
 let tests=JSON.parse(localStorage.getItem("tgy_tests")||"null")||defaultTests;
 tests=tests.map(t=>({...t,exam:t.exam||"MP पटवारी",visible:t.visible!==false,pricing:t.pricing||{oneTest:{mrp:0,offer:0},plans:{}}}));
 let results=JSON.parse(localStorage.getItem("tgy_results")||"[]");
@@ -253,6 +283,7 @@ function resumePendingStudentAction(){
  },50);
 }
 function openExam(exam){
+ exam=decodeURIComponent(exam);
  const folderVisible=getFolderVisibilityStudent(exam);
  const list=tests.filter(t=>t.exam===exam && folderVisible && t.published!==false && t.visible!==false && tgyDateValid(t.availableUntil));
  const pricing=getSeriesPricing(exam);
@@ -286,14 +317,14 @@ function openExam(exam){
  }else html+=`<div class="card"><h3>📁 ${esc(exam)} Test Series</h3><p class="muted">अभी कोई Test नहीं है। <b>Coming Soon</b></p></div>`;
  html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn gray" onclick="closeExam()">← पीछे</button><button class="btn gray" onclick="closeExam()">✕ बंद करें</button></div>`;
  document.getElementById("examContent").innerHTML=html;
- document.getElementById("examModal").style.display="flex";
+ const em=document.getElementById("examModal"); em.classList.remove("tgy-visible"); em.style.display="flex"; requestAnimationFrame(()=>em.classList.add("tgy-visible"));
 }
-function closeExam(){document.getElementById("examModal").style.display="none"}
+function closeExam(){const em=document.getElementById("examModal");if(em){em.classList.remove("tgy-visible");setTimeout(()=>{if(!em.classList.contains("tgy-visible"))em.style.display="none"},220)}}
 function startExamDemo(exam){
   closeExam();
   window.state={t:{name:exam+" Demo Test",time:10,questions:demoQuestions},idx:0,answers:Array(demoQuestions.length).fill(null)};
   document.getElementById("modalContent").innerHTML=`<div class="timer" id="timer"></div><h2>${esc(exam)} — Free Demo Test</h2><p class="muted">यह Demo Test मुफ्त है। Option चुनना जरूरी है।</p><div id="qarea"></div><button class="btn gray" id="prev" onclick="prevQ()">← Previous</button> <button class="btn" id="next" onclick="nextQ()">Next →</button>`;
-  document.getElementById("modal").style.display="flex"; renderQ();
+  tgyShowModal(); renderQ();
   let sec=10*60; window.timer=setInterval(()=>{sec--;let e=document.getElementById("timer");if(e)e.textContent=`⏱️ ${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;if(sec<=0)submitDemo()},1000);
 }
 function submitDemo(){
@@ -376,7 +407,7 @@ function buyTest(testName,days){
  ${p.redeemCode&&tgyDateValid(p.redeemUntil)?`<label>🎟️ Redeem Code</label><input id="redeemCode" placeholder="Code डालें"><button class="btn" onclick="applyRedeem('${esc(testName)}',${days},${original})">Code Apply करें</button><div id="redeemResult" style="margin-top:8px"></div>`:""}
  <div id="payFinal"><p><b>Payable: ₹${original}</b></p><button class="btn orange" onclick="submitPayment('${esc(testName)}',${days},${original})">Payment Details भरें</button></div>
  <button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
- document.getElementById("modal").style.display="flex";
+ tgyShowModal();
 }
 function applyRedeem(testName,days,original){
  const t=tgyGetTestByName(testName),code=document.getElementById("redeemCode").value.trim().toUpperCase(),p=t?.pricing||{};
@@ -406,7 +437,7 @@ function submitPayment(course,days,amount,redeemCode=""){
  localStorage.setItem("tgy_payments",JSON.stringify(p));
  document.getElementById("modalContent").innerHTML=`<h2>✅ Payment Details प्राप्त हो गई हैं</h2><div class="result"><b>Test Series:</b> ${esc(course)}<br><b>Access:</b> ${days===0?"1 Test":days+" दिन"}<br><b>Amount:</b> ₹${amount}<br>${redeemCode?`<b>Redeem Code:</b> ${esc(redeemCode)}<br>`:""}<b>Status:</b> 🟡 Pending</div><p><b>आपका Access Admin approval के बाद चालू किया जाएगा।</b></p><button class="btn" onclick="closeM()">ठीक है</button>`;
 }
-function closeM(){document.getElementById("modal").style.display="none";clearInterval(window.timer)}
+function closeM(){tgyHideModal();clearInterval(window.timer)}
 function openTestFromSeries(i){
  const t=tests[i]; if(!t)return;
  // Remember the exact Exam/Mock-Test folder that launched this Test.
@@ -414,32 +445,19 @@ function openTestFromSeries(i){
  window.openedTestFromSeries = !!window.activeTestExam;
  const examModal=document.getElementById("examModal");
  if(examModal)examModal.style.display="none";
- setTimeout(()=>openTest(i),60);
+ setTimeout(()=>window.startFinalMockTest(i),60);
 }
 function openTest(i){
- const tCheck=tests[i];
- if(!requireStudentLogin({type:"test",index:i}))return;
- if(tCheck && tCheck.demo!==true && !hasPurchasedTest(tCheck)){
-   buyTest(tCheck.name,0);
-   return;
- }
  const t=tests[i];if(!t)return;
- window.state={t,idx:0,answers:Array(t.questions.length).fill(null)};
- document.getElementById("modalContent").innerHTML=`<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap"><div class="timer" id="timer"></div><div><button class="btn gray" onclick="closeTestModal()">← वापस Test Series</button></div></div><h2>${esc(t.name)}</h2><p class="muted">Option चुनना जरूरी है। Previous से वापस जाकर उत्तर बदल सकते हैं।</p><div id="qarea"></div><button class="btn gray" id="prev" onclick="prevQ()">← Previous</button> <button class="btn" id="next" onclick="nextQ()">Next →</button>`;
- document.getElementById("modal").style.display="flex";renderQ();let sec=t.time*60;window.timer=setInterval(()=>{sec--;let e=document.getElementById("timer");if(e)e.textContent=`⏱️ ${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;if(sec<=0)submitTest()},1000)
+ if(typeof window.startFinalMockTest==="function"){window.startFinalMockTest(i);return;}
+ alert("Test system load नहीं हुआ।");
 }
 function closeTestModal(){
  if(window.timer)clearInterval(window.timer);
  const m=document.getElementById("modal");if(m)m.style.display="none";
- // If the Test was opened from a Mock Test/Exam folder, return to that
- // same folder instead of going to Home or the general Test list.
  const ex=window.activeTestExam;
- if(window.openedTestFromSeries && ex){
-   setTimeout(()=>openExam(ex),30);
- }else{
-   window.activeTestExam=null;
-   window.openedTestFromSeries=false;
- }
+ window.activeTestExam=null;window.openedTestFromSeries=false;
+ if(ex && typeof window.openExam==="function")setTimeout(()=>window.openExam(ex),30);
 }
 function renderQ(){let s=state,q=s.t.questions[s.idx];document.getElementById("qarea").innerHTML=`<div class="q"><b>प्रश्न ${s.idx+1}. ${esc(q[0])}</b>${q[1].map((o,j)=>`<label><input type="radio" name="ans" value="${j}" ${s.answers[s.idx]===j?"checked":""} onchange="state.answers[state.idx]=+this.value"> ${String.fromCharCode(65+j)}. ${esc(o)}</label>`).join("")}</div>`;document.getElementById("prev").style.visibility=s.idx?"visible":"hidden";document.getElementById("next").textContent=s.idx===s.t.questions.length-1?"Submit Test":"Next →"}
 function nextQ(){if(state.answers[state.idx]===null){alert("पहले कोई एक विकल्प चुनें।");return}if(state.idx===state.t.questions.length-1)submitTest();else{state.idx++;renderQ()}}
@@ -528,7 +546,7 @@ function openHomeCustomizer(){
  <button class="btn" onclick="saveHomeCustomizer()">💾 Save Home Settings</button>
  <button class="btn gray" onclick="closeM()">बंद करें</button>
  </div>`;
- document.getElementById("modal").style.display="flex";
+ tgyShowModal();
 }
 function saveHomeCustomizer(){
  const v=hcGet();
@@ -572,7 +590,7 @@ function openColorCustomizer(){
  <p>हर हिस्से के लिए अलग-अलग रंग चुनें।</p>
  <div class="hcm-grid">${items.map(([k,l])=>`<div class="hcm-item"><label>${l}</label><input type="color" id="hcColor_${k}" value="${c[k]}"><small>${c[k]}</small></div>`).join("")}</div>
  <div class="hcm-actions"><button class="btn" onclick="saveHomeColors()">💾 Save Colors</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
- document.getElementById("modal").style.display="flex";
+ tgyShowModal();
 }
 function saveHomeColors(){
  const c={};
@@ -598,30 +616,99 @@ function tgyApplyNews(){
 document.addEventListener("DOMContentLoaded",tgyApplyNews);
 window.addEventListener("storage",tgyApplyNews);
 </script><script id="student-pages-script">
-function openStudentPage(key){
+
+function getStudentExamMaster(){
+ try{return JSON.parse(localStorage.getItem("tgy_exam_master")||"[]").filter(x=>x&&x.name)}
+ catch(e){return[]}
+}
+function renderStudentExamCards(){
+ const box=document.getElementById("studentExamCards");if(!box)return;
+ const exams=getStudentExamMaster();
+ if(!exams.length){
+   box.innerHTML='<div class="card"><h3>📭 अभी कोई परीक्षा उपलब्ध नहीं है</h3><p class="muted">Admin Panel में पहले परीक्षा/Folder बनाएँ।</p></div>';
+   return;
+ }
+ box.innerHTML=exams.map(x=>{
+   const name=esc(x.name);
+   return `<div class="card"><h3>📁 ${name}</h3><p class="muted">Mock Tests</p><button class="btn" onclick="window.openExam('${encodeURIComponent(x.name)}')">देखें</button></div>`;
+ }).join("");
+}
+let tgyStudentPageHistory=[];
+let tgyStudentCurrentPage=null;
+
+function tgyShowStudentOverlay(overlay){
+ if(!overlay)return;
+ overlay.style.display="block";
+ requestAnimationFrame(()=>overlay.classList.add("tgy-visible"));
+ document.body.style.overflow="hidden";
+}
+function tgyHideStudentOverlay(overlay){
+ if(!overlay)return;
+ overlay.classList.remove("tgy-visible");
+ setTimeout(()=>{if(overlay&&!overlay.classList.contains("tgy-visible"))overlay.style.display="none"},220);
+ document.body.style.overflow="";
+}
+
+function openStudentPage(key, fromHistory=false){
  if(key==="home"){studentGoHome();return}
  let overlay=document.getElementById("studentPageOverlay");
  if(!overlay){overlay=document.createElement("div");overlay.id="studentPageOverlay";overlay.className="student-page";document.body.appendChild(overlay)}
  const titles={mock:"🎯 Mock Tests",series:"📚 Test Series",plans:"💳 Access Plans",results:"📊 My Results",info:"ℹ️ Exam Information",help:"📞 सहायता",purchased:"🎓 My Purchased Tests",notes:"📄 PDF Notes"};
  let body="";
- if(key==="mock")body='<div class="card"><h2>🎯 Mock Tests</h2><p class="muted">Test देखने के लिए नीचे परीक्षा चुनें। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentMockPageList"></div></div>';
- if(key==="series")body='<div class="card"><h2>📚 Test Series</h2><p class="muted">हर परीक्षा की पूरी Test Series एक ही Folder में मिलेगी। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentSeriesPageList"></div></div>';
- if(key==="plans")body='<div class="card"><h2 style="display:none">💳 Access Plans</h2><p>पहले Test Series चुनें, फिर अपना Plan चुनें और Payment करें।</p><button class="btn orange" onclick="pay()">Plan चुनें / Payment</button></div>';
+ if(key==="mock")body='<div class="card"><h2>🎯 Mock Tests</h2><p class="muted">पहले परीक्षा चुनें, फिर उसी Folder के Tests देखें। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentMockPageList"></div></div>';
+ if(key==="series")body='<div class="card"><h2>📚 Test Series</h2><p class="muted">हर परीक्षा की Test Series एक ही Folder में मिलेगी।</p><div id="studentSeriesPageList"></div></div>';
+ if(key==="plans")body='<div class="card"><p>पहले Test Series चुनें, फिर Admin द्वारा बनाई गई Pricing में से Plan चुनें।</p><button class="btn orange" onclick="buySeriesAccess(window.activeExamName||"",0)">Plan चुनें / Payment</button></div>';
  if(key==="results")body='<div class="card"><h2>📊 My Results</h2><p>Login करने के बाद आपके दिए गए Tests के Results यहाँ दिखाई देंगे।</p></div>';
  if(key==="info")body='<div class="card"><h2>ℹ️ Exam Information</h2><p>परीक्षा की तारीख, आवेदन, Admit Card, Exam Pattern, Syllabus, Result और Latest Updates यहाँ दिखाई देंगे।</p></div>';
  if(key==="purchased")body='<div class="card"><h2>🎓 My Purchased Tests</h2><div id="myPurchasedTests"></div></div>';
- if(key==="notes")body='<div class="card"><h2>📄 PDF Notes</h2><p>Notes दिखाई देंगे। Open करने के लिए Login/Register जरूरी होगा। Paid Notes के लिए पहले खरीदना होगा।</p><div id="studentNotesList"></div></div>';
+ if(key==="notes")body='<div class="card"><h2>📄 PDF Notes</h2><p>PDF Notes वेबसाइट के अंदर ही पढ़ें। Download button नहीं दिया जाएगा।</p><div id="studentNotesList"></div></div>';
  if(key==="help")body='<div class="card"><h2>📞 सहायता</h2><p>Payment, Login या Test से संबंधित सहायता के लिए यहाँ जानकारी दी जाएगी।</p></div>';
+
+ if(!fromHistory && tgyStudentCurrentPage && tgyStudentCurrentPage!==key) tgyStudentPageHistory.push(tgyStudentCurrentPage);
+ tgyStudentCurrentPage=key;
+
  overlay.innerHTML='<div class="student-page-head"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="student-close" onclick="studentGoBack()">← पीछे</button><h2>'+titles[key]+'</h2></div><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body">'+body+'</div>';
- overlay.style.display="block"; window.scrollTo(0,0);
+ tgyShowStudentOverlay(overlay); window.scrollTo(0,0);
+
  if(key==="mock")renderStudentMockPage();
  if(key==="series")renderStudentSeriesPage();
  if(key==="purchased")renderMyPurchasedTests();
  if(key==="notes")renderStudentNotes();
 }
-function closeStudentPage(){let o=document.getElementById("studentPageOverlay");if(o)o.style.display="none";document.body.style.overflow=""}
-function studentGoHome(){closeStudentPage();window.scrollTo({top:0,behavior:"smooth"});}
-function studentGoBack(){closeStudentPage();window.scrollTo({top:0,behavior:"smooth"});}
+function closeStudentPage(){
+ const o=document.getElementById("studentPageOverlay");
+ if(o)tgyHideStudentOverlay(o);
+ tgyStudentCurrentPage=null;
+ tgyStudentPageHistory=[];
+}
+function studentGoHome(){
+ const o=document.getElementById("studentPageOverlay");
+ if(o)tgyHideStudentOverlay(o);
+ tgyStudentCurrentPage=null;
+ tgyStudentPageHistory=[];
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+function studentGoBack(){
+ if(tgyStudentPageHistory.length){
+   const prev=tgyStudentPageHistory.pop();
+   openStudentPage(prev,true);
+ }else{
+   studentGoHome();
+ }
+}
+function renderStudentMockPage(){
+ const b=document.getElementById("studentMockPageList");if(!b)return;
+ let exams=[];
+ try{
+   exams=(JSON.parse(localStorage.getItem("tgy_exams")||"[]")||[])
+     .map(x=>typeof x==="string"?{name:x,visible:true}:x)
+     .filter(x=>x&&x.name&&x.visible!==false);
+ }catch(e){}
+ // Include exams that exist in Tests only as a compatibility fallback.
+ tests.forEach(t=>{if(t.exam&&!exams.some(x=>x.name===t.exam))exams.push({name:t.exam,visible:true})});
+ b.innerHTML=exams.length?'<div class="grid">'+exams.map(x=>`<div class="card"><h3>🎯 ${esc(x.name)}</h3><p>Mock Tests / Demo</p><button class="btn orange" onclick="window.openExam('${encodeURIComponent(x.name)}')">🎯 Test खोलें</button></div>`).join('')+'</div>':'<div class="card"><p>अभी कोई परीक्षा उपलब्ध नहीं है।</p></div>';
+}
+
 function renderStudentMockPage(){
  const b=document.getElementById("studentMockPageList");if(!b)return;
  const names=[...new Set(tests.filter(t=>getFolderVisibilityStudent(t.exam||"") && t.published!==false).map(t=>t.exam||"अन्य परीक्षाएँ"))];
@@ -659,8 +746,8 @@ function getSeriesPricing(exam){
  return getAccessPricing().filter(x=>
    x.exam===exam && (x.type==="folder" || (x.type==="testseries" && Number(x.count)>0))
  ).sort((a,b)=>{
-   if(a.type==="folder"&&b.type!=="folder")return 1;
-   if(a.type!=="folder"&&b.type==="folder")return -1;
+   const ac=(a.type==="folder"||Number(a.count)===100),bc=(b.type==="folder"||Number(b.count)===100);
+   if(ac!==bc)return ac?-1:1;
    return Number(a.count)-Number(b.count);
  });
 }
@@ -698,7 +785,7 @@ function buySeriesAccess(exam,pricingIndex){
  <label>Transaction / UTR Number</label><input id="utr" placeholder="Payment के बाद UTR Number">
  <button class="btn orange" onclick="submitSeriesPayment('${esc(exam)}',${purchaseCount},${amount},${x.days||accessDaysStudent(x)},'${esc(x.name)}', '${x.type||"testseries"}')">Payment Details Submit करें</button>
  <button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
- document.getElementById("modal").style.display="flex";
+ tgyShowModal();
 }
 function accessDurationTextStudent(x){
  const v=Number(x.durationValue||x.days||0),u=x.unit||"days";
@@ -758,7 +845,7 @@ function hasPurchasedNote(n){
 }
 function renderStudentNotes(){
  const b=document.getElementById("studentNotesList");if(!b)return;
- const notes=getNotes();
+ const today=new Date().toISOString().slice(0,10); const notes=getNotes().filter(n=>!n.availableUntil||n.availableUntil>=today);
  if(!notes.length){b.innerHTML='<p>अभी कोई PDF Notes उपलब्ध नहीं है।</p>';return}
  const groups={};
  notes.forEach((n,i)=>{const exam=(n.exam||"अन्य Notes").trim()||"अन्य Notes";(groups[exam]||(groups[exam]=[])).push({...n,_i:i})});
@@ -779,7 +866,7 @@ function buyPdfNote(i){
  const price=Number(n.offer)||Number(n.mrp)||0;
  const u=getCurrentStudent()||{};
  document.getElementById("modalContent").innerHTML=`<h2>💳 PDF Notes खरीदें</h2><div class="pay"><p><b>Notes:</b> ${esc(n.title||"PDF Notes")}</p><p><b>Price:</b> ₹${price}</p><input id="pn" value="${esc(u.name||"")}" placeholder="नाम"><input id="pemail" value="${esc(u.email||"")}" placeholder="Email"><input id="utr" placeholder="Payment UTR / Transaction ID"><button class="btn orange" onclick="submitPayment('PDF: ${esc(n.title||"PDF Notes")}',0,${price})">Payment Details भेजें</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
- document.getElementById("modal").style.display="flex";
+ tgyShowModal();
 }
 function viewPdfNote(i){
  const n=getNotes()[i];if(!n)return;
@@ -792,7 +879,7 @@ function viewPdfNote(i){
  if(n.url){const iframe=document.createElement("iframe");iframe.src=n.url+"#toolbar=0&navpanes=0&scrollbar=1";iframe.style.cssText="width:100%;height:100%;border:0;background:white";iframe.setAttribute("sandbox","allow-same-origin allow-scripts");box.appendChild(iframe)}
  else if(n.dataUrl){const iframe=document.createElement("iframe");iframe.src=n.dataUrl+"#toolbar=0&navpanes=0&scrollbar=1";iframe.style.cssText="width:100%;height:100%;border:0;background:white";iframe.setAttribute("sandbox","allow-same-origin");box.appendChild(iframe)}
  else box.innerHTML="<p style='color:white;padding:20px'>PDF उपलब्ध नहीं है।</p>";
- box.addEventListener("contextmenu",e=>e.preventDefault());
+ box.addEventListener("contextmenu",e=>e.preventDefault()); box.addEventListener("dragstart",e=>e.preventDefault());
 }
 
 function closeNoteViewer(){openStudentPage("notes")}
@@ -809,7 +896,7 @@ function renderHomeHeadline(){
 }
 document.addEventListener("DOMContentLoaded",renderHomeHeadline);
 </script><script>document.addEventListener("DOMContentLoaded",function(){if(typeof updateAuthUI==="function")updateAuthUI();});</script><script>document.addEventListener("DOMContentLoaded",function(){if(typeof updateAuthUI==="function")updateAuthUI();});</script><script id="exam-open-fallback">
-document.addEventListener("DOMContentLoaded",()=>{
+document.addEventListener("DOMContentLoaded",()=>{renderStudentExamCards();
  document.querySelectorAll(".exam-open-btn").forEach(btn=>{
    btn.addEventListener("click",(ev)=>{
      ev.preventDefault();
@@ -820,6 +907,18 @@ document.addEventListener("DOMContentLoaded",()=>{
 });
 </script>
 
+<script id="tgy-modal-animation-helper">
+function tgyShowModal(){
+ const m=document.getElementById("modal");if(!m)return;
+ m.classList.remove("tgy-visible");m.style.display="flex";
+ requestAnimationFrame(()=>m.classList.add("tgy-visible"));
+}
+function tgyHideModal(){
+ const m=document.getElementById("modal");if(!m)return;
+ m.classList.remove("tgy-visible");
+ setTimeout(()=>{if(!m.classList.contains("tgy-visible"))m.style.display="none"},220);
+}
+</script>
 <script id="tgy-final-mock-flow">
 (function(){
   function tgyDoneKey(t){return "tgy_done_"+encodeURIComponent((t.exam||"")+"||"+(t.name||""))}

@@ -78,18 +78,6 @@ function checkAdmin(){
 <button onclick="show('accessPricing',this)">📁 Access Pricing</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 
-<section id="exams" class="sec">
-<h1>🎓 परीक्षा Management</h1>
-<div class="card">
-<p>यहाँ परीक्षा एक बार जोड़ें। यही Common Exam List Test, Questions, PDF Notes, Pricing और Offers में उपयोग होगी।</p>
-<div class="row">
-<div><label>नई परीक्षा का नाम</label><input id="examNewName" placeholder="जैसे MP शिक्षक भर्ती"></div>
-<div><label>स्थिति</label><select id="examNewVisible"><option value="true">Student Site पर दिखाएँ</option><option value="false">Hide करें</option></select></div>
-</div>
-<button class="btn orange" onclick="saveExamMaster()">💾 परीक्षा Save करें</button>
-</div>
-<div class="card"><h3>📋 सभी परीक्षाएँ</h3><div id="examMasterList"></div></div>
-</section>
 <section id="tests" class="sec">
   <h1>📝 Mock Test — Test Management</h1>
   <div class="card">
@@ -146,7 +134,7 @@ function checkAdmin(){
   <label>Notes का नाम</label>
   <input id="noteTitle" placeholder="जैसे MP पटवारी Notes">
   <label>Exam</label>
-  <select id="noteExam"></select><small id="noteExamHelp" class="muted">📋 सूची से परीक्षा चुनें या नीचे से नई परीक्षा जोड़ें।</small>
+  <select id="noteExam"></select><small id="noteExamHelp" class="muted">📋 परीक्षा प्रबंधन में बनाई गई परीक्षा चुनें।</small>
   <div class="row">
    <div><label>💰 MRP (₹)</label><input id="noteMrp" type="number" min="0" placeholder="जैसे 50"></div>
    <div><label>🏷️ Offer Price (₹)</label><input id="noteOffer" type="number" min="0" placeholder="जैसे 30"></div>
@@ -168,7 +156,7 @@ function uploadPdfNote(){
  if(!title){alert("Notes का नाम लिखें।");return} if(!file){alert("पहले PDF चुनें।");return}
  const r=new FileReader();r.onload=function(){let a=getAdminNotes();
  a.push({title,exam,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:""});
- saveAdminNotes(a);["noteTitle","noteExam","notePdfFile","noteMrp","noteOffer"].forEach(id=>document.getElementById(id).value="");
+ const until=document.getElementById("noteUntil")?.value||""; a.push({title,exam,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:until}); saveAdminNotes(a);["noteTitle","noteExam","notePdfFile","noteMrp","noteOffer","noteUntil"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
  st.textContent="✅ PDF Notes Save हो गई।";renderAdminNotes()};r.readAsDataURL(file);
 }
 function editPdfNote(i){
@@ -234,7 +222,7 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
 <section id="examManagement" class="sec">
 <h1>📋 परीक्षा प्रबंधन</h1>
 <div class="card">
-  <h3>➕ नई परीक्षा जोड़ें</h3>
+  <h3></h3>
   <div class="row">
     <div>
       <label>परीक्षा का नाम</label>
@@ -353,7 +341,35 @@ function removeUserAccess(i){
 
 function renderAll(){renderTests();renderPayments();renderComplaints();renderUsers();document.getElementById("sp").textContent=JSON.parse(localStorage.getItem("tgy_payments")||"[]").length;document.getElementById("sc").textContent=JSON.parse(localStorage.getItem("tgy_help")||"[]").filter(x=>x.status!=="Resolved").length}
 function renderTests(){document.getElementById("tt").innerHTML=tests.map((t,i)=>`<tr><td>${esc(t.name)}</td><td>${t.questions.length}</td><td>${t.time} min</td><td><button class="btn" onclick="editTest(${i})">Edit</button> <button class="btn gray" onclick="toggleTest(${i})">${t.published===false?"Publish":"Unpublish"}</button> <button class="btn danger" onclick="deleteTest(${i})">Delete</button></td></tr>`).join("");save()}
-function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function tgyNormalizeFormula(s){
+ let x=String(s??"");
+ // Strip common inline-math delimiters while keeping the content readable.
+ x=x.replace(/\$\$?([\s\S]*?)\$\$?/g,"$1");
+ x=x.replace(/\\text\s*\{([^{}]*)\}/g,"$1");
+ x=x.replace(/\\mathrm\s*\{([^{}]*)\}/g,"$1");
+ x=x.replace(/\\operatorname\s*\{([^{}]*)\}/g,"$1");
+ x=x.replace(/\\mathbf\s*\{([^{}]*)\}/g,"$1");
+ // Common Greek/math symbols used in question material.
+ const sym={"\\Omega":"Ω","\\omega":"ω","\\alpha":"α","\\beta":"β","\\gamma":"γ","\\delta":"δ","\\theta":"θ","\\lambda":"λ","\\mu":"μ","\\pi":"π","\\rho":"ρ","\\sigma":"σ","\\phi":"φ","\\Delta":"Δ","\\Sigma":"Σ","\\times":"×","\\div":"÷","\\pm":"±","\\le":"≤","\\ge":"≥","\\neq":"≠","\\approx":"≈","\\infty":"∞"};
+ for(const k in sym)x=x.split(k).join(sym[k]);
+ // Subscripts: CH_3, H_2O, SO_4 etc.
+ const subs={"0":"₀","1":"₁","2":"₂","3":"₃","4":"₄","5":"₅","6":"₆","7":"₇","8":"₈","9":"₉","+":"₊","-":"₋","n":"ₙ","m":"ₘ","x":"ₓ"};
+ x=x.replace(/_\{([^{}]+)\}/g,(_,v)=>String(v).split("").map(c=>subs[c]||c).join(""));
+ x=x.replace(/_([0-9A-Za-z+\-])/g,(_,c)=>subs[c]||c);
+ // Superscripts: x^{2}, ion charges, powers.
+ const sups={"0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹","+":"⁺","-":"⁻","n":"ⁿ","x":"ˣ"};
+ x=x.replace(/\^\{([^{}]+)\}/g,(_,v)=>String(v).split("").map(c=>sups[c]||c).join(""));
+ x=x.replace(/\^([0-9A-Za-z+\-])/g,(_,c)=>sups[c]||c);
+ // Simple fractions: \\frac{a}{b} -> a/b.
+ x=x.replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g,"$1/$2");
+ // Remove remaining harmless LaTeX spacing/formatting commands.
+ x=x.replace(/\\(?:left|right|displaystyle|,|;|!|quad|qquad)\b/g,"");
+ return x;
+}
+function esc(s){
+ const v=tgyNormalizeFormula(s);
+ return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
 function newTest(){document.getElementById("mb").innerHTML=`<h2>नया Test</h2><label>Test Name</label><input id="tn"><label>Time (minutes)</label><input id="tm" type="number" value="60"><div id="qs"></div><button class="btn gray" onclick="addQ()">+ Question</button> <button class="btn" onclick="saveNew()">Save & Publish</button> <button class="btn gray" onclick="closeM()">Cancel</button>`;document.getElementById("modal").style.display="flex";addQ()}
 function addQ(){let d=document.createElement("div");d.className="qrow";d.innerHTML=`<label>Question</label><textarea class="qq" rows="2"></textarea><div class="row"><div><label>A</label><input class="oa"></div><div><label>B</label><input class="ob"></div><div><label>C</label><input class="oc"></div><div><label>D</label><input class="od"></div></div><label>Correct Answer</label><select class="ans"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select><label>Explanation</label><textarea class="ex"></textarea>`;document.getElementById("qs").appendChild(d)}
 function saveNew(){let qs=[...document.querySelectorAll(".qrow")].map(x=>[x.querySelector(".qq").value,[x.querySelector(".oa").value,x.querySelector(".ob").value,x.querySelector(".oc").value,x.querySelector(".od").value],+x.querySelector(".ans").value,x.querySelector(".ex").value]);if(!tn.value||qs.some(q=>!q[0]||q[1].some(o=>!o))){alert("सभी जानकारी भरें।");return}tests.push({name:tn.value,time:+tm.value||60,questions:qs,published:true});save();closeM();renderAll()}
@@ -581,7 +597,7 @@ function removeNews(i){const a=tgyAdminNews();a.splice(i,1);tgySaveAdminNews(a);
 function saveNews(){const a=tgyAdminNews();a.forEach((x,i)=>{const t=document.getElementById("news_"+i),c=document.getElementById("newsOn_"+i);if(t)x.text=t.value.trim();if(c)x.enabled=c.checked});tgySaveAdminNews(a);alert("📰 News Updates Save हो गए। Student Home Page पर refresh करने पर दिखेंगे।")}
 </script>
 <script id="bulk-question-manager-script">
-const BQM_DEFAULT_EXAMS=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];
+const BQM_DEFAULT_EXAMS=[];
 function bqmGet(){try{return JSON.parse(localStorage.getItem("tgy_exam_structure")||"{}")}catch(e){return{}}}
 function bqmSave(x){localStorage.setItem("tgy_exam_structure",JSON.stringify(x))}
 function bqmEsc(v){return (window.esc?esc(v):String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])))}
@@ -649,25 +665,41 @@ function bqmParseText(){
  bqmRender(qs);
 }
 function bqmGenericParse(raw){
- let t=raw.replace(/\r/g,"\n").replace(/\u00a0/g," ").replace(/[ \t]+/g," ").trim();
- const re=/(?:^|\n|\s)(?:प्रश्न\s*(?:क्रमांक\s*)?|प्र\.\s*|Question\s*|Q\.?\s*)(\d+)?[\s:.)-]*/gi;
- let m,starts=[];while((m=re.exec(t)))starts.push({pos:m.index,end:re.lastIndex});
- if(!starts.length)starts=[{pos:0,end:0}];
+ let t=String(raw||"").normalize("NFC").replace(/\u00a0/g," ").replace(/[\u200B-\u200D\uFEFF]/g,"").replace(/\r\n?/g,"\n").replace(/[ \t]+/g," ").trim();
+ if(!t)return [];
+ const re=/(?:^|\s)(?:प्रश्न|Question|Q\.?)\s*(?:क्रमांक\s*)?(\d{1,4})\s*[\.\):\-]\s*/gi;
+ let m,starts=[];
+ while((m=re.exec(t)))starts.push({pos:m.index,end:re.lastIndex,num:m[1]});
+ if(starts.length<2){
+   const fb=/(?:^|\n)\s*(\d{1,4})\s*[\.\):\-]\s+/g;let x;
+   while((x=fb.exec(t)))starts.push({pos:x.index,end:fb.lastIndex,num:x[1]});
+ }
+ starts=starts.filter((x,i)=>i===0||x.pos-starts[i-1].pos>8);
  const out=[];
  for(let i=0;i<starts.length;i++){
    let b=t.slice(starts[i].end,i+1<starts.length?starts[i+1].pos:t.length).trim();
-   const am=b.search(/(?:\(?A\)?|अ)[\s.):-]/i); if(am<0)continue;
-   const q=b.slice(0,am).replace(/\s+/g," ").trim();
-   const marks=[...b.slice(am).matchAll(/(?:\(\s*([A-Da-d])\s*\)|\b([A-Da-d])\s*[.)]|\(\s*([अ-ब])\s*\)|\b([अ-ब])\s*[.)])\s*/g)];
-   if(marks.length<4)continue;
-   let opts=["","","",""];
-   for(let j=0;j<4;j++){let mm=marks[j],idx=mm[1]?mm[1].toUpperCase().charCodeAt(0)-65:(mm[2]?mm[2].toUpperCase().charCodeAt(0)-65:j);let from=am+mm.index+mm[0].length;let to=j<3?am+marks[j+1].index:b.length;opts[idx]=b.slice(from,to).replace(/\s+/g," ").trim();}
+   const am=b.search(/(?:^|\s)(?:\(?A\)?|A\s*[.)\-]|\(?अ\)?|अ\s*[.)\-])\s*/i); if(am<0)continue;
+   const q=b.slice(0,am).replace(/^(?:प्रश्न|Question|Q\.?|प्र\.)\s*(?:क्रमांक\s*)?\d*\s*[\.:)\-]?\s*/i,"").trim();
+   const rest=b.slice(am);
+   const marks=[...rest.matchAll(/(?:\(\s*([A-Da-d])\s*\)|\b([A-Da-d])\s*[.)\-]|\(\s*([अ-ब])\s*\)|\b([अ-ब])\s*[.)\-])\s*/g)];
+   if(marks.length<2)continue;
+   let opts=[];
+   for(let j=0;j<Math.min(4,marks.length);j++){
+     const from=marks[j].index+marks[j][0].length,to=j+1<marks.length?marks[j+1].index:rest.length;
+     opts.push(rest.slice(from,to).trim());
+   }
+   while(opts.length<4)opts.push("");
    const ans=b.match(/(?:सही\s*उत्तर|उत्तर|Answer|Ans\.?|Correct\s*Answer|सही\s*विकल्प)\s*[:\-]?\s*\(?([A-Da-dअ-ब1-4IVXivx]+)\)?/i);
    const ex=b.match(/(?:जानकारी|सामान्य\s*जानकारी|महत्वपूर्ण\s*जानकारी|व्याख्या|Explanation|Solution|समाधान|Note|नोट)\s*[:\-]?\s*([\s\S]*)$/i);
-   out.push({q,o:opts,answer:ans?ans[1]:"",ex:ex?ex[1].trim():""});
+   if(ex){
+     const cut=opts[3].search(/(?:सही\s*उत्तर|उत्तर|Answer|Ans\.?|Correct\s*Answer|जानकारी|व्याख्या|Explanation|Solution|समाधान|Note|नोट)\s*[:\-]/i);
+     if(cut>=0)opts[3]=opts[3].slice(0,cut).trim();
+   }
+   if(q&&opts.filter(Boolean).length>=2)out.push({q,o:opts.slice(0,4),answer:ans?ans[1]:"",ex:ex?ex[1].trim():""});
  }
  return out;
 }
+
 function bqmRender(qs){
  document.getElementById("bqmCount").innerHTML=`<b>✅ ${qs.length} Questions मिले</b>`;
  document.getElementById("bqmPreview").innerHTML=qs.map((x,i)=>`<div class="bqm-q"><b>प्रश्न ${i+1}.</b> ${bqmEsc(x.q)}<br>(A) ${bqmEsc(x.o[0])}<br>(B) ${bqmEsc(x.o[1])}<br>(C) ${bqmEsc(x.o[2])}<br>(D) ${bqmEsc(x.o[3])}<br><b>सही उत्तर:</b> ${bqmEsc(x.answer)} ${x.ex?`<br><b>जानकारी:</b> ${bqmEsc(x.ex)}`:""}</div>`).join("");
@@ -683,13 +715,21 @@ async function bqmImportPdf(){
  const f=document.getElementById("bqmPdf").files[0];if(!f){alert("पहले PDF चुनें।");return}
  if(!window.pdfjsLib){alert("PDF Reader library उपलब्ध नहीं है। PDF.js जोड़ने के बाद PDF Import चलेगा।");return}
  const buf=await f.arrayBuffer(),pdf=await pdfjsLib.getDocument({data:buf}).promise;let text="";
- for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i),c=await page.getTextContent();text+=c.items.map(x=>x.str).join(" ")+"\\n";}
+ for(let i=1;i<=pdf.numPages;i++){
+   const page=await pdf.getPage(i),c=await page.getTextContent();
+   const items=(c.items||[]).map(x=>({str:String(x.str||""),x:Number(x.transform?.[4]||0),y:Number(x.transform?.[5]||0)}));
+   items.sort((a,b)=>Math.abs(a.y-b.y)<2?a.x-b.x:b.y-a.y);
+   const lines=[];
+   for(const it of items){let line=lines.find(l=>Math.abs(l.y-it.y)<2);if(!line){line={y:it.y,items:[]};lines.push(line)}line.items.push(it)}
+   lines.sort((a,b)=>b.y-a.y);
+   text+=lines.map(l=>l.items.sort((a,b)=>a.x-b.x).map(x=>x.str).join(" ")).join("\\n")+"\\n";
+ }
  document.getElementById("bqmText").value=text;bqmParseText();
 }
 </script>
 
 <script id="mock-test-final-system">
-const MT_DEFAULT_EXAMS=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"];
+const MT_DEFAULT_EXAMS=[];
 function mtStore(){
  let flat=[];try{flat=JSON.parse(localStorage.getItem("tgy_tests")||"[]")}catch(e){flat=[]}
  const d={exams:{}};
@@ -713,14 +753,14 @@ function mtEsc(v){return typeof esc==="function"?esc(v):String(v??"").replace(/[
 function mtEnsureDefaults(){
   let arr=[];
   try{arr=JSON.parse(localStorage.getItem("tgy_tests")||"[]")}catch(e){arr=[]}
-  if(!Array.isArray(arr)||!arr.length){
-    arr=[
-      {name:"MP पटवारी Mock Test 01",exam:"MP पटवारी",time:60,published:true,questions:[]},
-      {name:"MPPSC Mock Test 01",exam:"MPPSC",time:60,published:true,questions:[]}
-    ];
-    localStorage.setItem("tgy_tests",JSON.stringify(arr));
-  }
+  if(!Array.isArray(arr)) arr=[];
 }
+function mtCleanupLegacyExams(){
+ // पुराने Exam names को automatic cleanup से कभी delete नहीं करेंगे।
+ // परीक्षा Management ही Folder/Exam की एकमात्र authority है।
+ return;
+}
+
 function mtInit(){
  mtEnsureDefaults();
  let d=mtStore(); d.exams=d.exams||{};
@@ -733,6 +773,9 @@ function mtInit(){
  mtRenderAll();
 }
 function mtLoadTests(){
+ mtPreview=[];
+ const p=document.getElementById("mtPreview"),st=document.getElementById("mtStatus");
+ if(p)p.innerHTML=""; if(st)st.textContent="";
  const e=document.getElementById("mtExam")?.value;
  if(e){const d=mtStore();d.exams=d.exams||{};d.exams[e]=d.exams[e]||{tests:{}};mtSaveStore(d);}
  const n=document.getElementById("mtName");if(n)n.value="";
@@ -766,64 +809,63 @@ function mtFinalSave(){
  const e=document.getElementById("mtExam")?.value,n=(document.getElementById("mtName")?.value||"").trim();
  const time=Number(document.getElementById("mtTime")?.value)||60,negative=document.getElementById("mtNegative")?.value==="yes";
  const negativeMarks=negative?Number(document.getElementById("mtNegativeValue")?.value)||0:0;
- if(!e){alert("पहले परीक्षा चुनें।");return}if(!n){alert("Test का नाम लिखें।");return}
+ if(!e){alert("पहले परीक्षा चुनें।");return}
+ if(!n){alert("Test का नाम लिखें।");return}
  if(negative&&negativeMarks<=0){alert("Negative Marks की value डालें।");return}
+
  const d=mtStore();d.exams=d.exams||{};d.exams[e]=d.exams[e]||{tests:{}};
  const obj=d.exams[e].tests[n]||{name:n,exam:e,questions:[],published:true,visible:true};
  obj.name=n;obj.exam=e;obj.time=time;obj.negativeMarking=negative;obj.negativeMarks=negativeMarks;obj.questions=obj.questions||[];
+
  const base=obj.questions.length;
- (mtPreview||[]).forEach((x,i)=>obj.questions.push({q:x.q,o:x.o,answer:x.answer,ex:x.ex,number:base+i+1}));
- mtPreview=[];d.exams[e].tests[n]=obj;mtSaveStore(d);mtRenderAll();mtRenderQuestions();mtRenderPreview();
- document.getElementById("mtStatus").innerHTML="✅ Test और Questions Save हो गए।";
+ (mtPreview||[]).forEach((x,i)=>obj.questions.push({
+   q:x.q,o:x.o,answer:x.answer,ex:x.ex,number:base+i+1
+ }));
+
+ d.exams[e].tests[n]=obj;
+ mtSaveStore(d);
+ mtRenderAll();
+
+ // Test is now safely saved in the selected Exam/Folder.
+ // Clear only the editor/preview UI; never delete the saved Test.
+ mtClearPreview();
+ document.getElementById("mtStatus").innerHTML="✅ पूरा Test Save हो गया। Preview अपने-आप साफ कर दिया गया है।";
 }
 function mtParse(raw){
- let text=String(raw||"").replace(/\u00a0/g," ").replace(/\r/g,"\n");
- // Preserve line boundaries enough for OCR/text PDFs but also handle one-line PDFs.
- text=text.replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n").trim();
+ let text=String(raw||"").normalize("NFC").replace(/\u00a0/g," ").replace(/[\u200B-\u200D\uFEFF]/g,"").replace(/\r\n?/g,"\n");
+ text=text.replace(/[ \t]+/g," ").replace(/[ \t]*\n[ \t]*/g,"\n").trim();
  if(!text)return [];
- // Find starts for numbered questions or explicit question headings.
- const patterns=[
-   /(?:^|\n)\s*(?:प्रश्न|Question|Q)\s*(?:क्रमांक\s*)?(\d{1,4})?\s*[\.\):\-]?\s+/gi,
-   /(?:^|\s)(?:प्र\.)\s*(\d{1,4})\s*[\.\):\-]?\s+/gi,
-   /(?:^|\n)\s*(\d{1,4})\s*[\.\):\-]\s+/g
- ];
- let starts=[];
- for(const re of patterns){
-   let m;while((m=re.exec(text))!==null)starts.push({pos:m.index,end:re.lastIndex});
-   if(starts.length>=1)break;
+ const explicit=/(?:^|\s)(?:प्रश्न|Question|Q\.?)\s*(?:क्रमांक\s*)?(\d{1,4})\s*[\.\):\-]\s*/gi;
+ let starts=[],m;
+ while((m=explicit.exec(text))!==null) starts.push({pos:m.index,end:explicit.lastIndex,num:m[1]});
+ if(starts.length<2){
+   const fallback=/(?:^|\n)\s*(\d{1,4})\s*[\.\):\-]\s+/g; let fb;
+   while((fb=fallback.exec(text))!==null) starts.push({pos:fb.index,end:fallback.lastIndex,num:fb[1]});
  }
- // De-duplicate nearby starts and discard obvious page/header numbering.
- starts=starts.filter((x,i)=>i===0||x.pos-starts[i-1].pos>15);
+ starts=starts.filter((x,i)=>i===0||x.pos-starts[i-1].pos>8);
  if(!starts.length)return [];
-
  const out=[];
  for(let i=0;i<starts.length;i++){
    let block=text.slice(starts[i].end,i+1<starts.length?starts[i+1].pos:text.length).trim();
-   if(!block)continue;
-
-   // Locate first option.
-   const firstOpt=/(?:^|\s)(?:\(\s*A\s*\)|A\s*[.)\-]|\(\s*अ\s*\)|अ\s*[.)\-]|\(\s*1\s*\)|1\s*[.)\-]|\(\s*I\s*\)|I\s*[.)\-])\s*/i.exec(block);
+   const firstOpt=/(?:^|\s)(?:\(\s*A\s*\)|A\s*[.)\-]|\(\s*अ\s*\)|अ\s*[.)\-])\s*/i.exec(block);
    if(!firstOpt)continue;
-   const q=block.slice(0,firstOpt.index).replace(/^(?:प्रश्न|Question|Q|प्र\.)\s*(?:क्रमांक\s*)?\d*\s*[\.:)\-]?\s*/i,"").trim();
+   const q=block.slice(0,firstOpt.index).replace(/^(?:प्रश्न|Question|Q\.?|प्र\.)\s*(?:क्रमांक\s*)?\d*\s*[\.:)\-]?\s*/i,"").replace(/\s+/g," ").trim();
    const rest=block.slice(firstOpt.index);
-   const optRe=/(?:\(\s*([A-Da-d])\s*\)|\b([A-Da-d])\s*[.)\-]|\(\s*([अ-ब])\s*\)|\b([अ-ब])\s*[.)\-]|\(\s*([1-4])\s*\)|\b([1-4])\s*[.)\-]|\(\s*(I|II|III|IV)\s*\)|\b(I|II|III|IV)\s*[.)\-])\s*/g;
+   const optRe=/(?:\(\s*([A-Da-d])\s*\)|\b([A-Da-d])\s*[.)\-]|\(\s*([अ-ब])\s*\)|\b([अ-ब])\s*[.)\-])\s*/g;
    const marks=[...rest.matchAll(optRe)];
    if(marks.length<2)continue;
    let opts=[];
    for(let j=0;j<Math.min(4,marks.length);j++){
-     const from=marks[j].index+marks[j][0].length;
-     const to=j+1<marks.length?marks[j+1].index:rest.length;
+     const from=marks[j].index+marks[j][0].length,to=j+1<marks.length?marks[j+1].index:rest.length;
      opts.push(rest.slice(from,to).trim());
    }
    while(opts.length<4)opts.push("");
-   // Answer and explanation may be anywhere after options.
    const ansMatch=block.match(/(?:सही\s*उत्तर|सही\s*विकल्प|उत्तर|Answer|Ans\.?|Correct\s*Answer)\s*[:=\-]?\s*\(?\s*(A|B|C|D|अ|ब|स|द|1|2|3|4|I|II|III|IV)\s*\)?/i);
    const answer=ansMatch?ansMatch[1]:"";
    const expMatch=block.match(/(?:सामान्य\s*जानकारी|महत्वपूर्ण\s*जानकारी|जानकारी|व्याख्या|Explanation|Solution|समाधान|Note|नोट)\s*[:=\-]?\s*([\s\S]*)$/i);
    const ex=expMatch?expMatch[1].trim():"";
-   // Remove answer/explanation tails from option D when labels are absent.
-   if(expMatch && opts.length) {
-     const cut=opts[opts.length-1].search(/(?:सही\s*उत्तर|उत्तर|Answer|Ans\.?|Correct\s*Answer|सामान्य\s*जानकारी|जानकारी|व्याख्या|Explanation|Solution|समाधान|Note|नोट)\s*[:=\-]/i);
+   if(expMatch && opts.length){
+     const cut=opts[opts.length-1].search(/(?:सही\s*उत्तर|उत्तर|Answer|Ans\.?|Correct\s*Answer|सामान्य\s*जानकारी|महत्वपूर्ण\s*जानकारी|जानकारी|व्याख्या|Explanation|Solution|समाधान|Note|नोट)\s*[:=\-]/i);
      if(cut>=0)opts[opts.length-1]=opts[opts.length-1].slice(0,cut).trim();
    }
    if(q && opts.filter(Boolean).length>=2)out.push({q,o:opts.slice(0,4),answer,ex});
@@ -858,7 +900,12 @@ async function mtPdfPreview(){
    let text="";
    for(let i=1;i<=pdf.numPages;i++){
      const page=await pdf.getPage(i),content=await page.getTextContent();
-     text+=content.items.map(x=>x.str).join(" ")+"\\n";
+     const items=(content.items||[]).map(x=>({str:String(x.str||""),x:Number(x.transform?.[4]||0),y:Number(x.transform?.[5]||0)}));
+     items.sort((a,b)=>Math.abs(a.y-b.y)<2?a.x-b.x:b.y-a.y);
+     const lines=[];
+     for(const it of items){let line=lines.find(l=>Math.abs(l.y-it.y)<2);if(!line){line={y:it.y,items:[]};lines.push(line)}line.items.push(it)}
+     lines.sort((a,b)=>b.y-a.y);
+     text+=lines.map(l=>l.items.sort((a,b)=>a.x-b.x).map(x=>x.str).join(" ")).join("\\n")+"\\n";
      st.textContent=`⏳ PDF पढ़ी जा रही है... Page ${i}/${pdf.numPages}`;
    }
    document.getElementById("mtBulkText").value=text;
@@ -870,14 +917,24 @@ async function mtPdfPreview(){
  }
 }
 function mtImportPreview(){mtFinalSave();}
-function mtClearPreview(){mtPreview=[];document.getElementById("mtPreview").innerHTML="";document.getElementById("mtStatus").textContent=""}
+function mtClearPreview(){
+ mtPreview=[];
+ const p=document.getElementById("mtPreview"), st=document.getElementById("mtStatus");
+ const qs=document.getElementById("mtQuestions"), qc=document.getElementById("mtQuestionCount");
+ if(p)p.innerHTML="";
+ if(qs)qs.innerHTML="";
+ if(qc)qc.innerHTML="";
+ const bulk=document.getElementById("mtBulkText"); if(bulk)bulk.value="";
+ const pdf=document.getElementById("mtPdf"); if(pdf)pdf.value="";
+ if(st)st.textContent="";
+}
 function mtManualAdd(){
  const q=prompt("Question लिखें:");if(!q)return;
  const o=[prompt("Option A:"),prompt("Option B:"),prompt("Option C:"),prompt("Option D:")];
  if(o.some(x=>x===null||!String(x).trim()))return;
  const ans=(prompt("सही उत्तर A/B/C/D:","A")||"A").toUpperCase(),ex=prompt("जानकारी / Explanation:","")||"";
  mtPreview.push({q:q.trim(),o:o.map(x=>String(x).trim()),answer:ans,ex});
- mtRenderPreview();
+ mtShowPreview(mtPreview,"Manual");
 }
 function mtNormQuestion(x,i){
  if(Array.isArray(x)){
@@ -937,6 +994,7 @@ function setFolderVisibility(exam,visible){
  localStorage.setItem("tgy_exams",JSON.stringify(a));
 }
 function mtToggleFolder(exam){
+ exam=decodeURIComponent(exam);
  const now=!getFolderVisibility(exam);
  setFolderVisibility(exam,now);
  mtRenderAll();
@@ -1055,17 +1113,9 @@ const EXAM_NEW_VALUE="__NEW_EXAM__";
 function getExamMaster(){
  let a=getAdminList("tgy_exams");
  if(!Array.isArray(a))a=[];
- const tests=getAdminTestsFlat();
- const names=new Set(a.map(x=>typeof x==="string"?x:x.name).filter(Boolean));
- tests.forEach(t=>{if(t.exam)names.add(t.exam)});
- getAdminNotes().forEach(n=>{if(n.exam)names.add(n.exam)});
- getAdminList("tgy_pricing").forEach(x=>{if(x.exam)names.add(x.exam)});
- getAdminList("tgy_offers").forEach(x=>{if(x.exam)names.add(x.exam)});
- const result=[...names].map(name=>{
-   const old=a.find(x=>(typeof x==="string"?x:x.name)===name);
-   return typeof old==="object"?old:{name,visible:true};
- });
- if(!result.length) result=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"].map(name=>({name,visible:true}));
+ const result=a.map(x=>typeof x==="string"?{name:x,visible:true}:x)
+   .filter(x=>x&&String(x.name||"").trim())
+   .map(x=>({...x,name:String(x.name).trim()}));
  setAdminList("tgy_exams",result);
  return result;
 }
@@ -1180,8 +1230,12 @@ function refreshAllExamDropdowns(preferred=""){
 }
 function populateExamTests(examId,testId,selected=""){
  const e=document.getElementById(examId),t=document.getElementById(testId);if(!e||!t)return;
- const exam=e.value;
- const tests=getAdminTestsFlat().filter(x=>x.exam===exam);
+ const exam=e.value; let tests=[];
+ try{
+   const d=mtStore(); tests=Object.entries(d.exams?.[exam]?.tests||{}).map(([k,x])=>({...x,name:x.name||k,exam}));
+ }catch(err){}
+ if(!tests.length)tests=getAdminTestsFlat().filter(x=>x.exam===exam);
+ const seen=new Set(); tests=tests.filter(x=>{const k=String(x.name||"");if(!k||seen.has(k))return false;seen.add(k);return true;});
  t.innerHTML=tests.map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join("") || '<option value="">-- कोई Test नहीं --</option>';
  if(selected && tests.some(x=>x.name===selected))t.value=selected;
 }
@@ -1211,7 +1265,7 @@ function savePricingItem(){
 function editPricing(i){let x=getAdminList("tgy_pricing")[i];populateExamSelect("prExam",x.exam);populateExamTests("prExam","prTest",x.test||x.name);document.getElementById("prMrp").value=x.mrp;document.getElementById("prOffer").value=x.offer}
 function deletePricing(i){let a=getAdminList("tgy_pricing");a.splice(i,1);setAdminList("tgy_pricing",a);renderPricing()}
 function clearPricingForm(){["prMrp","prOffer"].forEach(id=>document.getElementById(id).value="");populateExamSelect("prExam");populateExamTests("prExam","prTest")}
-function renderPricing(){const b=document.getElementById("pricingList");if(!b)return;const a=getAdminList("tgy_pricing");b.innerHTML=a.map((x,i)=>`<div class="card"><b>${esc(x.exam||"")}</b> — <b>${esc(x.test||x.name||"")}</b> — MRP ₹${x.mrp||0} / Offer ₹${x.offer||0} <button class="btn" onclick="editPricing(${i})">✏️ Edit</button><button class="btn danger" onclick="deletePricing(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी Pricing नहीं है।</p>"}
+function renderPricing(){const b=document.getElementById("pricingList");if(!b)return;const a=getAdminList("tgy_pricing");b.innerHTML=a.map((x,i)=>`<div class="card"><b>${esc(x.exam||"")}</b> — <b>${esc(x.test||x.name||"")}</b> — MRP ₹${x.mrp||0}${Number(x.offer)>0?` / Offer ₹${x.offer}`:""} <button class="btn" onclick="editPricing(${i})">✏️ Edit</button><button class="btn danger" onclick="deletePricing(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी Pricing नहीं है।</p>"}
 function apTypeChanged(){
  const type=document.getElementById("apType")?.value;
  const custom=type==="testseries";
@@ -1239,7 +1293,7 @@ function saveAccessPricing(){
  const durationValue=Number(document.getElementById("apDuration")?.value)||0;
  const unit=document.getElementById("apUnit")?.value||"days";
  const mrp=Number(document.getElementById("apMrp")?.value)||0;
- const offer=Number(document.getElementById("apOffer")?.value)||0;
+ const offerRaw=(document.getElementById("apOffer")?.value||"").trim(); const offer=offerRaw===""?0:Number(offerRaw);
  const max=(unit==="months"?durationValue<=6:durationValue<=180);
  if(!exam||durationValue<1||!max||mrp<=0){
    alert("परीक्षा, Validity (अधिकतम 6 महीने/180 दिन) और MRP भरें।");return;
@@ -1279,8 +1333,8 @@ function renderAccessPricing(){
  const a=getAdminList("tgy_access_pricing");
  const indexed=a.map((x,i)=>({x,i})).sort((A,B)=>{
    if(A.x.exam!==B.x.exam)return String(A.x.exam).localeCompare(String(B.x.exam));
-   if(A.x.type==="folder"&&B.x.type!=="folder")return -1;
-   if(A.x.type!=="folder"&&B.x.type==="folder")return 1;
+   const ac=(A.x.type==="folder"||Number(A.x.count||0)===100), bc=(B.x.type==="folder"||Number(B.x.count||0)===100);
+   if(ac!==bc)return ac?-1:1;
    return Number(A.x.count||0)-Number(B.x.count||0);
  });
  b.innerHTML=indexed.map(({x,i})=>{
