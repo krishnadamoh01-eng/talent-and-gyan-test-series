@@ -100,20 +100,58 @@ header{margin-left:-260px;padding-left:calc(5% + 260px)}
 .tgy-auth-buttons a.register{background:#f07800!important;color:#fff!important}
 .tgy-auth-buttons button{padding:8px 11px!important}
 @media(max-width:900px){.tgy-auth-buttons{width:100%;margin-left:0!important;justify-content:center}}
-</style><style id="tgy-auth-force">#studentNavigation #studentAuthTop{display:flex!important;visibility:visible!important;opacity:1!important;margin-left:auto!important;gap:8px!important;align-items:center!important}#studentNavigation #studentAuthTop a{display:inline-block!important;color:#fff!important;background:#0b5ed7!important;padding:8px 12px!important;border-radius:7px!important;text-decoration:none!important;font-weight:800!important}.tgy-auth-buttons a.register{background:#f07800!important}</style></head><body>
-<aside class="tgy-sidebar" aria-label="Talent And Gyan Quick Links">
+</style><style id="tgy-auth-force">#studentNavigation #studentAuthTop{display:flex!important;visibility:visible!important;opacity:1!important;margin-left:auto!important;gap:8px!important;align-items:center!important}#studentNavigation #studentAuthTop a{display:inline-block!important;color:#fff!important;background:#0b5ed7!important;padding:8px 12px!important;border-radius:7px!important;text-decoration:none!important;font-weight:800!important}.tgy-auth-buttons a.register{background:#f07800!important}</style><style id="tgy-photo-only-sidebar-fix">
+/* Student site: remove the duplicate left menu; keep only the logo photo. */
+body{padding-left:0!important}
+.tgy-sidebar{position:fixed!important;left:10px!important;top:10px!important;bottom:auto!important;width:96px!important;height:96px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow:visible!important;z-index:100!important}
+.tgy-sidebar-logo{display:block!important;width:88px!important;height:88px!important;object-fit:contain!important;margin:0!important;border-radius:14px!important}
+.tgy-sidebar-title,.tgy-side-card,.tgy-side-social{display:none!important}
+header{margin-left:0!important;padding-left:125px!important}
+#studentNavigation{margin-left:0!important;padding-left:5%!important}
+#homeNewsTicker{margin-left:0!important}
+@media(max-width:900px){header{padding-left:110px!important}.tgy-sidebar{width:78px!important;height:78px!important}.tgy-sidebar-logo{width:72px!important;height:72px!important}}
+</style>
+
+<style id="tgy-final-mock-css">
+#examModal{z-index:9998}
+.tgy-exam-shell{position:fixed;inset:0;background:#f4f7fb;z-index:10000;display:flex;flex-direction:column;color:#172b4d}
+.tgy-exam-top{background:#125dcc;color:#fff;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tgy-exam-top h2{margin:0;font-size:20px}
+.tgy-exam-main{flex:1;min-height:0;display:flex;gap:12px;padding:12px;overflow:hidden}
+.tgy-exam-question{flex:1;min-width:0;background:#fff;border-radius:10px;padding:18px;overflow:auto;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.tgy-palette{width:280px;background:#fff;border-radius:10px;padding:12px;overflow:auto;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.tgy-palette-grid{display:grid;grid-template-columns:repeat(5,minmax(36px,1fr));gap:7px}
+.tgy-palette-btn{border:1px solid #c8d3e0;border-radius:7px;padding:8px 4px;background:#fff;font-weight:800;cursor:pointer}
+.tgy-palette-btn.current{outline:3px solid #125dcc}
+.tgy-palette-btn.attempted{background:#1f9d55;color:#fff;border-color:#1f9d55}
+.tgy-palette-btn.review{background:#f1c40f;color:#111;border-color:#d5a900}
+.tgy-palette-btn.notattempted{background:#e53935;color:#fff;border-color:#e53935}
+.tgy-exam-options label{display:block;padding:12px;margin:8px 0;border:1px solid #dbe3ed;border-radius:8px;cursor:pointer}
+.tgy-exam-bottom{background:#fff;border-top:1px solid #dbe3ed;padding:10px 14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.tgy-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.tgy-summary-box{padding:14px;border-radius:10px;text-align:center;border:1px solid #dbe3ed;background:#fff}
+.tgy-answer-row{padding:12px;border:1px solid #dbe3ed;border-radius:9px;margin:8px 0;background:#fff}
+.tgy-explanation{padding:12px;background:#fffbe8;border-left:4px solid #e0a800;border-radius:6px;margin-top:8px}
+@media(max-width:850px){
+ .tgy-exam-main{flex-direction:column;overflow:auto}
+ .tgy-palette{width:auto;max-height:220px;flex:none}
+ .tgy-palette-grid{grid-template-columns:repeat(8,minmax(32px,1fr))}
+ .tgy-summary-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+
+<style id="tgy-photo-only-final">
+.tgy-sidebar-title,.tgy-side-card,.tgy-side-social,.tgy-side-link{display:none!important}.tgy-sidebar{pointer-events:none!important}
+.tgy-sidebar{width:96px!important;height:96px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;overflow:visible!important}
+.tgy-sidebar-logo{width:88px!important;height:88px!important;margin:0!important}
+body{padding-left:0!important}
+header{margin-left:0!important;padding-left:5%!important}
+#studentNavigation{margin-left:0!important;padding-left:5%!important}
+#homeNewsTicker{margin-left:0!important}
+</style>
+</head><body>
+<aside class="tgy-sidebar" aria-label="Talent And Gyan Logo">
   <img class="tgy-sidebar-logo" src="talent-and-gyan-logo.png" alt="Talent And Gyan Logo">
-  <div class="tgy-sidebar-title">Talent And Gyan</div>
-  <div class="tgy-side-card">
-    <h3>🔗 त्वरित लिंक</h3>
-    <button class="tgy-side-link" onclick="studentGoHome()">🏠 Home</button>
-    <button class="tgy-side-link" onclick="openStudentPage('mock')">🎯 Mock Test</button>
-    <button class="tgy-side-link" onclick="openStudentPage('series')">📚 Test Series</button>
-    <button class="tgy-side-link" onclick="openStudentPage('purchased')">🎓 मेरे खरीदे हुए Test</button>
-    <button class="tgy-side-link" onclick="openStudentPage('notes')">📄 PDF Notes</button>
-    <button class="tgy-side-link" onclick="openStudentPage('help')">📞 सहायता / संपर्क</button>
-  </div>
-  <div class="tgy-side-social">📚 Learn For The Success<br><small>Talent And Gyan</small></div>
 </aside>
 
 <header><div class="logo" style="font-size:34px;font-weight:900">Talent And Gyan Test Series</div>
@@ -780,5 +818,218 @@ document.addEventListener("DOMContentLoaded",()=>{
    });
  });
 });
+</script>
+
+<script id="tgy-final-mock-flow">
+(function(){
+  function tgyDoneKey(t){return "tgy_done_"+encodeURIComponent((t.exam||"")+"||"+(t.name||""))}
+  function tgyIsDone(t){try{return localStorage.getItem(tgyDoneKey(t))==="1"}catch(e){return false}}
+  function tgyMarkDone(t){try{localStorage.setItem(tgyDoneKey(t),"1")}catch(e){}}
+
+  window.openExam=function(exam){
+    const folderVisible=getFolderVisibilityStudent(exam);
+    const list=tests.filter(t=>t.exam===exam && folderVisible && t.published!==false && t.visible!==false && tgyDateValid(t.availableUntil));
+    const ordered=list.slice().sort((a,b)=>(tgyIsDone(a)?1:0)-(tgyIsDone(b)?1:0));
+    let html=`<div class="exam-inner-head"><h2>📁 ${esc(exam)}</h2><p class="muted">इस परीक्षा के सभी Mock Tests यहाँ दिखाई देंगे।</p></div>`;
+    if(ordered.length){
+      html+=`<div class="card"><h3>📝 उपलब्ध Mock Tests</h3><div class="grid">`;
+      ordered.forEach(t=>{
+        const idx=tests.indexOf(t),done=tgyIsDone(t),free=t.demo===true,purchased=hasPurchasedTest(t);
+        let action="";
+        if(done) action=`<button class="btn" onclick="tgyOpenTestFromFolder(${idx})">↻ फिर से दें</button>`;
+        else if(free||purchased) action=`<button class="btn orange" onclick="tgyOpenTestFromFolder(${idx})">▶️ Test खोलें</button>`;
+        else action=`<button class="btn orange" onclick="buySeriesAccess('${esc(exam)}',0)">🔒 Access लें</button>`;
+        html+=`<div class="card" style="margin:0"><h3>${esc(t.name)}</h3><p>${t.questions.length} Questions • ${t.time||60} मिनट</p>
+          ${done?'<p style="color:#1f9d55;font-weight:800">✅ Test Complete — अगला Test नीचे</p>':free?'<p style="color:#1f9d55;font-weight:800">FREE</p>':'<p class="muted">🔒 Access required</p>'}
+          ${action}</div>`;
+      });
+      html+=`</div></div>`;
+    }else{
+      html+=`<div class="card"><h3>📭 कोई Mock Test उपलब्ध नहीं है</h3><p class="muted">इस Folder में अभी कोई Test नहीं जोड़ा गया है।</p></div>`;
+    }
+    html+=`<div style="margin-top:12px"><button class="btn gray" onclick="closeExam()">← पीछे</button></div>`;
+    const box=document.getElementById("examContent");if(box)box.innerHTML=html;
+    const m=document.getElementById("examModal");if(m)m.style.display="flex";
+  };
+
+  window.closeExam=function(){
+    const m=document.getElementById("examModal");if(m)m.style.display="none";
+  };
+
+  window.tgyOpenTestFromFolder=function(i){
+    const t=tests[i];if(!t)return;
+    if(!requireStudentLogin({type:"test",index:i,exam:t.exam})){return}
+    if(t.demo!==true && !hasPurchasedTest(t)){
+      const pricing=getSeriesPricing(t.exam||"");
+      if(pricing.length) buySeriesAccess(t.exam,0);
+      else alert("इस Test के लिए अभी Access/Pricing सेट नहीं है।");
+      return;
+    }
+    window.activeTestExam=t.exam||null;
+    window.openedTestFromSeries=true;
+    closeExam();
+    setTimeout(()=>window.startFinalMockTest(i),80);
+  };
+
+  // Keep legacy entry points pointing to the same in-place Test flow.
+  window.openTestFromSeries=window.tgyOpenTestFromFolder;
+  window.openTest=function(i){return window.tgyOpenTestFromFolder(i)};
+
+  window.startFinalMockTest=function(i){
+    const t=tests[i];if(!t)return;
+    if(!requireStudentLogin({type:"test",index:i,exam:t.exam})){return}
+    if(t.demo!==true && !hasPurchasedTest(t)){
+      const pricing=getSeriesPricing(t.exam||"");
+      if(pricing.length) return buySeriesAccess(t.exam,0);
+      alert("इस Test के लिए Access उपलब्ध नहीं है।");return;
+    }
+    const qs=t.questions||[];
+    if(!qs.length){alert("इस Test में अभी कोई Question नहीं है।");return}
+    window.state={t,idx:0,answers:Array(qs.length).fill(null),review:Array(qs.length).fill(false),startedAt:Date.now()};
+    const modal=document.getElementById("modal");
+    const content=document.getElementById("modalContent");
+    if(!modal||!content)return;
+    modal.style.display="flex";
+    modal.style.padding="0";
+    content.style.cssText="padding:0;max-width:none;width:100%;height:100vh;border-radius:0;background:#f4f7fb";
+    content.innerHTML=`<div class="tgy-exam-shell">
+      <div class="tgy-exam-top"><h2>📝 ${esc(t.name)}</h2><div><span id="tgyExamTimer">⏱️ ${Number(t.time||60)}:00</span></div></div>
+      <div class="tgy-exam-main"><div class="tgy-exam-question"><div id="tgyExamQuestion"></div></div>
+      <aside class="tgy-palette"><h3 style="margin-top:0">Question Palette</h3>
+       <p style="font-size:13px">🔴 Not Attempted &nbsp; 🟢 Attempted &nbsp; 🟡 Review</p>
+       <div id="tgyPalette" class="tgy-palette-grid"></div></aside></div>
+      <div class="tgy-exam-bottom">
+       <div><button class="btn gray" id="tgyPrevBtn" onclick="tgyPrevQ()">← Previous</button>
+       <button class="btn" onclick="tgyMarkReview()">🟡 Mark for Review</button></div>
+       <div><button class="btn gray" onclick="tgyExitExam()">✕ Exit</button>
+       <button class="btn orange" id="tgyNextBtn" onclick="tgyNextQ()">Next →</button></div>
+      </div>
+    </div>`;
+    tgyRenderExamQ();
+    let sec=Number(t.time||60)*60;
+    window.timer=setInterval(()=>{
+      sec--;
+      const el=document.getElementById("tgyExamTimer");
+      if(el)el.textContent=`⏱️ ${Math.max(0,Math.floor(sec/60))}:${String(Math.max(0,sec%60)).padStart(2,"0")}`;
+      if(sec<=0)tgySubmitExam(true);
+    },1000);
+  };
+
+  window.tgyRenderExamQ=function(){
+    const s=state,q=s.t.questions[s.idx];
+    const ans=s.answers[s.idx];
+    const qbox=document.getElementById("tgyExamQuestion");
+    if(!qbox)return;
+    qbox.innerHTML=`<h3>प्रश्न ${s.idx+1} / ${s.t.questions.length}</h3>
+      <div style="font-size:20px;font-weight:800;margin:15px 0">${esc(q[0])}</div>
+      <div class="tgy-exam-options">${q[1].map((o,j)=>`<label><input type="radio" name="tgyAns" value="${j}" ${ans===j?"checked":""} onchange="state.answers[state.idx]=+this.value;tgyRenderPalette()"> ${String.fromCharCode(65+j)}. ${esc(o)}</label>`).join("")}</div>`;
+    const prev=document.getElementById("tgyPrevBtn"),next=document.getElementById("tgyNextBtn");
+    if(prev)prev.style.visibility=s.idx>0?"visible":"hidden";
+    if(next)next.textContent=s.idx===s.t.questions.length-1?"Submit Test":"Next →";
+    tgyRenderPalette();
+  };
+
+  window.tgyRenderPalette=function(){
+    const b=document.getElementById("tgyPalette");if(!b)return;
+    const s=state;
+    b.innerHTML=s.t.questions.map((q,i)=>{
+      const cls=i===s.idx?"current":s.review[i]?"review":s.answers[i]!==null?"attempted":"notattempted";
+      return `<button class="tgy-palette-btn ${cls}" onclick="tgyGoQ(${i})">${i+1}</button>`;
+    }).join("");
+  };
+  window.tgyGoQ=function(i){state.idx=i;tgyRenderExamQ()};
+  window.tgyPrevQ=function(){if(state.idx>0){state.idx--;tgyRenderExamQ()}};
+  window.tgyNextQ=function(){
+    if(state.answers[state.idx]===null){alert("पहले कोई विकल्प चुनें।");return}
+    if(state.idx===state.t.questions.length-1)tgySubmitExam(false);
+    else{state.idx++;tgyRenderExamQ()}
+  };
+  window.tgyMarkReview=function(){
+    state.review[state.idx]=!state.review[state.idx];
+    if(state.idx<state.t.questions.length-1){state.idx++;tgyRenderExamQ()}else tgyRenderPalette();
+  };
+
+  window.tgyExitExam=function(){
+    if(!confirm("क्या आप Test से बाहर निकलना चाहते हैं? आपका वर्तमान प्रयास Submit नहीं होगा।"))return;
+    clearInterval(window.timer);
+    const m=document.getElementById("modal");if(m)m.style.display="none";
+    const c=document.getElementById("modalContent");if(c)c.style.cssText="";
+    const ex=window.activeTestExam;
+    if(ex){setTimeout(()=>window.openExam(ex),80)}
+  };
+
+  window.closeTestModal=window.tgyExitExam;
+
+  window.tgySubmitExam=function(auto){
+    clearInterval(window.timer);
+    const s=state,total=s.t.questions.length,attempted=s.answers.filter(x=>x!==null).length;
+    let correct=0;
+    s.t.questions.forEach((q,i)=>{if(s.answers[i]!==null && s.answers[i]===q[2])correct++});
+    const wrong=attempted-correct,skipped=total-attempted;
+    const neg=s.t.negativeMarking?Number(s.t.negativeMarks||0):0;
+    const negativeMarks=wrong*neg,score=correct-negativeMarks;
+    const percent=total?((score/total)*100).toFixed(2):"0.00";
+    const timeTaken=Math.max(0,Math.round((Date.now()-(s.startedAt||Date.now()))/1000));
+    tgyMarkDone(s.t);
+    let rs=[];try{rs=JSON.parse(localStorage.getItem("tgy_results")||"[]")}catch(e){}
+    rs.unshift({test:s.t.name,exam:s.t.exam,total,attempted,wrong,correct,skipped,score,negativeMarks,percent,timeTaken,date:new Date().toLocaleString()});
+    localStorage.setItem("tgy_results",JSON.stringify(rs));
+    window.tgyShowResultSummary({total,attempted,skipped,correct,wrong,negativeMarks,score,percent,timeTaken});
+  };
+
+  window.tgyShowResultSummary=function(r){
+    const c=document.getElementById("modalContent");if(!c)return;
+    const min=Math.floor(r.timeTaken/60),sec=r.timeTaken%60;
+    c.innerHTML=`<div style="padding:20px;max-height:100vh;overflow:auto;background:#f4f7fb">
+      <h2>🏆 Test Result</h2>
+      <div class="tgy-summary-grid">
+       <div class="tgy-summary-box"><b>🟢 सही</b><br><span style="font-size:26px">${r.correct}</span></div>
+       <div class="tgy-summary-box"><b>🔴 गलत</b><br><span style="font-size:26px">${r.wrong}</span></div>
+       <div class="tgy-summary-box"><b>⚪ Attempted</b><br><span style="font-size:26px">${r.attempted}</span></div>
+       <div class="tgy-summary-box"><b>⚪ Not Attempted</b><br><span style="font-size:26px">${r.skipped}</span></div>
+       <div class="tgy-summary-box"><b>📊 Marks</b><br><span style="font-size:26px">${Number(r.score).toFixed(2)}</span></div>
+       <div class="tgy-summary-box"><b>❌ Negative</b><br><span style="font-size:26px">${Number(r.negativeMarks).toFixed(2)}</span></div>
+      </div>
+      <div class="card"><p><b>Total Questions:</b> ${r.total}</p><p><b>Final Score:</b> ${Number(r.score).toFixed(2)} / ${r.total}</p><p><b>Percentage:</b> ${r.percent}%</p><p><b>Time Taken:</b> ${min}m ${sec}s</p></div>
+      <button class="btn orange" onclick="tgyShowAnswerDetails()">📋 Answer Details देखें</button>
+      <button class="btn gray" onclick="tgyBackToFolder()">← Test List पर वापस</button>
+    </div>`;
+  };
+
+  window.tgyShowAnswerDetails=function(){
+    const s=state,c=document.getElementById("modalContent");if(!c)return;
+    let html=`<div style="padding:20px;max-height:100vh;overflow:auto"><h2>📋 Question-wise Answer Details</h2>`;
+    s.t.questions.forEach((q,i)=>{
+      const a=s.answers[i],ok=a!==null&&a===q[2];
+      html+=`<div class="tgy-answer-row"><b>Question ${i+1}</b><p>आपका Answer: ${a===null?"नहीं दिया":String.fromCharCode(65+a)+" — "+esc(q[1][a])}</p><p>सही Answer: ${String.fromCharCode(65+q[2])} — ${esc(q[1][q[2]])}</p><p style="font-weight:800;color:${ok?"#1f9d55":"#e53935"}">Status: ${ok?"Correct":"Wrong"}</p></div>`;
+    });
+    html+=`<button class="btn orange" onclick="tgyShowExplanations()">📖 सबसे अंत में Explanation / Solution देखें</button>
+      <button class="btn gray" onclick="tgyBackToFolder()">← Test List पर वापस</button></div>`;
+    c.innerHTML=html;
+  };
+
+  window.tgyShowExplanations=function(){
+    const s=state,c=document.getElementById("modalContent");if(!c)return;
+    let html=`<div style="padding:20px;max-height:100vh;overflow:auto"><h2>📖 Explanation / Solution</h2>`;
+    s.t.questions.forEach((q,i)=>{html+=`<div class="tgy-answer-row"><b>Question ${i+1}</b><div class="tgy-explanation">${esc(q[3]||"Explanation उपलब्ध नहीं है।")}</div></div>`});
+    html+=`<button class="btn orange" onclick="tgyBackToFolder()">← Test List पर वापस</button></div>`;
+    c.innerHTML=html;
+  };
+
+  window.tgyBackToFolder=function(){
+    const m=document.getElementById("modal");if(m)m.style.display="none";
+    const c=document.getElementById("modalContent");if(c)c.style.cssText="";
+    const ex=state?.t?.exam||window.activeTestExam;
+    if(ex)window.openExam(ex);
+  };
+
+  // Completed tests move below the remaining tests whenever the folder is reopened.
+  window.getNextSeriesTest=function(current){
+    const exam=current?.exam||"";
+    const arr=tests.filter(t=>t.exam===exam&&t.visible!==false&&t.published!==false&&tgyDateValid(t.availableUntil)).sort((a,b)=>(tgyIsDone(a)?1:0)-(tgyIsDone(b)?1:0));
+    const pos=arr.findIndex(t=>t.name===current.name);
+    return pos>=0?arr[pos+1]||null:null;
+  };
+})();
 </script>
 </body></html>
