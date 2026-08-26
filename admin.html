@@ -103,6 +103,12 @@ function checkAdmin(){
         <select id="mtExam" onchange="mtLoadTests()"></select>
       </div>
       <div>
+        <label>📝 पहले से बना Test चुनें</label>
+        <select id="mtTest" onchange="mtLoadSelected()">
+          <option value="">-- नया Test बनाने के लिए नीचे नाम लिखें --</option>
+        </select>
+      </div>
+      <div>
         <label>📝 Test का नाम</label>
         <input id="mtName" placeholder="जैसे Mock Test 01 / Mock Test 02">
       </div>
@@ -270,32 +276,72 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
 </section>
 
 <section id="accessPricing" class="sec">
-<h1>📁 Access Pricing</h1>
+<h1>💰 Test Series Pricing</h1>
 <div class="card">
-<p>यहाँ Test Series के Access को बहुत सरल तरीके से सेट करें। 10, 20, 30, 50, 80 या 100 Tests चुनें। 100 Tests को Complete Series माना जाएगा। Validity दिन या महीने में रखें; अधिकतम 6 महीने। Offer Price optional है।</p>
+<p><b>Step 1:</b> परीक्षा चुनें → <b>Step 2:</b> पूरा Folder या Custom चुनें → <b>Step 3:</b> Price और Validity डालें → <b>Save</b> करें।</p>
+
 <div class="row">
-<div><label>📋 परीक्षा</label><select id="apExam"></select></div>
-<div><label>Access Type</label>
-<select id="apType" onchange="apTypeChanged()">
-<option value="testseries">📝 Test Series</option>
-<option value="folder">📁 पूरा Folder</option>
-<option value="topic">📚 Topic / Subject</option>
-<option value="single">📄 Single PDF / Test</option>
-</select></div>
-<div id="apCountWrap"><label>📝 कितने Tests</label>
-<select id="apCount">
-<option value="10">10 Tests</option><option value="20">20 Tests</option><option value="30">30 Tests</option>
-<option value="50">50 Tests</option><option value="80">80 Tests</option><option value="100">100 Tests — Complete</option>
-</select></div>
-<div><label>नाम</label><input id="apName" placeholder="जैसे MP पटवारी Test Series"></div>
-<div><label>Validity</label><input id="apDuration" type="number" min="1" max="6" value="15" placeholder="15"></div>
-<div><label>Unit</label><select id="apUnit"><option value="days">दिन</option><option value="months">महीना</option></select></div>
-<div><label>MRP (₹)</label><input id="apMrp" type="number" min="0"></div>
-<div><label>Offer Price (₹) — Optional</label><input id="apOffer" type="number" min="0" placeholder="खाली छोड़ सकते हैं"></div>
+  <div>
+    <label>📋 1. परीक्षा का नाम</label>
+    <select id="apExam"></select>
+  </div>
+
+  <div>
+    <label>📁 2. Access Option</label>
+    <select id="apType" onchange="apTypeChanged()">
+      <option value="folder">📁 पूरा Test Series / Folder</option>
+      <option value="testseries">⚙️ Custom Test Series</option>
+    </select>
+  </div>
+
+  <div id="apCustomWrap" style="display:none">
+    <label>📝 Custom में कितने Tests?</label>
+    <select id="apCount">
+      <option value="10">10 Tests</option>
+      <option value="20">20 Tests</option>
+      <option value="30">30 Tests</option>
+      <option value="50">50 Tests</option>
+      <option value="80">80 Tests</option>
+      <option value="100">100 Tests</option>
+    </select>
+  </div>
+
+  <div id="apNameWrap" style="display:none">
+    <label>Custom का नाम (Optional)</label>
+    <input id="apName" placeholder="जैसे 20 Test Series">
+  </div>
+
+  <div>
+    <label>💰 MRP (₹)</label>
+    <input id="apMrp" type="number" min="0" placeholder="जैसे 199">
+  </div>
+
+  <div>
+    <label>🏷️ Offer Price (₹) — Optional</label>
+    <input id="apOffer" type="number" min="0" placeholder="खाली छोड़ सकते हैं">
+  </div>
+
+  <div>
+    <label>⏳ Validity</label>
+    <input id="apDuration" type="number" min="1" max="6" value="15" placeholder="15">
+  </div>
+
+  <div>
+    <label>समय की Unit</label>
+    <select id="apUnit">
+      <option value="days">दिन</option>
+      <option value="months">महीना</option>
+    </select>
+  </div>
 </div>
-<button class="btn orange" onclick="saveAccessPricing()">💾 Save</button>
+
+<button class="btn orange" onclick="saveAccessPricing()">💾 Save Pricing</button>
 </div>
-<div class="card"><h3>📋 Saved Access Prices</h3><div id="accessPricingList"></div></div>
+
+<div class="card">
+  <h3>📋 जो Pricing आपने बनाई है</h3>
+  <div id="accessPricingList"></div>
+</div>
 </section>
 <section id="support" class="sec"><h1>🛠️ Support / Complaints <span id="badge"></span></h1><table><thead><tr><th>नाम</th><th>Email</th><th>समस्या</th><th>UTR</th><th>विवरण</th><th>स्थिति</th></tr></thead><tbody id="ct"></tbody></table></section>
 </main></div>
@@ -481,7 +527,7 @@ function activate(i){
      u.seriesAccess=u.seriesAccess||[];
      const days=Number(p.days)||0;
      const expires=new Date(Date.now()+days*86400000).toISOString();
-     const item={exam:p.exam||p.course, count:Number(p.seriesCount)||100, amount:Number(p.amount)||0, accessName:p.accessName||p.course, activatedAt:p.activatedAt, expiresAt:expires};
+     const item={exam:p.exam||p.course, count:p.accessType==="folder"?999999:(Number(p.seriesCount)||100), amount:Number(p.amount)||0, accessName:p.accessName||p.course, accessType:p.accessType||"testseries", activatedAt:p.activatedAt, expiresAt:expires};
      u.seriesAccess=u.seriesAccess.filter(x=>!(x.exam===item.exam&&Number(x.count)===Number(item.count)&&x.accessName===item.accessName));
      u.seriesAccess.push(item);
    }else{
@@ -711,7 +757,10 @@ function mtLoadTests(){
  const d=mtStore(),e=document.getElementById("mtExam")?.value,t=document.getElementById("mtTest");
  if(!t)return;
  const tests=d.exams?.[e]?.tests||{};
- t.innerHTML=Object.keys(tests).map(x=>`<option value="${mtEsc(x)}">${mtEsc(x)}</option>`).join("")||'<option value="">-- पहले Test बनाएं --</option>';
+ const keys=Object.keys(tests);
+ t.innerHTML='<option value="">-- नया Test बनाने के लिए नाम लिखें --</option>'+
+   keys.map(x=>`<option value="${mtEsc(x)}">${mtEsc(x)}</option>`).join("");
+ if(keys.length && !document.getElementById("mtName")?.value) t.value=keys[0];
  mtLoadSelected();
 }
 function mtLoadSelected(){
@@ -721,8 +770,12 @@ function mtLoadSelected(){
    const nameEl=document.getElementById("mtName"),timeEl=document.getElementById("mtTime");
    if(nameEl)nameEl.value=obj.name||t;
    if(timeEl)timeEl.value=obj.time||60;
+ }else{
+   const box=document.getElementById("mtQuestions"),count=document.getElementById("mtQuestionCount");
+   if(box)box.innerHTML="नया Test बनाने के लिए ऊपर Test का नाम लिखें।";
+   if(count)count.innerHTML="";
  }
- mtRenderQuestions();
+ if(t)mtRenderQuestions();
 }
 
 function mtAddExam(){
@@ -732,11 +785,16 @@ function mtAddExam(){
  mtLoadTests();
 }
 function mtAddTest(){
- const e=document.getElementById("mtExam").value;if(!e){alert("पहले परीक्षा चुनें।");return}
- const n=prompt("नए Test / Test Series का नाम लिखें:");if(!n?.trim())return;
+ const e=document.getElementById("mtExam")?.value;if(!e){alert("पहले परीक्षा चुनें।");return}
+ const typed=document.getElementById("mtName")?.value.trim();
+ const n=typed||prompt("नए Test / Test Series का नाम लिखें:");
+ if(!n?.trim())return;
+ const time=Number(document.getElementById("mtTime")?.value)||60;
  const d=mtStore();d.exams[e]=d.exams[e]||{tests:{}};
- d.exams[e].tests[n.trim()]={name:n.trim(),exam:e,time:60,questions:[],published:true};
- mtSaveStore(d);mtLoadTests();document.getElementById("mtTest").value=n.trim();mtLoadSelected();mtRenderAll();
+ d.exams[e].tests[n.trim()]={name:n.trim(),exam:e,time,questions:[],published:true};
+ mtSaveStore(d);mtLoadTests();
+ const sel=document.getElementById("mtTest");if(sel)sel.value=n.trim();
+ mtLoadSelected();mtRenderAll();
  alert("✅ नया Test बन गया। अब इसी Test में Questions जोड़ सकते हैं।");
 }
 function mtNewTest(){mtAddTest()}
@@ -846,16 +904,42 @@ async function mtPdfPreview(){
  }
 }
 function mtImportPreview(){
- const e=document.getElementById("mtExam").value,t=document.getElementById("mtTest").value;
- if(!e||!t){alert("पहले परीक्षा और Test/Series चुनें।");return}
+ const e=document.getElementById("mtExam")?.value;
+ const select=document.getElementById("mtTest");
+ let t=select?.value||"";
+ const typedName=document.getElementById("mtName")?.value.trim()||"";
+ const time=Number(document.getElementById("mtTime")?.value)||60;
+ if(!e){alert("पहले परीक्षा चुनें।");return}
+ if(!t){
+   t=typedName;
+   if(!t){alert("पहले Test का नाम लिखें।");return}
+   const d=mtStore();
+   d.exams[e]=d.exams[e]||{tests:{}};
+   if(!d.exams[e].tests[t]){
+     d.exams[e].tests[t]={name:t,exam:e,time,questions:[],published:true};
+     mtSaveStore(d);
+     mtLoadTests();
+     if(select)select.value=t;
+   }
+ } 
  if(!mtPreview.length){alert("पहले PDF Preview या Bulk Text Preview करें।");return}
- const d=mtStore();const obj=d.exams[e].tests[t];
+ const d=mtStore();
+ d.exams[e]=d.exams[e]||{tests:{}};
+ const obj=d.exams[e].tests[t];
+ if(!obj){alert("Test तैयार नहीं हुआ। ऊपर Test का नाम लिखकर फिर Submit करें।");return}
+ obj.name=typedName||obj.name||t;
+ obj.time=time;
  obj.questions=obj.questions||[];
  const start=obj.questions.length;
  mtPreview.forEach((x,i)=>obj.questions.push({q:x.q,o:x.o,answer:x.answer,ex:x.ex,number:start+i+1}));
- d.exams[e].tests[t]=obj;mtSaveStore(d);
- document.getElementById("mtStatus").innerHTML=`✅ <b>${mtPreview.length} Questions ${mtEsc(e)} → ${mtEsc(t)} में जोड़ दिए गए।</b>`;
- mtPreview=[];mtRenderQuestions();mtRenderAll();
+ d.exams[e].tests[t]=obj;
+ mtSaveStore(d);
+ if(select)select.value=t;
+ document.getElementById("mtStatus").innerHTML=`✅ <b>${mtPreview.length} Questions ${mtEsc(e)} → ${mtEsc(t)} में Save हो गए।</b>`;
+ mtPreview=[];
+ mtRenderQuestions();mtRenderAll();mtLoadTests();
+ if(select)select.value=t;
+ mtLoadSelected();
 }
 function mtClearPreview(){mtPreview=[];document.getElementById("mtPreview").innerHTML="";document.getElementById("mtStatus").textContent=""}
 function mtManualAdd(){
@@ -988,7 +1072,16 @@ function mtRenderAll(){
 
 function mtSelectTest(e,t){
  e=decodeURIComponent(e);t=decodeURIComponent(t);
- document.getElementById("mtExam").value=e;mtLoadTests();document.getElementById("mtTest").value=t;mtLoadSelected();
+ const exam=document.getElementById("mtExam"),sel=document.getElementById("mtTest");
+ if(exam)exam.value=e;
+ mtLoadTests();
+ if(sel){
+   sel.value=t;
+   if(sel.value!==t){
+     const opt=document.createElement("option");opt.value=t;opt.textContent=t;sel.appendChild(opt);sel.value=t;
+   }
+ }
+ mtLoadSelected();
 }
 function mtOpenTestEditor(e,t){
  e=decodeURIComponent(e);t=decodeURIComponent(t);
@@ -1171,43 +1264,58 @@ function clearPricingForm(){["prMrp","prOffer"].forEach(id=>document.getElementB
 function renderPricing(){const b=document.getElementById("pricingList");if(!b)return;const a=getAdminList("tgy_pricing");b.innerHTML=a.map((x,i)=>`<div class="card"><b>${esc(x.exam||"")}</b> — <b>${esc(x.test||x.name||"")}</b> — MRP ₹${x.mrp||0} / Offer ₹${x.offer||0} <button class="btn" onclick="editPricing(${i})">✏️ Edit</button><button class="btn danger" onclick="deletePricing(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी Pricing नहीं है।</p>"}
 function apTypeChanged(){
  const type=document.getElementById("apType")?.value;
- const wrap=document.getElementById("apCountWrap");
- if(wrap)wrap.style.display=type==="testseries"?"block":"none";
+ const custom=type==="testseries";
+ const cw=document.getElementById("apCustomWrap"),nw=document.getElementById("apNameWrap");
+ if(cw)cw.style.display=custom?"block":"none";
+ if(nw)nw.style.display=custom?"block":"none";
  const name=document.getElementById("apName");
- if(name && type==="testseries" && !name.value)name.placeholder="जैसे MP पटवारी Test Series";
+ if(name && custom && !name.value)name.placeholder="जैसे 20 Test Series";
 }
 function accessDurationText(x){
  const unit=x.unit||"days",v=Number(x.durationValue||x.days||0);
- return unit==="months"?`${v} ${v===1?"महीना":"महीने"}`:`${v} ${v===1?"दिन":"दिन"}`;
+ return unit==="months"?`${v} ${v===1?"महीना":"महीने"}`:`${v} दिन`;
 }
 function accessDays(x){
  const v=Number(x.durationValue||x.days||0);
  return (x.unit||"days")==="months"?v*30:v;
 }
 function saveAccessPricing(){
- const exam=document.getElementById("apExam").value;
- const type=document.getElementById("apType").value;
- const count=type==="testseries"?Number(document.getElementById("apCount").value):0;
- const name=document.getElementById("apName").value.trim();
- const durationValue=Number(document.getElementById("apDuration").value)||0;
- const unit=document.getElementById("apUnit").value;
- const mrp=Number(document.getElementById("apMrp").value)||0;
- const offer=Number(document.getElementById("apOffer").value)||0;
+ const exam=document.getElementById("apExam")?.value;
+ const type=document.getElementById("apType")?.value||"folder";
+ const count=type==="testseries"?Number(document.getElementById("apCount")?.value||10):0;
+ const name=type==="testseries"
+   ?(document.getElementById("apName")?.value.trim()||`${count} Test Series`)
+   :`${exam} — पूरा Test Series`;
+ const durationValue=Number(document.getElementById("apDuration")?.value)||0;
+ const unit=document.getElementById("apUnit")?.value||"days";
+ const mrp=Number(document.getElementById("apMrp")?.value)||0;
+ const offer=Number(document.getElementById("apOffer")?.value)||0;
  const max=(unit==="months"?durationValue<=6:durationValue<=180);
- if(!exam||!name||durationValue<1||!max||mrp<=0)return alert("परीक्षा, नाम, Validity (अधिकतम 6 महीने/180 दिन) और MRP भरें।");
+ if(!exam||durationValue<1||!max||mrp<=0){
+   alert("परीक्षा, Validity (अधिकतम 6 महीने/180 दिन) और MRP भरें।");return;
+ }
  let a=getAdminList("tgy_access_pricing");
- const obj={exam,type,count,name,durationValue,unit,days:accessDays({durationValue,unit}),mrp,offer};
- const n=a.findIndex(x=>x.exam===exam&&x.type===type&&Number(x.count||0)===count&&x.name===name&&x.durationValue===durationValue&&x.unit===unit);
+ const obj={
+   exam,type,count,name,durationValue,unit,days:accessDays({durationValue,unit}),
+   mrp,offer,scope:type==="folder"?"full":"custom"
+ };
+ const n=a.findIndex(x=>x.exam===exam&&x.type===type&&Number(x.count||0)===count);
  if(n>=0)a[n]=obj;else a.push(obj);
- setAdminList("tgy_access_pricing",a);renderAccessPricing();alert("✅ Access Pricing Save हो गई।");
+ setAdminList("tgy_access_pricing",a);
+ renderAccessPricing();
+ alert("✅ Pricing Save हो गई। अब Student Site पर यही option दिखाई देगा।");
+ clearAccessPricingForm();
+}
+function clearAccessPricingForm(){
+ ["apName","apMrp","apOffer"].forEach(id=>{const x=document.getElementById(id);if(x)x.value=""});
 }
 function editAccessPricing(n){
- const x=getAdminList("tgy_access_pricing")[n];if(!x)return;
+ const a=getAdminList("tgy_access_pricing"),x=a[n];if(!x)return;
  populateExamSelect("apExam",x.exam);
- document.getElementById("apType").value=x.type||"testseries";
+ document.getElementById("apType").value=x.type==="folder"?"folder":"testseries";
  apTypeChanged();
  if(document.getElementById("apCount"))document.getElementById("apCount").value=x.count||"10";
- document.getElementById("apName").value=x.name||"";
+ if(document.getElementById("apName"))document.getElementById("apName").value=x.type==="folder"?"":(x.name||"");
  document.getElementById("apDuration").value=x.durationValue||x.days||"";
  document.getElementById("apUnit").value=x.unit||"days";
  document.getElementById("apMrp").value=x.mrp||"";
@@ -1218,19 +1326,22 @@ function deleteAccessPricing(n){
 }
 function renderAccessPricing(){
  const b=document.getElementById("accessPricingList");if(!b)return;
- let a=getAdminList("tgy_access_pricing");
- a=a.slice().sort((x,y)=>{
-   if(x.exam!==y.exam)return String(x.exam).localeCompare(String(y.exam));
-   if(x.type==="testseries"&&y.type==="testseries")return Number(x.count||0)-Number(y.count||0);
-   return 0;
+ const a=getAdminList("tgy_access_pricing");
+ const indexed=a.map((x,i)=>({x,i})).sort((A,B)=>{
+   if(A.x.exam!==B.x.exam)return String(A.x.exam).localeCompare(String(B.x.exam));
+   if(A.x.type==="folder"&&B.x.type!=="folder")return -1;
+   if(A.x.type!=="folder"&&B.x.type==="folder")return 1;
+   return Number(A.x.count||0)-Number(B.x.count||0);
  });
- b.innerHTML=a.map((x,n)=>{
-   const typ=x.type==="testseries"?`📝 ${x.count||0} Tests`:x.type==="folder"?"📁 Folder":x.type==="topic"?"📚 Topic":"📄 Single";
-   const price=x.offer?`MRP ₹${x.mrp} / Offer ₹${x.offer}`:`MRP ₹${x.mrp}`;
-   return `<div class="card" style="margin:8px 0"><b>${esc(x.exam)}</b> — ${typ} — <b>${esc(x.name)}</b> — ${accessDurationText(x)} — ${price}
-   <button class="btn" onclick="editAccessPricing(${n})">✏️ Edit</button>
-   <button class="btn danger" onclick="deleteAccessPricing(${n})">🗑️ Delete</button></div>`;
- }).join("")||"<p>अभी कोई Access Pricing नहीं है।</p>";
+ b.innerHTML=indexed.map(({x,i})=>{
+   const typ=x.type==="folder"?"📁 पूरा Test Series":`⚙️ Custom — ${x.count||0} Tests`;
+   const price=x.offer?`<span style="text-decoration:line-through;color:#777">₹${x.mrp}</span> <b>₹${x.offer}</b>`:`<b>₹${x.mrp}</b>`;
+   return `<div class="card" style="margin:8px 0">
+     <b>${esc(x.exam)}</b> — ${typ} — ${accessDurationText(x)} — ${price}
+     <button class="btn" onclick="editAccessPricing(${i})">✏️ Edit</button>
+     <button class="btn danger" onclick="deleteAccessPricing(${i})">🗑️ Delete</button>
+   </div>`;
+ }).join("")||"<p>अभी कोई Pricing नहीं बनाई गई है।</p>";
 }
 
 function saveOfferItem(){
@@ -1278,7 +1389,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  populateExamTests("ofExam","ofTest");
  populateExamSelect("noteExam");
  if(typeof mtInit==="function"){mtInit();}
- populateExamSelect("apExam");renderPricing();renderOffers();renderAccessPricing();renderAdminNotes();
+ populateExamSelect("apExam");apTypeChanged();renderPricing();renderOffers();renderAccessPricing();renderAdminNotes();
 });
 </script>
 </body></html>
