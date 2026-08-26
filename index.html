@@ -142,12 +142,7 @@ header{margin-left:-260px;padding-left:calc(5% + 260px)}
 <div class="container" id="tests"><div class="title">📝 उपलब्ध Mock Tests</div><div class="grid" id="testCards"></div></div>
 <div class="modal" id="authModal"><div class="box" id="authContent"></div></div>
 <div class="modal" id="examModal"><div class="box" id="examContent"></div></div>
-<div class="container" id="plans"><div class="title">💳 Access Plans</div><div class="grid">
-<div class="card"><h3>1 दिन</h3><div class="price">₹10</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay()">Access लें</button></div>
-<div class="card"><h3>2 दिन</h3><div class="price">₹15</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay()">Access लें</button></div>
-<div class="card"><h3>5 दिन</h3><div class="price">₹30</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay()">Access लें</button></div>
-<div class="card"><h3>7 दिन</h3><div class="price">₹50</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay()">Access लें</button></div>
-<div class="card"><h3>15 दिन</h3><div class="price">₹80</div><p class="muted">सभी उपलब्ध Tests</p><button class="btn orange" onclick="pay()">Access लें</button></div></div></div>
+<div id="plans" style="display:none"></div>
 <div class="container"><div class="ad"><h3>📢 Advertisement</h3><p class="muted">यहाँ आपके Advertisement दिखाए जा सकते हैं।</p></div></div>
 <div class="container" id="results"><div class="title">📊 मेरे रिजल्ट</div><div class="card" id="resultList">अभी कोई Result नहीं है।</div></div>
 <div class="container" id="help"><div class="title">🛠️ सहायता / शिकायत</div><div class="card"><p>Payment, Login, Test, Result या किसी अन्य समस्या के लिए शिकायत भेजें।</p><label>नाम</label><input id="hname" placeholder="आपका नाम"><label>Email</label><input id="hemail" placeholder="आपकी Email ID"><label>समस्या</label><select id="htype"><option>Payment की समस्या</option><option>Login की समस्या</option><option>Test नहीं खुल रहा</option><option>Timer की समस्या</option><option>Result की समस्या</option><option>Payment किया लेकिन Access नहीं मिला</option><option>अन्य समस्या</option></select><label>Transaction / UTR</label><input id="hutr" placeholder="यदि लागू हो"><label>समस्या का विवरण</label><textarea id="hmsg" rows="4"></textarea><button class="btn" onclick="sendHelp()">शिकायत Submit करें</button></div></div>
@@ -246,7 +241,7 @@ function openExam(exam){
    html+=`<div class="card" style="margin-top:14px"><h3>📝 उपलब्ध Tests</h3><p class="muted">कुल ${list.length} Tests</p><div class="grid">`;
    list.forEach(t=>{
       const idx=tests.indexOf(t),purchased=hasPurchasedTest(t),free=t.demo===true;
-      const action=(free||purchased)?`<button class="btn" onclick="closeExam();openTest(${idx})">▶️ Test दें</button>`:`<button class="btn orange" onclick="window.scrollTo(0,0);alert('ऊपर से अपना Test Series Access चुनें।')">🔒 Access लें</button>`;
+      const action=(free||purchased)?`<button class="btn" onclick="openTestFromSeries(${idx})">▶️ Test खोलें</button>`:`<button class="btn orange" onclick="buySeriesAccess('${esc(exam)}',0)">🔒 Access लें</button>`;
       html+=`<div class="card" style="margin:0"><h3>📝 ${esc(t.name)}</h3><p>${t.questions.length} Questions • ${t.time} मिनट</p>${purchased?'<p style="color:green;font-weight:700">✅ आपके Access में</p>':free?'<p style="color:green;font-weight:700">FREE</p>':'<p class="muted">🔒 Locked</p>'}${action}</div>`;
    });
    html+=`</div></div>`;
@@ -374,6 +369,15 @@ function submitPayment(course,days,amount,redeemCode=""){
  document.getElementById("modalContent").innerHTML=`<h2>✅ Payment Details प्राप्त हो गई हैं</h2><div class="result"><b>Test Series:</b> ${esc(course)}<br><b>Access:</b> ${days===0?"1 Test":days+" दिन"}<br><b>Amount:</b> ₹${amount}<br>${redeemCode?`<b>Redeem Code:</b> ${esc(redeemCode)}<br>`:""}<b>Status:</b> 🟡 Pending</div><p><b>आपका Access Admin approval के बाद चालू किया जाएगा।</b></p><button class="btn" onclick="closeM()">ठीक है</button>`;
 }
 function closeM(){document.getElementById("modal").style.display="none";clearInterval(window.timer)}
+function openTestFromSeries(i){
+ const t=tests[i]; if(!t)return;
+ // Remember the exact Exam/Mock-Test folder that launched this Test.
+ window.activeTestExam = t.exam || null;
+ window.openedTestFromSeries = !!window.activeTestExam;
+ const examModal=document.getElementById("examModal");
+ if(examModal)examModal.style.display="none";
+ setTimeout(()=>openTest(i),60);
+}
 function openTest(i){
  const tCheck=tests[i];
  if(!requireStudentLogin({type:"test",index:i}))return;
@@ -383,10 +387,22 @@ function openTest(i){
  }
  const t=tests[i];if(!t)return;
  window.state={t,idx:0,answers:Array(t.questions.length).fill(null)};
- document.getElementById("modalContent").innerHTML=`<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap"><div class="timer" id="timer"></div><div><button class="btn gray" onclick="closeTestModal()">← पीछे</button></div></div><h2>${esc(t.name)}</h2><p class="muted">Option चुनना जरूरी है। Previous से वापस जाकर उत्तर बदल सकते हैं।</p><div id="qarea"></div><button class="btn gray" id="prev" onclick="prevQ()">← Previous</button> <button class="btn" id="next" onclick="nextQ()">Next →</button>`;
+ document.getElementById("modalContent").innerHTML=`<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap"><div class="timer" id="timer"></div><div><button class="btn gray" onclick="closeTestModal()">← वापस Test Series</button></div></div><h2>${esc(t.name)}</h2><p class="muted">Option चुनना जरूरी है। Previous से वापस जाकर उत्तर बदल सकते हैं।</p><div id="qarea"></div><button class="btn gray" id="prev" onclick="prevQ()">← Previous</button> <button class="btn" id="next" onclick="nextQ()">Next →</button>`;
  document.getElementById("modal").style.display="flex";renderQ();let sec=t.time*60;window.timer=setInterval(()=>{sec--;let e=document.getElementById("timer");if(e)e.textContent=`⏱️ ${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;if(sec<=0)submitTest()},1000)
 }
-function closeTestModal(){if(window.timer)clearInterval(window.timer);const m=document.getElementById("modal");if(m)m.style.display="none";}
+function closeTestModal(){
+ if(window.timer)clearInterval(window.timer);
+ const m=document.getElementById("modal");if(m)m.style.display="none";
+ // If the Test was opened from a Mock Test/Exam folder, return to that
+ // same folder instead of going to Home or the general Test list.
+ const ex=window.activeTestExam;
+ if(window.openedTestFromSeries && ex){
+   setTimeout(()=>openExam(ex),30);
+ }else{
+   window.activeTestExam=null;
+   window.openedTestFromSeries=false;
+ }
+}
 function renderQ(){let s=state,q=s.t.questions[s.idx];document.getElementById("qarea").innerHTML=`<div class="q"><b>प्रश्न ${s.idx+1}. ${esc(q[0])}</b>${q[1].map((o,j)=>`<label><input type="radio" name="ans" value="${j}" ${s.answers[s.idx]===j?"checked":""} onchange="state.answers[state.idx]=+this.value"> ${String.fromCharCode(65+j)}. ${esc(o)}</label>`).join("")}</div>`;document.getElementById("prev").style.visibility=s.idx?"visible":"hidden";document.getElementById("next").textContent=s.idx===s.t.questions.length-1?"Submit Test":"Next →"}
 function nextQ(){if(state.answers[state.idx]===null){alert("पहले कोई एक विकल्प चुनें।");return}if(state.idx===state.t.questions.length-1)submitTest();else{state.idx++;renderQ()}}
 function prevQ(){if(state.idx){state.idx--;renderQ()}}
@@ -403,7 +419,10 @@ function submitTest(){
  clearInterval(window.timer);
  let s=state,correct=0,attempted=s.answers.filter(x=>x!==null).length;
  s.t.questions.forEach((q,i)=>{if(s.answers[i]===q[2])correct++});
- let wrong=attempted-correct,skipped=s.t.questions.length-attempted,percent=(correct/s.t.questions.length*100).toFixed(2);
+ let wrong=attempted-correct,skipped=s.t.questions.length-attempted;
+ const neg=s.t.negativeMarking?Number(s.t.negativeMarks||0):0;
+ const score=correct-(wrong*neg);
+ let percent=(s.t.questions.length?((score/s.t.questions.length)*100):0).toFixed(2);
  results.unshift({test:s.t.name,total:s.t.questions.length,attempted,correct,wrong,skipped,percent,date:new Date().toLocaleString()});
  localStorage.setItem("tgy_results",JSON.stringify(results));
  let rows=s.t.questions.map((q,i)=>`<div class="q"><b>${i+1}. ${esc(q[0])}</b><p>आपका उत्तर: ${s.answers[i]===null?"नहीं दिया":esc(q[1][s.answers[i]])} ${s.answers[i]===q[2]?"✅":"❌"}</p><p><b>सही उत्तर:</b> ${esc(q[1][q[2]])}</p><p class="muted">${esc(q[3]||"")}</p></div>`).join("");
@@ -416,14 +435,14 @@ function submitTest(){
      <p><b>${esc(next.name)}</b></p>
      <p class="muted">${next.questions.length} Questions • ${next.time} मिनट</p>
      ${purchased
-       ? `<button class="btn orange" onclick="closeM();openTest(${tests.indexOf(next)})">▶️ अगला Test दें</button>`
+       ? `<button class="btn orange" onclick="closeM();openTestFromSeries(${tests.indexOf(next)})">▶️ अगला Test दें</button>`
        : `<button class="btn orange" onclick="buyTest('${esc(next.name)}',0)">💳 अगला Test लें</button>`}
    </div>`;
  }else{
    nextHtml=`<div class="card" style="margin-top:18px"><h3>🎉 Test Series Complete</h3><p class="muted">इस परीक्षा की उपलब्ध Test Series में अभी कोई अगला Test नहीं है।</p></div>`;
  }
  document.getElementById("modalContent").innerHTML=`<h2>🎉 आपका Result</h2>
- <div class="result"><b>कुल प्रश्न:</b> ${s.t.questions.length}<br><b>Attempt किए:</b> ${attempted}<br><b>सही:</b> ${correct} ✅<br><b>गलत:</b> ${wrong} ❌<br><b>छोड़े:</b> ${skipped}<br><b>अंक:</b> ${correct}/${s.t.questions.length}<br><b>Percentage:</b> ${percent}%</div>
+ <div class="result"><b>कुल प्रश्न:</b> ${s.t.questions.length}<br><b>Attempt किए:</b> ${attempted}<br><b>सही:</b> ${correct} ✅<br><b>गलत:</b> ${wrong} ❌<br><b>Negative:</b> ${neg?`-${neg} प्रति गलत`:"नहीं"}<br><b>छोड़े:</b> ${skipped}<br><b>अंक:</b> ${score.toFixed(2)}/${s.t.questions.length}<br><b>Percentage:</b> ${percent}%</div>
  <h3>Answer Key & Explanation</h3>${rows}${nextHtml}
  <div style="margin-top:12px"><button class="btn" onclick="closeM();renderResults()">बंद करें</button></div>`;
  renderResults();
@@ -549,7 +568,7 @@ function openStudentPage(key){
  let body="";
  if(key==="mock")body='<div class="card"><h2>🎯 Mock Tests</h2><p class="muted">Test देखने के लिए नीचे परीक्षा चुनें। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentMockPageList"></div></div>';
  if(key==="series")body='<div class="card"><h2>📚 Test Series</h2><p class="muted">हर परीक्षा की पूरी Test Series एक ही Folder में मिलेगी। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentSeriesPageList"></div></div>';
- if(key==="plans")body='<div class="card"><h2>💳 Access Plans</h2><p>पहले Test Series चुनें, फिर अपना Plan चुनें और Payment करें।</p><button class="btn orange" onclick="pay()">Plan चुनें / Payment</button></div>';
+ if(key==="plans")body='<div class="card"><h2 style="display:none">💳 Access Plans</h2><p>पहले Test Series चुनें, फिर अपना Plan चुनें और Payment करें।</p><button class="btn orange" onclick="pay()">Plan चुनें / Payment</button></div>';
  if(key==="results")body='<div class="card"><h2>📊 My Results</h2><p>Login करने के बाद आपके दिए गए Tests के Results यहाँ दिखाई देंगे।</p></div>';
  if(key==="info")body='<div class="card"><h2>ℹ️ Exam Information</h2><p>परीक्षा की तारीख, आवेदन, Admit Card, Exam Pattern, Syllabus, Result और Latest Updates यहाँ दिखाई देंगे।</p></div>';
  if(key==="purchased")body='<div class="card"><h2>🎓 My Purchased Tests</h2><div id="myPurchasedTests"></div></div>';
@@ -571,34 +590,25 @@ function renderStudentMockPage(){
  b.innerHTML='<div class="grid">'+names.map(n=>`<div class="card"><h3>🎯 ${esc(n)}</h3><p>Mock Tests / Demo</p><button class="btn orange" onclick="window.openExam('${esc(n)}')">🎯 Test खोलें</button></div>`).join('')+'</div>';
 }
 function renderStudentSeriesPage(){
- const b=document.getElementById("studentSeriesPageList");if(!b)return;
+ const b=document.getElementById("studentSeriesPageList"),home=document.getElementById("studentExamCards");
  const groups={};
  const addExam=(ex)=>{
    ex=(ex||"").trim();if(!ex)return;
    if(getFolderVisibilityStudent(ex)!==false)groups[ex]=groups[ex]||[];
  };
- // Exam master keeps empty folders visible; tests and pricing can also introduce an exam.
  try{(JSON.parse(localStorage.getItem("tgy_exams")||"[]")||[]).forEach(x=>addExam(typeof x==="string"?x:x.name))}catch(e){}
  tests.forEach(t=>{if(t.exam)addExam(t.exam)});
  getAccessPricing().forEach(x=>{if(x.exam)addExam(x.exam)});
- Object.keys(groups).forEach(ex=>{
-   groups[ex]=tests.filter(t=>t.exam===ex && t.published!==false && t.visible!==false && tgyDateValid(t.availableUntil));
- });
  const names=Object.keys(groups);
+ if(home)home.innerHTML=names.length?names.map(ex=>`<div class="card"><h3>📁 ${esc(ex)}</h3><p class="muted">Mock Test Series</p><button class="btn orange" onclick="openExam('${esc(ex)}')">देखें</button></div>`).join(""):'<div class="card"><p>अभी कोई परीक्षा उपलब्ध नहीं है।</p></div>';
+ names.forEach(ex=>groups[ex]=tests.filter(t=>t.exam===ex&&t.published!==false&&t.visible!==false&&tgyDateValid(t.availableUntil)));
+ if(!b)return;
  if(!names.length){
-   b.innerHTML='<div class="card"><h3>📭 अभी कोई Test Series Folder नहीं है।</h3><p>Admin Panel में परीक्षा जोड़ें।</p></div>';
-   return;
+   b.innerHTML='<div class="card"><h3>📭 अभी कोई Test Series Folder नहीं है।</h3><p>Admin Panel में परीक्षा जोड़ें।</p></div>';return;
  }
  b.innerHTML=names.map(ex=>{
-   const count=groups[ex].length;
-   const pricing=getSeriesPricing(ex);
-   const priceHint=pricing.length?`<p class="muted">🔓 ${pricing.length} Access Options उपलब्ध हैं।</p>`:'<p class="muted">💳 Pricing Admin Panel में सेट की जा सकती है।</p>';
-   return `<div class="card" style="border:2px solid #1d65a6;margin:12px 0">
-     <h3>📁 ${esc(ex)} Test Series</h3>
-     <p class="muted">इस Folder में ${count} Test${count===1?"":"s"} हैं।</p>
-     ${priceHint}
-     <button class="btn orange" onclick="openExam('${esc(ex)}')">📂 Series खोलें</button>
-   </div>`;
+   const count=groups[ex].length,pricing=getSeriesPricing(ex);
+   return `<div class="card" style="border:2px solid #1d65a6;margin:12px 0"><h3>📁 ${esc(ex)} Test Series</h3><p class="muted">${count} Tests</p><p class="muted">${pricing.length?`🔓 ${pricing.length} Access Options उपलब्ध हैं।`:"Pricing अभी उपलब्ध नहीं है।"}</p><button class="btn orange" onclick="openExam('${esc(ex)}')">📂 Series खोलें</button></div>`;
  }).join("");
 }
 
