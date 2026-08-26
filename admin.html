@@ -130,11 +130,36 @@ function checkAdmin(){
 <section id="notes" class="sec">
  <h1>📄 PDF Notes</h1>
  <div class="card">
-  <p>यहाँ से PDF सीधे अपलोड करें। विद्यार्थी इसे वेबसाइट पर पढ़ सकेगा; Download button नहीं दिया जाएगा।</p>
+  <h2>📁 PDF Notes Folders</h2>
+  <p class="muted">यहाँ अलग-अलग परीक्षा/विषय के Folder बनाएँ। उदाहरण: MP पटवारी, MPPSC, MP पुलिस। PDF इसी चुने हुए Folder के अंदर सेव होगी।</p>
+  <div class="row">
+   <div><label>नया Folder नाम</label><input id="pdfFolderName" placeholder="जैसे MP पटवारी"></div>
+   <div style="display:flex;align-items:end"><button class="btn" onclick="addPdfFolder()">➕ Folder बनाएँ</button></div>
+  </div>
+  <div id="pdfFoldersAdmin" style="margin-top:12px"></div>
+ </div>
+ <div class="card">
+  <h2>💰 PDF Folder Pricing</h2>
+  <p class="muted">पूरा PDF Folder खरीदने के लिए यहाँ अलग Price और Access Validity सेट करें। Offer Price खाली रहे तो MRP ही Final Price होगा।</p>
+  <div class="row">
+   <div><label>📁 Folder</label><select id="pdfFolderPriceFolder"></select></div>
+   <div><label>💰 MRP (₹)</label><input id="pdfFolderPriceMrp" type="number" min="0" placeholder="जैसे 100"></div>
+   <div><label>🏷️ Offer Price (₹) — Optional</label><input id="pdfFolderPriceOffer" type="number" min="0" placeholder="खाली छोड़ सकते हैं"></div>
+  </div>
+  <div class="row">
+   <div><label>⏱️ Validity</label><input id="pdfFolderPriceDuration" type="number" min="1" max="6" value="1" placeholder="जैसे 1"></div>
+   <div><label>Unit</label><select id="pdfFolderPriceUnit"><option value="days">दिन</option><option value="months">महीने</option></select></div>
+  </div>
+  <button class="btn orange" onclick="savePdfFolderPricing()">💾 Folder Pricing Save करें</button>
+  <div id="pdfFolderPricingList" style="margin-top:12px"></div>
+ </div>
+ <div class="card">
+  <h2>📄 PDF Upload करें</h2>
+  <p>पहले Folder चुनें, फिर PDF अपलोड करें। विद्यार्थी इसे वेबसाइट के अंदर ही पढ़ सकेगा; Download button नहीं दिया जाएगा।</p>
   <label>Notes का नाम</label>
-  <input id="noteTitle" placeholder="जैसे MP पटवारी Notes">
-  <label>Exam</label>
-  <select id="noteExam"></select><small id="noteExamHelp" class="muted">📋 परीक्षा प्रबंधन में बनाई गई परीक्षा चुनें।</small>
+  <input id="noteTitle" placeholder="जैसे MP पटवारी 200 Question PDF">
+  <label>📁 Folder</label>
+  <select id="noteFolder"></select><small id="noteFolderHelp" class="muted">ऊपर बनाए गए Folder में से चुनें।</small>
   <div class="row">
    <div><label>💰 MRP (₹)</label><input id="noteMrp" type="number" min="0" placeholder="जैसे 50"></div>
    <div><label>🏷️ Offer Price (₹)</label><input id="noteOffer" type="number" min="0" placeholder="जैसे 30"></div>
@@ -148,32 +173,184 @@ function checkAdmin(){
  <div id="adminNotesList"></div>
 </section>
 <script id="pdf-notes-admin-upload">
-function getAdminNotes(){try{return JSON.parse(localStorage.getItem("tgy_pdf_notes")||"[]")}catch(e){return[]}}
+function getPdfFolders(){
+ try{
+  const raw=JSON.parse(localStorage.getItem("tgy_pdf_folders")||"[]");
+  return Array.isArray(raw)?raw.filter(x=>x&&x.name):[];
+ }catch(e){return[]}
+}
+function savePdfFolders(a){localStorage.setItem("tgy_pdf_folders",JSON.stringify(a))}
+function pdfFolderId(name){return "pdf_folder_"+String(name).trim().toLowerCase().replace(/\s+/g,"_")}
+function addPdfFolder(){
+ const el=document.getElementById("pdfFolderName"),name=el.value.trim();
+ if(!name){alert("Folder का नाम लिखें।");return}
+ const a=getPdfFolders();
+ if(a.some(x=>String(x.name).trim().toLowerCase()===name.toLowerCase())){alert("यह Folder पहले से मौजूद है।");return}
+ a.push({id:pdfFolderId(name)+"_"+Date.now(),name,hidden:false});
+ savePdfFolders(a);el.value="";renderPdfFoldersAdmin();populatePdfFolderSelect();
+ alert("✅ PDF Notes Folder बन गया।");
+}
+function renamePdfFolder(i){
+ const a=getPdfFolders(),x=a[i];if(!x)return;
+ const name=prompt("नया Folder नाम लिखें:",x.name);if(name===null)return;
+ const v=name.trim();if(!v)return;
+ if(a.some((y,j)=>j!==i&&String(y.name).trim().toLowerCase()===v.toLowerCase())){alert("यह नाम पहले से मौजूद है।");return}
+ const old=x.name;x.name=v;savePdfFolders(a);
+ const notes=getAdminNotes().map(n=>{if((n.folder||n.exam||"").trim()===old){n.folder=v;n.exam=v}return n});saveAdminNotes(notes);
+ renderPdfFoldersAdmin();populatePdfFolderSelect();populatePdfFolderPriceSelect();renderPdfFolderPricing();renderAdminNotes();
+}
+function togglePdfFolder(i){
+ const a=getPdfFolders(),x=a[i];if(!x)return;x.hidden=!x.hidden;savePdfFolders(a);renderPdfFoldersAdmin();
+}
+function deletePdfFolder(i){
+ const a=getPdfFolders(),x=a[i];if(!x)return;
+ const count=getAdminNotes().filter(n=>(n.folder||n.exam||"").trim()===x.name).length;
+ if(count&& !confirm(`"${x.name}" में ${count} PDF हैं। Folder हटाने पर PDFs भी हट जाएँगी। जारी रखें?`))return;
+ if(!confirm(`"${x.name}" Folder Delete करें?`))return;
+ savePdfFolders(a.filter((_,j)=>j!==i));
+ saveAdminNotes(getAdminNotes().filter(n=>(n.folder||n.exam||"").trim()!==x.name));
+ renderPdfFoldersAdmin();populatePdfFolderSelect();populatePdfFolderPriceSelect();renderPdfFolderPricing();renderAdminNotes();
+}
+function renderPdfFoldersAdmin(){
+ const b=document.getElementById("pdfFoldersAdmin");if(!b)return;
+ const a=getPdfFolders(),notes=getAdminNotes();
+ b.innerHTML=a.map((x,i)=>{
+  const c=notes.filter(n=>(n.folder||n.exam||"").trim()===x.name).length;
+  return `<div class="card" style="margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+   <div><b>📁 ${esc(x.name)}</b><br><span class="muted">${c} PDF • ${x.hidden?"Hidden":"Show"}</span></div>
+   <div><button class="btn" onclick="renamePdfFolder(${i})">✏️ Rename</button>
+   <button class="btn" onclick="togglePdfFolder(${i})">${x.hidden?"👁️ Show":"🙈 Hide"}</button>
+   <button class="btn danger" onclick="deletePdfFolder(${i})">🗑️ Delete</button></div>
+  </div>`;
+ }).join("")||"<p class='muted'>अभी कोई PDF Folder नहीं है। ऊपर नाम लिखकर Folder बनाएँ।</p>";
+}
+function populatePdfFolderSelect(preferred){
+ const s=document.getElementById("noteFolder");if(!s)return;
+ const a=getPdfFolders().filter(x=>!x.hidden);
+ s.innerHTML='<option value="">-- Folder चुनें --</option>'+a.map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join("");
+ if(preferred)s.value=preferred;
+}
+function getPdfFolderPricing(){
+ try{const a=JSON.parse(localStorage.getItem("tgy_pdf_folder_pricing")||"[]");return Array.isArray(a)?a:[]}catch(e){return[]}
+}
+function savePdfFolderPricing(){
+ const folder=document.getElementById("pdfFolderPriceFolder")?.value||"";
+ const mrp=Number(document.getElementById("pdfFolderPriceMrp")?.value)||0;
+ const offer=Number(document.getElementById("pdfFolderPriceOffer")?.value)||0;
+ const duration=Math.min(6,Math.max(1,Number(document.getElementById("pdfFolderPriceDuration")?.value)||1));
+ const unit=document.getElementById("pdfFolderPriceUnit")?.value||"days";
+ if(!folder){alert("पहले PDF Folder चुनें।");return}
+ if(mrp<=0){alert("MRP डालें।");return}
+ if(offer<0 || (offer>0 && offer>=mrp)){alert("Offer Price खाली रखें या MRP से कम रखें।");return}
+ let a=getPdfFolderPricing(),obj={folder,mrp,offer,durationValue:duration,unit};
+ const i=a.findIndex(x=>String(x.folder).trim().toLowerCase()===folder.trim().toLowerCase());
+ if(i>=0)a[i]=obj;else a.push(obj);
+ localStorage.setItem("tgy_pdf_folder_pricing",JSON.stringify(a));
+ renderPdfFolderPricing();alert("✅ PDF Folder Pricing Save हो गई। अब Student Site पर यही Price दिखेगी।");
+}
+function editPdfFolderPricing(i){
+ const x=getPdfFolderPricing()[i];if(!x)return;
+ populatePdfFolderPriceSelect(x.folder);
+ document.getElementById("pdfFolderPriceMrp").value=x.mrp||"";
+ document.getElementById("pdfFolderPriceOffer").value=x.offer||"";
+ document.getElementById("pdfFolderPriceDuration").value=Math.min(6,Number(x.durationValue)||1);
+ document.getElementById("pdfFolderPriceUnit").value=x.unit||"days";
+}
+function deletePdfFolderPricing(i){let a=getPdfFolderPricing();if(!a[i])return;if(!confirm("इस Folder की Pricing Delete करें?"))return;a.splice(i,1);localStorage.setItem("tgy_pdf_folder_pricing",JSON.stringify(a));renderPdfFolderPricing()}
+function populatePdfFolderPriceSelect(preferred){
+ const s=document.getElementById("pdfFolderPriceFolder");if(!s)return;
+ const a=getPdfFolders();s.innerHTML='<option value="">-- Folder चुनें --</option>'+a.map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join("");
+ if(preferred)s.value=preferred;
+}
+function renderPdfFolderPricing(){
+ const b=document.getElementById("pdfFolderPricingList");if(!b)return;
+ const a=getPdfFolderPricing();
+ b.innerHTML=a.map((x,i)=>`<div class="card" style="margin:8px 0"><b>📁 ${esc(x.folder)}</b><br><b>MRP:</b> ₹${x.mrp}${Number(x.offer)>0?` &nbsp; <b>Offer:</b> ₹${x.offer}`:""} &nbsp; <b>Validity:</b> ${x.durationValue} ${x.unit==="months"?(x.durationValue==1?"महीना":"महीने"):(x.durationValue==1?"दिन":"दिन")}<br><button class="btn" onclick="editPdfFolderPricing(${i})">✏️ Edit</button> <button class="btn danger" onclick="deletePdfFolderPricing(${i})">🗑️ Delete</button></div>`).join("")||'<p class="muted">अभी Folder Pricing नहीं बनाई गई है।</p>';
+}
+function getAdminNotes(){
+ try{
+  const raw=JSON.parse(localStorage.getItem("tgy_pdf_notes")||"[]"),out=[],seen=new Set();
+  raw.forEach(n=>{
+   if(!n)return;
+   // Folder is the primary grouping key. Keep old notes compatible by using exam as fallback.
+   if(!n.folder)n.folder=(n.exam||"").trim()||"अन्य Notes";
+   if(!n.exam)n.exam=n.folder;
+   const key=[n.folder||"",n.title||"",n.fileName||"",n.dataUrl||""].join("|");
+   if(seen.has(key))return;seen.add(key);out.push(n);
+  });
+  if(out.length!==raw.length || out.some((n,i)=>n!==raw[i] && !raw[i]?.folder)) localStorage.setItem("tgy_pdf_notes",JSON.stringify(out));
+  // Automatically create folders for old PDF Notes so existing data is not lost.
+  const folders=getPdfFolders(),names=new Set(folders.map(x=>String(x.name).toLowerCase()));
+  let changed=false;
+  out.forEach(n=>{const f=(n.folder||"अन्य Notes").trim();if(f&&!names.has(f.toLowerCase())){folders.push({id:pdfFolderId(f)+"_"+Date.now()+Math.random(),name:f,hidden:false});names.add(f.toLowerCase());changed=true}});
+  if(changed)savePdfFolders(folders);
+  return out;
+ }catch(e){return[]}
+}
 function saveAdminNotes(a){localStorage.setItem("tgy_pdf_notes",JSON.stringify(a))}
 function uploadPdfNote(){
- const title=document.getElementById("noteTitle").value.trim(),exam=document.getElementById("noteExam").value.trim();
+ const title=document.getElementById("noteTitle").value.trim(),folder=document.getElementById("noteFolder").value.trim();
  const file=document.getElementById("notePdfFile").files[0],st=document.getElementById("noteUploadStatus");
- if(!title){alert("Notes का नाम लिखें।");return} if(!file){alert("पहले PDF चुनें।");return}
- const r=new FileReader();r.onload=function(){let a=getAdminNotes();
- a.push({title,exam,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:""});
- const until=document.getElementById("noteUntil")?.value||""; a.push({title,exam,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:until}); saveAdminNotes(a);["noteTitle","noteExam","notePdfFile","noteMrp","noteOffer","noteUntil"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
- st.textContent="✅ PDF Notes Save हो गई।";renderAdminNotes()};r.readAsDataURL(file);
+ if(!title){alert("Notes का नाम लिखें।");return}
+ if(!folder){alert("पहले PDF Notes Folder चुनें।");return}
+ if(!file){alert("पहले PDF चुनें।");return}
+ if(!file.name.toLowerCase().endsWith(".pdf")){alert("केवल PDF file चुनें।");return}
+ const r=new FileReader();r.onload=function(){
+  let a=getAdminNotes();
+  const duplicate=a.some(n=>String(n.folder||"").trim()===folder && String(n.title||"").trim().toLowerCase()===title.toLowerCase() && String(n.fileName||"")===file.name);
+  if(duplicate){alert("यह PDF इसी Folder में पहले से मौजूद है।");return}
+  const until=document.getElementById("noteUntil")?.value||"";
+  a.push({id:"note_"+Date.now()+"_"+Math.random().toString(36).slice(2,8),title,folder,exam:folder,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:until});
+  saveAdminNotes(a);
+  ["noteTitle","noteFolder","notePdfFile","noteMrp","noteOffer","noteUntil"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+  st.textContent="✅ PDF Notes Save हो गई।";renderPdfFoldersAdmin();renderAdminNotes();
+ };r.readAsDataURL(file);
 }
 function editPdfNote(i){
  const n=getAdminNotes()[i];if(!n)return;
- document.getElementById("noteTitle").value=n.title||"";document.getElementById("noteExam").value=n.exam||"";
+ document.getElementById("noteTitle").value=n.title||"";populatePdfFolderSelect(n.folder||n.exam||"");
  document.getElementById("noteMrp").value=n.mrp??"";document.getElementById("noteOffer").value=n.offer??"";
- const b=document.getElementById("adminNotesList");b.dataset.editIndex=i;
- const btn=document.querySelector('#notes button[onclick*="uploadPdfNote"]');if(btn)btn.textContent="💾 Update Notes";
- btn.onclick=function(){let a=getAdminNotes(),x=a[i];x.title=document.getElementById("noteTitle").value.trim();x.exam=document.getElementById("noteExam").value.trim();x.mrp=Number(document.getElementById("noteMrp").value)||0;x.offer=Number(document.getElementById("noteOffer").value)||0;x.availableUntil=document.getElementById("noteUntil").value;saveAdminNotes(a);renderAdminNotes();alert("✅ Notes की जानकारी Update हो गई।");btn.textContent="⬆️ PDF Upload करके Save करें";btn.onclick=uploadPdfNote};
+ document.getElementById("noteUntil").value=n.availableUntil||"";
+ const btn=document.querySelector('#notes button[onclick*="uploadPdfNote"]');
+ if(btn)btn.textContent="💾 Update Notes";
+ btn.onclick=function(){
+  let a=getAdminNotes(),x=a[i];
+  x.title=document.getElementById("noteTitle").value.trim();
+  x.folder=document.getElementById("noteFolder").value.trim();x.exam=x.folder;
+  x.mrp=Number(document.getElementById("noteMrp").value)||0;x.offer=Number(document.getElementById("noteOffer").value)||0;x.availableUntil=document.getElementById("noteUntil").value;
+  saveAdminNotes(a);renderPdfFoldersAdmin();renderAdminNotes();alert("✅ Notes की जानकारी Update हो गई।");
+  btn.textContent="⬆️ PDF Upload करके Save करें";btn.onclick=uploadPdfNote;
+ };
 }
-function renderAdminNotes(){const b=document.getElementById("adminNotesList");if(!b)return;const a=getAdminNotes();
- b.innerHTML=a.map((n,i)=>`<div class="card" style="margin:10px 0"><b>📄 ${esc(n.title)}</b> — ${esc(n.exam||"")}<br><span class="muted">${esc(n.fileName||"PDF")}</span><br><b>MRP:</b> ₹${n.mrp||0} &nbsp; <b>Offer:</b> ₹${n.offer||0} ${n.availableUntil?`&nbsp; <b>Valid Till:</b> ${esc(n.availableUntil)}`:""}<br>
+function renderAdminNotes(){
+ const b=document.getElementById("adminNotesList");if(!b)return;
+ const a=getAdminNotes();
+ b.innerHTML=a.map((n,i)=>`<div class="card" style="margin:10px 0"><b>📄 ${esc(n.title)}</b> — 📁 ${esc(n.folder||n.exam||"")}<br><span class="muted">${esc(n.fileName||"PDF")}</span><br><b>MRP:</b> ₹${n.mrp||0}${Number(n.offer)>0?` &nbsp; <b>Offer:</b> ₹${n.offer}`:""} ${n.availableUntil?`&nbsp; <b>Valid Till:</b> ${esc(n.availableUntil)}`:""}<br>
  <button class="btn" onclick="previewAdminPdfNote(${i})">👁️ Preview</button><button class="btn" onclick="editPdfNote(${i})">✏️ Edit</button><button class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी कोई PDF Notes नहीं हैं।</p>";
 }
-function previewAdminPdfNote(i){const n=getAdminNotes()[i];if(!n?.dataUrl)return;const w=window.open("","_blank");if(!w)return;w.document.write(`<title>${esc(n.title)}</title><iframe src="${n.dataUrl}#toolbar=0&navpanes=0" style="width:100%;height:100vh;border:0"></iframe>`);w.document.close()}
-function deletePdfNote(i){let a=getAdminNotes();a.splice(i,1);saveAdminNotes(a);renderAdminNotes()}
-document.addEventListener("DOMContentLoaded",renderAdminNotes);</script>
+async function previewAdminPdfNote(i){
+ const n=getAdminNotes()[i];if(!n?.dataUrl)return;
+ const m=document.getElementById("modal"),b=document.getElementById("mb");if(!m||!b)return;
+ b.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;position:sticky;top:0;background:#fff;padding-bottom:10px;z-index:2"><h2 style="margin:0">📄 ${esc(n.title||"PDF Preview")}</h2><button class="btn gray" onclick="closeM()">✕ बंद करें</button></div><div id="adminPdfViewer" style="height:78vh;overflow:auto;background:#555;padding:10px"></div>`;
+ m.style.display="flex";
+ const box=document.getElementById("adminPdfViewer");
+ try{
+  const pdfjs=await import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
+  const bytes=Uint8Array.from(atob(n.dataUrl.split(",")[1]),c=>c.charCodeAt(0));
+  const pdf=await pdfjs.getDocument({data:bytes}).promise;
+  for(let p=1;p<=pdf.numPages;p++){
+   const page=await pdf.getPage(p),vp=page.getViewport({scale:1.15});
+   const wrap=document.createElement("div");wrap.style.cssText="background:#fff;margin:0 auto 12px;width:max-content;max-width:100%;box-shadow:0 2px 8px #0005";
+   const canvas=document.createElement("canvas");canvas.width=vp.width;canvas.height=vp.height;canvas.style.cssText="display:block;max-width:100%;height:auto";
+   wrap.appendChild(canvas);box.appendChild(wrap);
+   await page.render({canvasContext:canvas.getContext("2d"),viewport:vp}).promise;
+  }
+ }catch(e){console.error(e);box.innerHTML="<p style='color:#fff;padding:20px'>PDF Preview लोड नहीं हो सका।</p>";}
+}
+function deletePdfNote(i){let a=getAdminNotes();if(!a[i])return;if(!confirm(`"${a[i].title}" Delete करें?`))return;a.splice(i,1);saveAdminNotes(a);renderPdfFoldersAdmin();renderAdminNotes()}
+setTimeout(()=>{getAdminNotes();renderPdfFoldersAdmin();populatePdfFolderSelect();renderAdminNotes()},80);
+</script>
 <section id="headline-manager" class="sec">
 <h1>📢 Home Headline</h1>
 <div class="card"><p>यह Headline Home Page के सफेद हिस्से में चलेगी।</p>
@@ -514,7 +691,14 @@ function activate(i){
  localStorage.setItem("tgy_payments",JSON.stringify(a));
  let users=JSON.parse(localStorage.getItem("tgy_users")||"[]"),u=users.find(x=>x.email===p.email);
  if(u){
-   if(String(p.course||"").startsWith("PDF:")){
+   if(p.type==="pdf_folder"){
+     u.purchasedPdfFolders=u.purchasedPdfFolders||[];
+     const folder=p.folder||String(p.course||"").replace(/^PDF Folder:\s*/,"");
+     const days=Number(p.days)||0;
+     const expires=days>0?new Date(Date.now()+days*86400000).toISOString():null;
+     u.purchasedPdfFolders=u.purchasedPdfFolders.filter(x=>x.folder!==folder);
+     u.purchasedPdfFolders.push({folder,amount:Number(p.amount)||0,activatedAt:p.activatedAt,expiresAt:expires});
+   }else if(String(p.course||"").startsWith("PDF:")){
      u.purchasedNotes=u.purchasedNotes||[];
      const noteTitle=String(p.course).replace(/^PDF:\s*/,"");
      if(noteTitle&&!u.purchasedNotes.includes(noteTitle))u.purchasedNotes.push(noteTitle);
@@ -529,7 +713,7 @@ function activate(i){
      u.purchasedTests=u.purchasedTests||[];
      if(p.course&&!u.purchasedTests.includes(p.course))u.purchasedTests.push(p.course);
    }
-   u.access=`Tests: ${(u.purchasedTests||[]).length} • Series Access: ${(u.seriesAccess||[]).length} • Notes: ${(u.purchasedNotes||[]).length}`;
+   u.access=`Tests: ${(u.purchasedTests||[]).length} • Series Access: ${(u.seriesAccess||[]).length} • Notes: ${(u.purchasedNotes||[]).length} • PDF Folders: ${(u.purchasedPdfFolders||[]).length}`;
    localStorage.setItem("tgy_users",JSON.stringify(users));
  }
  renderPayments();renderUsers();
@@ -537,7 +721,11 @@ function activate(i){
 }
 function renderComplaints(){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");document.getElementById("badge").textContent=a.filter(x=>x.status!=="Resolved").length+" New";document.getElementById("ct").innerHTML=a.length?a.map((x,i)=>`<tr><td>${esc(x.name||"-")}</td><td>${esc(x.email||"-")}</td><td>${esc(x.type)}</td><td>${esc(x.utr||"-")}</td><td>${esc(x.msg||"-")}</td><td><button class="btn" onclick="resolve(${i})">Resolve</button></td></tr>`).join(""):"<tr><td colspan='6'>अभी कोई शिकायत नहीं।</td></tr>"}
 function resolve(i){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");a[i].status="Resolved";localStorage.setItem("tgy_help",JSON.stringify(a));renderAll()}
-function closeM(){document.getElementById("modal").style.display="none"}renderAll();
+function closeM(){const m=document.getElementById("modal");if(m)m.style.display="none"}
+// Question viewer: Esc or clicking the dark backdrop returns to the previous screen.
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){const m=document.getElementById("modal");if(m&&m.style.display!=="none")closeM()}});
+document.addEventListener("click",e=>{const m=document.getElementById("modal");if(m&&e.target===m)closeM()});
+renderAll();
 </script><script>document.addEventListener("DOMContentLoaded",checkAdmin);</script>
 <script id="home-customizer-admin-script">
 function openHomeCustomizerAdmin(){
@@ -785,6 +973,7 @@ function mtLoadTests(){
 }
 
 function mtLoadSelected(){
+ mtEditorClean=false;
  const e=document.getElementById("mtExam")?.value,t=(document.getElementById("mtName")?.value||"").trim();
  const obj=mtStore().exams?.[e]?.tests?.[t];
  if(obj){
@@ -826,10 +1015,11 @@ function mtFinalSave(){
  mtSaveStore(d);
  mtRenderAll();
 
- // Test is now safely saved in the selected Exam/Folder.
- // Clear only the editor/preview UI; never delete the saved Test.
+ // Test is safely saved in the selected Exam/Folder.
+ // Now completely reset the editor/preview area. Saved data is NOT deleted.
  mtClearPreview();
- document.getElementById("mtStatus").innerHTML="✅ पूरा Test Save हो गया। Preview अपने-आप साफ कर दिया गया है।";
+ const st=document.getElementById("mtStatus");
+ if(st)st.innerHTML="";
 }
 function mtParse(raw){
  let text=String(raw||"").normalize("NFC").replace(/\u00a0/g," ").replace(/[\u200B-\u200D\uFEFF]/g,"").replace(/\r\n?/g,"\n");
@@ -873,9 +1063,9 @@ function mtParse(raw){
  return out;
 }
 
-let mtPreview=[];
+let mtPreview=[]; let mtEditorClean=false;
 function mtShowPreview(qs,source){
- mtPreview=qs;
+ mtEditorClean=false; mtPreview=qs;
  const st=document.getElementById("mtStatus"),box=document.getElementById("mtPreview");
  st.innerHTML=qs.length?`✅ <b>${qs.length} Questions मिले — ${source}</b>`:`❌ कोई Question पहचान में नहीं आया।`;
  box.innerHTML=qs.length?qs.map((x,i)=>`<div class="card" style="margin:8px 0;padding:12px">
@@ -918,7 +1108,7 @@ async function mtPdfPreview(){
 }
 function mtImportPreview(){mtFinalSave();}
 function mtClearPreview(){
- mtPreview=[];
+ mtPreview=[]; mtEditorClean=true;
  const p=document.getElementById("mtPreview"), st=document.getElementById("mtStatus");
  const qs=document.getElementById("mtQuestions"), qc=document.getElementById("mtQuestionCount");
  if(p)p.innerHTML="";
@@ -929,6 +1119,7 @@ function mtClearPreview(){
  if(st)st.textContent="";
 }
 function mtManualAdd(){
+ mtEditorClean=false;
  const q=prompt("Question लिखें:");if(!q)return;
  const o=[prompt("Option A:"),prompt("Option B:"),prompt("Option C:"),prompt("Option D:")];
  if(o.some(x=>x===null||!String(x).trim()))return;
@@ -944,6 +1135,7 @@ function mtNormQuestion(x,i){
 }
 function mtRenderQuestions(){
  const e=document.getElementById("mtExam")?.value,t=(document.getElementById("mtName")?.value||"").trim(),box=document.getElementById("mtQuestions"),count=document.getElementById("mtQuestionCount");if(!box)return;
+ if(mtEditorClean){box.innerHTML="";if(count)count.innerHTML="";return;}
  const raw=mtStore().exams?.[e]?.tests?.[t]?.questions||[],qs=raw.map(mtNormQuestion);
  if(count)count.innerHTML=`कुल Questions: <b>${qs.length}</b>`;
  box.innerHTML=qs.length?qs.map((x,i)=>`<div class="qrow" style="margin:8px 0"><b>प्रश्न ${i+1}.</b> ${mtEsc(x.q)}<div>(A) ${mtEsc(x.o[0])}<br>(B) ${mtEsc(x.o[1])}<br>(C) ${mtEsc(x.o[2])}<br>(D) ${mtEsc(x.o[3])}</div><button class="btn" onclick="mtEditQuestion(${i})">✏️ Edit</button> <button class="btn danger" onclick="mtDeleteQuestion(${i})">🗑️ Delete</button></div>`).join(""):"<p>अभी कोई Question Save नहीं है।</p>";
@@ -1055,11 +1247,15 @@ function mtOpenTestEditor(e,t){
 
  const qs=(obj.questions||[]).map(mtNormQuestion);
  const mb=document.getElementById("mb"),modal=document.getElementById("modal");
- mb.innerHTML=`<h2>📋 ${mtEsc(t)} — Questions</h2>
+ mb.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;background:#fff;padding:2px 0 10px;z-index:2;border-bottom:1px solid #e1e8ef">
+ <h2 style="margin:0">📋 ${mtEsc(t)} — Questions</h2>
+ <button class="btn danger" style="font-size:18px;padding:7px 13px" title="वापस जाएँ / बंद करें" onclick="closeM()">✕</button>
+ </div>
  <p><b>परीक्षा:</b> ${mtEsc(e)} &nbsp; | &nbsp; <b>कुल Questions:</b> ${qs.length} &nbsp; | &nbsp; <b>समय:</b> ${obj.time||60} मिनट</p>
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
    <button class="btn orange" onclick="closeM();mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}');document.getElementById('mtQuestions').scrollIntoView({behavior:'smooth',block:'start'})">⬇️ Questions पर जाएँ</button>
-   <button class="btn gray" onclick="closeM()">✖ बंद करें</button>
+   <button class="btn gray" onclick="closeM()">← वापस जाएँ</button>
+   <button class="btn danger" onclick="closeM()">✕ बंद करें</button>
  </div>
  <div style="max-height:65vh;overflow:auto">
  ${qs.length ? qs.map((x,i)=>`<div class="qrow" style="margin-bottom:12px">
@@ -1223,7 +1419,7 @@ function populateExamSelect(id,selected=""){
  el.onchange=null;
 }
 function refreshAllExamDropdowns(preferred=""){
- ["mtExam","prExam","ofExam","noteExam"].forEach(id=>populateExamSelect(id,preferred));
+ ["mtExam","prExam","ofExam"].forEach(id=>populateExamSelect(id,preferred));
  if(document.getElementById("mtExam"))mtLoadTests();
  if(document.getElementById("prExam"))populateExamTests("prExam","prTest");
  if(document.getElementById("ofExam"))populateExamTests("ofExam","ofTest");
@@ -1391,9 +1587,9 @@ document.addEventListener("DOMContentLoaded",()=>{
  populateExamTests("prExam","prTest");
  populateExamSelect("ofExam");
  populateExamTests("ofExam","ofTest");
- populateExamSelect("noteExam");
+ populatePdfFolderSelect();renderPdfFoldersAdmin();renderAdminNotes();
  if(typeof mtInit==="function"){mtInit();}
- populateExamSelect("apExam");apTypeChanged();renderPricing();renderOffers();renderAccessPricing();renderAdminNotes();
+ populateExamSelect("apExam");apTypeChanged();renderPricing();renderOffers();renderAccessPricing();populatePdfFolderPriceSelect();renderPdfFolderPricing();renderAdminNotes();
 });
 </script>
 </body></html>
