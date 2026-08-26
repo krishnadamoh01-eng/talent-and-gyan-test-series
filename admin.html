@@ -74,7 +74,8 @@ function checkAdmin(){
 }
 </script>
 <header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
-<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('pricing',this)">💰 Pricing</button><button onclick="show('offers',this)">🎟️ Offers</button><button onclick="show('accessPricing',this)">📁 Access Pricing</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
+<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('pricing',this)">💰 Pricing</button><button onclick="show('offers',this)">🎟️ Offers</button><button onclick="show('examManagement',this)">📋 परीक्षा प्रबंधन</button>
+<button onclick="show('accessPricing',this)">📁 Access Pricing</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 
 <section id="exams" class="sec">
@@ -119,7 +120,6 @@ function checkAdmin(){
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
       <button class="btn" onclick="mtAddExam()">➕ नई परीक्षा जोड़ें</button>
-      <button class="btn" onclick="mtAddTest()">➕ नया Test</button>
       <button class="btn orange" onclick="mtSaveMeta()">💾 Test Save करें</button>
     </div>
     <p class="muted" style="margin-top:8px">यहाँ केवल परीक्षा, Test का नाम और समय रहेगा। Test को दिखाना/Hide करना नीचे “सभी Test Folders” में किया जाएगा।</p>
@@ -273,6 +273,29 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
 <button class="btn orange" onclick="saveOfferItem()">💾 Save</button>
 </div>
 <div class="card"><h3>📋 Saved Offers</h3><div id="offersList"></div></div>
+</section>
+
+<section id="examManagement" class="sec">
+<h1>📋 परीक्षा प्रबंधन</h1>
+<div class="card">
+  <h3>➕ नई परीक्षा जोड़ें</h3>
+  <div class="row">
+    <div>
+      <label>परीक्षा का नाम</label>
+      <input id="examNewName" placeholder="जैसे MP पटवारी">
+    </div>
+    <div>
+      <label>Student Site पर</label>
+      <select id="examNewVisible"><option value="true">👁️ Show</option><option value="false">🙈 Hide</option></select>
+    </div>
+  </div>
+  <button class="btn orange" onclick="saveExamMaster()">💾 परीक्षा Save करें</button>
+</div>
+<div class="card">
+  <h3>📋 सभी परीक्षाएँ</h3>
+  <p class="muted">यहाँ से केवल परीक्षा का नाम Manage करें। Test/Question/PDF अलग-अलग sections में Manage होंगे।</p>
+  <div id="examMasterList"></div>
+</div>
 </section>
 
 <section id="accessPricing" class="sec">
@@ -1039,21 +1062,24 @@ function mtToggleFolder(exam){
 function mtRenderAll(){
  const box=document.getElementById("mtAllTests");if(!box)return;
  const d=mtStore(),groups={};
+ Object.keys(getExamMaster()).forEach(()=>{});
+ getExamMaster().forEach(x=>{groups[x.name]=[]});
  Object.entries(d.exams||{}).forEach(([e,v])=>{
+   groups[e]=groups[e]||[];
    const arr=Object.entries(v.tests||{});
-   if(arr.length)(groups[e]||(groups[e]=[])).push(...arr);
+   groups[e].push(...arr);
  });
  const exams=Object.keys(groups);
- if(!exams.length){box.innerHTML='<div class="card"><h3>📭 अभी कोई Test नहीं है।</h3></div>';return}
+ if(!exams.length){box.innerHTML='<div class="card"><h3>📭 अभी कोई परीक्षा नहीं है।</h3><p>पहले परीक्षा प्रबंधन से परीक्षा जोड़ें।</p></div>';return}
  box.innerHTML=exams.map(e=>{
    const folderVisible=getFolderVisibility(e);
-   const tests=groups[e];
+   const tests=groups[e]||[];
    return `<div class="card" style="margin:14px 0;border:2px solid #1d65a6">
      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
        <div><h2 style="margin:0">📁 ${mtEsc(e)}</h2><p class="muted" style="margin:4px 0">${tests.length} Test • Folder ${folderVisible?"दिख रहा है":"Hidden है"}</p></div>
        <button class="btn ${folderVisible?"gray":"orange"}" onclick="mtToggleFolder('${encodeURIComponent(e)}')">${folderVisible?"🙈 Folder Hide":"👁️ Folder Show"}</button>
      </div>
-     <div style="overflow:auto;margin-top:10px">
+     ${tests.length?`<div style="overflow:auto;margin-top:10px">
      <table><thead><tr><th>Test</th><th>Questions</th><th>Time</th><th>Status</th><th>Action</th></tr></thead><tbody>
      ${tests.map(([t,x])=>`<tr>
        <td>${mtEsc(x.name||t)}</td><td>${x.questions?.length||0}</td><td>${x.time||60} min</td>
@@ -1062,14 +1088,14 @@ function mtRenderAll(){
         <button class="btn" onclick="mtOpenTestEditor('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">👁️ देखें / Edit</button>
         <button class="btn" onclick="mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}');document.getElementById('mtQuestions').scrollIntoView({behavior:'smooth'})">➕ Questions</button>
         <button class="btn ${x.published===false?"orange":"gray"}" onclick="mtTogglePublish('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">${x.published===false?"👁️ Test Show":"🙈 Test Hide"}</button>
-        <button class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">Delete</button>
+        <button class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">🗑️ Delete</button>
        </td>
      </tr>`).join("")}
-     </tbody></table></div>
+     </tbody></table></div>`:
+     `<div class="card" style="margin-top:10px;background:#f7f7f7"><h3>📭 इस Folder में अभी कोई Test नहीं है</h3><p>Coming Soon — बाद में इसी परीक्षा के अंदर Test जोड़े जा सकते हैं।</p></div>`}
    </div>`;
  }).join("");
 }
-
 function mtSelectTest(e,t){
  e=decodeURIComponent(e);t=decodeURIComponent(t);
  const exam=document.getElementById("mtExam"),sel=document.getElementById("mtTest");
@@ -1164,16 +1190,7 @@ function getExamMaster(){
 function getAdminTestsFlat(){
  try{let a=JSON.parse(localStorage.getItem("tgy_tests")||"[]");return Array.isArray(a)?a:[]}catch(e){return[]}
 }
-function addExamFromDropdown(selectId){
- const name=prompt("नई परीक्षा का नाम लिखें:");
- if(!name?.trim()){populateExamSelect(selectId);return false}
- saveNewExamMaster(name.trim(),true);
- populateExamSelect(selectId,name.trim());
- if(selectId==="mtExam")mtLoadTests();
- if(selectId==="prExam")populateExamTests("prExam","prTest");
- if(selectId==="ofExam")populateExamTests("ofExam","ofTest");
- return true;
-}
+function addExamFromDropdown(selectId){ return false; }
 function saveNewExamMaster(name,visible=true){
  let a=getExamMaster();
  if(!a.some(x=>x.name===name))a.push({name,visible});
@@ -1198,29 +1215,66 @@ function renderExamMaster(){
 function editExamMaster(i){
  const a=getExamMaster(),x=a[i];if(!x)return;
  const oldName=x.name;
- const n=prompt("परीक्षा का नाम बदलें:",oldName);if(n===null)return;
- const name=n.trim();if(!name)return;
- x.name=name;x.visible=confirm("Student Site पर यह परीक्षा दिखानी है?");
- const tt=getAdminTestsFlat();tt.forEach(t=>{if(t.exam===oldName)t.exam=name});setAdminList("tgy_tests",tt);
- const nn=getAdminNotes();nn.forEach(n=>{if(n.exam===oldName)n.exam=name});saveAdminNotes(nn);
- const pp=getAdminList("tgy_pricing");pp.forEach(x=>{if(x.exam===oldName)x.exam=name});setAdminList("tgy_pricing",pp);
- const oo=getAdminList("tgy_offers");oo.forEach(x=>{if(x.exam===oldName)x.exam=name});setAdminList("tgy_offers",oo);
+ const n=prompt("परीक्षा का नया नाम लिखें:",oldName);if(n===null)return;
+ const name=n.trim();if(!name||name===oldName)return;
+ if(a.some(v=>v.name===name))return alert("यह परीक्षा नाम पहले से मौजूद है।");
+ x.name=name;
+ x.visible=confirm("क्या नई परीक्षा को Student Site पर दिखाना है?");
+ // Legacy flat tests
+ const tt=getAdminTestsFlat();
+ tt.forEach(t=>{if(t.exam===oldName)t.exam=name});
+ setAdminList("tgy_tests",tt);
+ // Notes
+ const nn=getAdminNotes();
+ nn.forEach(n=>{if(n.exam===oldName)n.exam=name});
+ saveAdminNotes(nn);
+ // Legacy pricing/offers
+ ["tgy_pricing","tgy_offers","tgy_access_pricing"].forEach(key=>{
+   const arr=getAdminList(key);
+   arr.forEach(v=>{if(v.exam===oldName)v.exam=name});
+   setAdminList(key,arr);
+ });
+ // Mock-test structured store
+ try{
+   const d=mtStore();
+   if(d.exams?.[oldName]){
+     if(d.exams[name])return alert("नई परीक्षा नाम पहले से Mock Test में मौजूद है।");
+     d.exams[name]=d.exams[oldName];
+     delete d.exams[oldName];
+     Object.values(d.exams[name].tests||{}).forEach(t=>t.exam=name);
+     mtSaveStore(d);
+   }
+ }catch(e){}
+ // Payment history / user access records
+ let payments=getAdminList("tgy_payments");
+ payments.forEach(v=>{if(v.exam===oldName)v.exam=name;if(String(v.course||"").startsWith(oldName+" • "))v.course=name+String(v.course).slice(oldName.length)});
+ setAdminList("tgy_payments",payments);
+ let users=getAdminList("tgy_users");
+ users.forEach(u=>{
+   (u.seriesAccess||[]).forEach(x=>{if(x.exam===oldName)x.exam=name});
+ });
+ setAdminList("tgy_users",users);
  setAdminList("tgy_exams",a);
- refreshAllExamDropdowns(name);renderExamMaster();
+ refreshAllExamDropdowns(name);
+ renderExamMaster();
+ renderAccessPricing();
+ alert("✅ परीक्षा का नाम बदल दिया गया है और उससे जुड़ी जानकारी भी Update हो गई है।");
 }
 function deleteExamMaster(i){
  const a=getExamMaster(),x=a[i];if(!x)return;
- if(!confirm(`"${x.name}" को Exam List से हटाएँ? उसके Tests/PDF नहीं हटेंगे।`))return;
- a.splice(i,1);setAdminList("tgy_exams",a);refreshAllExamDropdowns("");renderExamMaster();
+ if(!confirm(`"${x.name}" को परीक्षा सूची से हटाएँ?\n\nइससे परीक्षा का नाम Dropdown से हटेगा। उसके Test/Questions/PDF को अपने-आप Delete नहीं किया जाएगा।`))return;
+ a.splice(i,1);setAdminList("tgy_exams",a);
+ refreshAllExamDropdowns("");
+ renderExamMaster();
+ alert("🗑️ परीक्षा सूची से नाम हटा दिया गया है।");
 }
 function populateExamSelect(id,selected=""){
  const el=document.getElementById(id);if(!el)return;
  const a=getExamMaster().filter(x=>x.visible!==false || x.name===selected);
- el.innerHTML=a.map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join("")+
-   `<option value="${EXAM_NEW_VALUE}">➕ नई परीक्षा जोड़ें</option>`;
+ el.innerHTML=a.map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join("");
  if(selected && a.some(x=>x.name===selected))el.value=selected;
  else if(a.length)el.value=a[0].name;
- el.onchange=function(){if(this.value===EXAM_NEW_VALUE){addExamFromDropdown(id)}};
+ el.onchange=null;
 }
 function refreshAllExamDropdowns(preferred=""){
  ["mtExam","prExam","ofExam","noteExam"].forEach(id=>populateExamSelect(id,preferred));

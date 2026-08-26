@@ -597,7 +597,7 @@ function renderStudentSeriesPage(){
      <h3>📁 ${esc(ex)} Test Series</h3>
      <p class="muted">इस Folder में ${count} Test${count===1?"":"s"} हैं।</p>
      ${priceHint}
-     <button class="btn orange" onclick="window.openExam('${esc(ex)}')">📂 Series खोलें</button>
+     <button class="btn orange" onclick="openExam('${esc(ex)}')">📂 Series खोलें</button>
    </div>`;
  }).join("");
 }
