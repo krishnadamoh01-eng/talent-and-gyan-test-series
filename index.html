@@ -154,6 +154,20 @@ header{margin-left:0!important;padding-left:5%!important}
 body.student-inner-open .tgy-red-band{display:none!important}
 body.student-inner-open .tgy-new-nav{box-shadow:0 2px 7px rgba(0,0,0,.04)}
 </style>
+
+<style id="tgy-red-ticker-single-fix">
+/* One and only one Important Information ticker on the student home. */
+#homeAnnouncement,#homeNewsTicker{display:none!important}
+.tgy-new-header{position:relative!important;overflow:visible!important}
+.tgy-blue-band{overflow:visible!important}
+.tgy-red-band{position:relative!important;display:flex!important;align-items:center!important;overflow:hidden!important;white-space:nowrap!important;box-sizing:border-box!important}
+.tgy-important{display:flex!important;align-items:center!important;min-width:0!important;flex:1 1 auto!important;overflow:hidden!important;height:100%!important}
+.tgy-important-label{position:relative!important;z-index:3!important;flex:0 0 auto!important;background:var(--tg-red)!important;white-space:nowrap!important}
+.tgy-important-text{position:relative!important;z-index:1!important;display:block!important;flex:1 1 auto!important;min-width:0!important;overflow:hidden!important;white-space:nowrap!important;padding-left:30px!important;padding-right:0!important;animation:tgyHeaderTicker 22s linear infinite!important}
+.tgy-youtube{position:relative!important;z-index:4!important;flex:0 0 auto!important}
+@keyframes tgyHeaderTicker{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
+@media(max-width:900px){.tgy-red-band{padding-left:110px!important}.tgy-important-label{font-size:14px!important;padding-right:10px!important}.tgy-important-text{padding-left:16px!important}.tgy-youtube{display:none!important}}
+</style>
 </head><body>
 <div class="tgy-new-header">
   <div class="tgy-blue-band">
