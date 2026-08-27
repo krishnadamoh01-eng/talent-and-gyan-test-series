@@ -728,7 +728,7 @@ function renderStudentMockPage(){
  }catch(e){}
  // Include exams that exist in Tests only as a compatibility fallback.
  tests.forEach(t=>{if(t.exam&&!exams.some(x=>x.name===t.exam))exams.push({name:t.exam,visible:true})});
- b.innerHTML=exams.length?'<div class="grid">'+exams.map(x=>`<div class="card"><h3>🎯 ${esc(x.name)}</h3><p>Mock Tests / Demo</p><button class="btn orange" onclick="window.openExam('${encodeURIComponent(x.name)}')">🎯 Test खोलें</button></div>`).join('')+'</div>':'<div class="card"><p>अभी कोई परीक्षा उपलब्ध नहीं है।</p></div>';
+ b.innerHTML=exams.length?'<div class="grid">'+exams.map(x=>`<div class="card" style="text-align:center">${typeof tgyExamLogoMarkup==='function'?tgyExamLogoMarkup(x):`<h3>🎯 ${esc(x.name)}</h3>`}<p>Mock Tests / Demo</p><button class="btn orange" onclick="window.openExam('${encodeURIComponent(x.name)}')">🎯 Test खोलें</button></div>`).join('')+'</div>':'<div class="card"><p>अभी कोई परीक्षा उपलब्ध नहीं है।</p></div>';
 }
 
 function renderStudentMockPage(){

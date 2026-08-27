@@ -1035,6 +1035,13 @@ function setFolderVisibility(exam,visible){
  }else x.visible=visible;
  localStorage.setItem("tgy_exams",JSON.stringify(a));if(window.tgyBroadcast)tgyBroadcast("tgy_exams");
 }
+function tgyFolderLogoFromCard(encoded){
+ const exam=decodeURIComponent(encoded);const a=getExamMaster(),i=a.findIndex(x=>x.name===exam);if(i<0)return;tgyPickExamLogo(i);
+}
+function tgyFolderPricingFromCard(encoded){
+ const exam=decodeURIComponent(encoded);const a=getExamMaster(),i=a.findIndex(x=>x.name===exam);if(i<0)return;tgyOpenFolderPricing(i);
+}
+
 function mtToggleFolder(exam){
  exam=decodeURIComponent(exam);
  const now=!getFolderVisibility(exam);
@@ -1060,7 +1067,11 @@ function mtRenderAll(){
    return `<div class="card" style="margin:14px 0;border:2px solid #1d65a6">
      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
        <div><h2 style="margin:0">📁 ${mtEsc(e)}</h2><p class="muted" style="margin:4px 0">${tests.length} Test • Folder ${folderVisible?"दिख रहा है":"Hidden है"}</p></div>
+       <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">
+       <button class="btn" onclick="tgyFolderLogoFromCard('${encodeURIComponent(e)}')">🖼️ Logo</button>
+       <button class="btn" onclick="tgyFolderPricingFromCard('${encodeURIComponent(e)}')">💰 Pricing</button>
        <button class="btn ${folderVisible?"gray":"orange"}" onclick="mtToggleFolder('${encodeURIComponent(e)}')">${folderVisible?"🙈 Folder Hide":"👁️ Folder Show"}</button>
+       </div>
      </div>
      ${tests.length?`<div style="overflow:auto;margin-top:10px">
      <table><thead><tr><th>Test</th><th>Questions</th><th>Time</th><th>Negative</th><th>Status</th><th>Action</th></tr></thead><tbody>
@@ -1176,19 +1187,29 @@ function saveNewExamMaster(name,visible=true){
  renderExamMaster();
  refreshAllExamDropdowns(name);
 }
-function saveExamMaster(){
+async function saveExamMaster(){
  const name=document.getElementById("examNewName").value.trim();
  if(!name)return alert("परीक्षा का नाम लिखें।");
- saveNewExamMaster(name,document.getElementById("examNewVisible").value!=="false");
+ const visible=document.getElementById("examNewVisible").value!=="false";
+ saveNewExamMaster(name,visible);
+ try{ await window.tgySaveExamLogo(name); }catch(e){}
  document.getElementById("examNewName").value="";
- alert("✅ नई परीक्षा Save हो गई। अब यह सभी Exam dropdown में दिखेगी।");
+ const logoInput=document.getElementById("tgyExamLogo"); if(logoInput)logoInput.value="";
+ const logoPreview=document.getElementById("tgyExamLogoPreview"); if(logoPreview)logoPreview.innerHTML="";
+ renderExamMaster();
+ refreshAllExamDropdowns(name);
+ alert("✅ परीक्षा और उसका Logo Save हो गया। Student Site पर भी यही Logo दिखेगा।");
 }
 function renderExamMaster(){
  const b=document.getElementById("examMasterList");if(!b)return;
  const a=getExamMaster();
- b.innerHTML=a.map((x,i)=>`<div class="card" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="min-width:220px">${esc(x.name)}</b> — ${x.visible===false?"🙈 Hidden":"👁️ Active"}
- <button class="btn" onclick="editExamMaster(${i})">✏️ Edit</button>
- <button class="btn danger" onclick="deleteExamMaster(${i})">🗑️ Delete</button></div>`).join("");
+ b.innerHTML=a.map((x,i)=>`<div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+   ${x.logo?`<img src="${x.logo}" alt="" style="width:58px;height:58px;object-fit:contain;border:1px solid #ddd;border-radius:10px;background:#fff">`:`<div style="width:58px;height:58px;border:1px dashed #aaa;border-radius:10px;display:flex;align-items:center;justify-content:center">🖼️</div>`}
+   <div style="min-width:220px"><b>${esc(x.name)}</b><br><small>${x.visible===false?"🙈 Hidden":"👁️ Active"}</small></div>
+   <button class="btn" onclick="editExamMaster(${i})">✏️ Edit</button>
+   <button class="btn" onclick="tgyPickExamLogo(${i})">🖼️ Logo</button>
+   <button class="btn" onclick="tgyOpenFolderPricing(${i})">💰 Folder Pricing</button>
+   <button class="btn danger" onclick="deleteExamMaster(${i})">🗑️ Delete</button></div>`).join("");
 }
 function editSelectedMockExam(){
  const el=document.getElementById("mtExam");
@@ -1204,6 +1225,22 @@ function deleteSelectedMockExam(){
  if(idx<0)return alert("यह परीक्षा सूची में नहीं मिली।");
  deleteExamMaster(idx);
 }
+function tgyPickExamLogo(i){
+ const a=getExamMaster(),x=a[i];if(!x)return;
+ const input=document.createElement("input"); input.type="file"; input.accept="image/*";
+ input.onchange=()=>{const f=input.files&&input.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{x.logo=r.result;setAdminList("tgy_exams",a);renderExamMaster();if(window.tgyBroadcast)tgyBroadcast("tgy_exams");alert("✅ Exam Logo Save हो गया।");};r.readAsDataURL(f)};
+ input.click();
+}
+function tgyOpenFolderPricing(i){
+ const a=getExamMaster(),x=a[i];if(!x)return;
+ const nav=document.querySelector('aside button[onclick*="accessPricing"]');
+ if(typeof show==="function"&&nav)show("accessPricing",nav);
+ populateExamSelect("apExam",x.name);
+ const type=document.getElementById("apType");if(type)type.value="folder";
+ apTypeChanged();
+ document.getElementById("accessPricing")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
 function editExamMaster(i){
  const a=getExamMaster(),x=a[i];if(!x)return;
  const oldName=x.name;
@@ -1477,6 +1514,7 @@ document.addEventListener("DOMContentLoaded",()=>{
           else a[i].logo=r.result;
         }else a.push({name:String(name).trim(),visible:true,logo:r.result});
         save(a);
+        try{if(window.tgyBroadcast)tgyBroadcast("tgy_exams");}catch(e){}
         resolve(r.result);
       };
       r.readAsDataURL(f);
