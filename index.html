@@ -177,6 +177,18 @@ header>a{flex:0 0 auto}
 #homeNewsTicker{padding-left:104px!important}
 @media(max-width:900px){header{padding-left:92px!important;min-height:72px}header .logo{font-size:23px!important}#homeNewsTicker{padding-left:92px!important}}
 @media(max-width:600px){header{padding-left:86px!important}header .logo{font-size:19px!important}header>a{padding:7px 9px!important;font-size:12px!important}#homeNewsTicker{padding-left:86px!important}}
+</style>
+<style id="tgy-student-logo-layout">
+.tgy-exam-logo-card{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:7px}
+.tgy-exam-card-name{font-weight:700;font-size:18px;line-height:1.25}
+@media (max-width:600px){.tgy-exam-card-logo{width:76px;height:76px}.tgy-exam-card-name{font-size:16px}}
+</style>
+<style id="tgy-header-final">
+.tgy-header-logo{position:relative;z-index:3;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.tgy-header-logo img{height:86px;width:86px;object-fit:contain}
+.tgy-header-title{flex:1;min-width:0;text-align:center;font-size:clamp(24px,3vw,42px);font-weight:800;line-height:1.05;white-space:nowrap}
+.tgy-header-info{flex:0 0 auto}
+@media(max-width:800px){.tgy-header-title{font-size:24px;white-space:normal}.tgy-header-logo img{height:68px;width:68px}}
 </style></head><body>
 <aside class="tgy-sidebar" aria-label="Talent And Gyan Logo">
   <img class="tgy-sidebar-logo" src="talent-and-gyan-logo.png" alt="Talent And Gyan Logo">
@@ -1171,5 +1183,39 @@ function tgyHideModal(){
  window.addEventListener('focus',()=>setTimeout(refresh,80));
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(refresh,80)});
  window.tgyRefreshStudentData=refresh;
+})();
+</script>
+<script id="tgy-student-exam-store-fix">
+(function(){
+  window.tgyGetStudentExams=function(){
+    try{
+      const x=JSON.parse(localStorage.getItem("tgy_exams")||"[]");
+      return (Array.isArray(x)?x:[])
+        .map(v=>typeof v==="string"?{name:v,visible:true,logo:""}:v)
+        .filter(v=>v&&v.name&&v.visible!==false);
+    }catch(e){return[]}
+  };
+  window.tgyExamLogoMarkup=function(exam){
+    const e=typeof exam==="string"?{name:exam}:exam||{};
+    const safe=String(e.name||"").replace(/[<>&"]/g,m=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[m]));
+    const logo=e.logo ? '<img class="tgy-exam-card-logo" src="'+e.logo+'" alt="">' : '<div class="tgy-exam-card-logo"></div>';
+    return '<div class="tgy-exam-logo-card">'+logo+'<div class="tgy-exam-card-name">'+safe+'</div></div>';
+  };
+})();
+</script>
+<script id="tgy-student-live-sync">
+(function(){
+  function refresh(){
+    try{window.dispatchEvent(new Event("tgy-data-refresh"))}catch(e){}
+  }
+  window.addEventListener("storage",refresh);
+  window.addEventListener("focus",refresh);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
+  try{
+    if(window.BroadcastChannel){
+      const c=new BroadcastChannel("tgy_sync");
+      c.onmessage=refresh;
+    }
+  }catch(e){}
 })();
 </script></body></html>
