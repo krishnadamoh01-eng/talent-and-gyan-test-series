@@ -149,6 +149,11 @@ header{margin-left:0!important;padding-left:5%!important}
 #studentNavigation{margin-left:0!important;padding-left:10px!important}
 #homeNewsTicker{margin-left:0!important}
 </style>
+
+<style id="tgy-inner-ticker-hide">
+body.student-inner-open .tgy-red-band{display:none!important}
+body.student-inner-open .tgy-new-nav{box-shadow:0 2px 7px rgba(0,0,0,.04)}
+</style>
 </head><body>
 <div class="tgy-new-header">
   <div class="tgy-blue-band">
@@ -163,12 +168,11 @@ header{margin-left:0!important;padding-left:5%!important}
 <nav class="tgy-new-nav" id="studentNavigation">
   <a href="#" onclick="studentGoHome();return false">🏠 Home</a>
   <a href="#" onclick="openStudentPage('mock');return false">🎯 Mock Test</a>
-  <a href="#" onclick="openStudentPage('series');return false">📚 Test Series</a>
-  <a href="#" onclick="openStudentPage('purchased');return false">🎓 My Purchased Tests</a>
   <a href="#" onclick="openStudentPage('notes');return false">📄 PDF Notes</a>
-  <a href="#" onclick="openStudentPage('help');return false">📞 सहायता</a>
+  <a href="#" onclick="openStudentPage('purchased');return false">🛒 Purchase Folder</a>
+  <a href="#" onclick="tgyOpenNotifications();return false">🔔 Notifications</a>
+  <a href="#" onclick="openStudentPage('profile');return false">👤 My Profile</a>
   <span class="tgy-nav-spacer"></span>
-  <button class="tgy-bell" title="Notifications" onclick="tgyOpenNotifications()">🔔</button>
   <span id="studentAuthTop" class="tgy-auth-top"></span>
 </nav>
 
@@ -632,7 +636,7 @@ function openStudentPage(key){
  if(key==="home"){studentGoHome();return}
  let overlay=document.getElementById("studentPageOverlay");
  if(!overlay){overlay=document.createElement("div");overlay.id="studentPageOverlay";overlay.className="student-page";document.body.appendChild(overlay)}
- const titles={mock:"🎯 Mock Tests",series:"📚 Test Series",plans:"💳 Access Plans",results:"📊 My Results",info:"ℹ️ Exam Information",help:"📞 सहायता",purchased:"🎓 My Purchased Tests",notes:"📄 PDF Notes"};
+ const titles={mock:"🎯 Mock Tests",series:"📚 Test Series",plans:"💳 Access Plans",results:"📊 My Results",info:"ℹ️ Exam Information",help:"📞 सहायता",purchased:"🎓 My Purchased Tests",notes:"📄 PDF Notes",profile:"👤 My Profile"};
  let body="";
  if(key==="mock")body='<div class="card"><h2>🎯 Mock Tests</h2><p class="muted">Test देखने के लिए नीचे परीक्षा चुनें। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentMockPageList"></div></div>';
  if(key==="series")body='<div class="card"><h2>📚 Test Series</h2><p class="muted">हर परीक्षा की पूरी Test Series एक ही Folder में मिलेगी। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentSeriesPageList"></div></div>';
@@ -641,17 +645,20 @@ function openStudentPage(key){
  if(key==="info")body='<div class="card"><h2>ℹ️ Exam Information</h2><p>परीक्षा की तारीख, आवेदन, Admit Card, Exam Pattern, Syllabus, Result और Latest Updates यहाँ दिखाई देंगे।</p></div>';
  if(key==="purchased")body='<div class="card"><h2>🎓 My Purchased Tests</h2><div id="myPurchasedTests"></div></div>';
  if(key==="notes")body='<div class="card"><h2>📄 PDF Notes</h2><p>Notes दिखाई देंगे। Open करने के लिए Login/Register जरूरी होगा। Paid Notes के लिए पहले खरीदना होगा।</p><div id="studentNotesList"></div></div>';
+ if(key==="profile")body='<div class="card"><h2>👤 My Profile</h2><p>Login करने के बाद आपकी जानकारी और Active Access यहाँ दिखाई देगा।</p><div id="profileSummary"></div></div>';
  if(key==="help")body='<div class="card"><h2>📞 सहायता</h2><p>Payment, Login या Test से संबंधित सहायता के लिए यहाँ जानकारी दी जाएगी।</p></div>';
  overlay.innerHTML='<div class="student-page-head"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="student-close" onclick="studentGoBack()">← पीछे</button><h2>'+titles[key]+'</h2></div><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body">'+body+'</div>';
- overlay.style.display="block"; window.scrollTo(0,0);
+ overlay.style.display="block"; document.body.classList.add("student-inner-open"); window.scrollTo(0,0);
  if(key==="mock")renderStudentMockPage();
+ if(key==="profile")renderStudentProfile();
  if(key==="series")renderStudentSeriesPage();
  if(key==="purchased")renderMyPurchasedTests();
  if(key==="notes")renderStudentNotes();
 }
-function closeStudentPage(){let o=document.getElementById("studentPageOverlay");if(o)o.style.display="none";document.body.style.overflow=""}
+function closeStudentPage(){let o=document.getElementById("studentPageOverlay");if(o)o.style.display="none";document.body.classList.remove("student-inner-open");document.body.style.overflow=""}
 function studentGoHome(){closeStudentPage();window.scrollTo({top:0,behavior:"smooth"});}
 function studentGoBack(){closeStudentPage();window.scrollTo({top:0,behavior:"smooth"});}
+function renderStudentProfile(){const b=document.getElementById("profileSummary");if(!b)return;const u=getCurrentStudent?getCurrentStudent():null;b.innerHTML=u?`<p><b>नाम:</b> ${esc(u.name||"")}</p><p><b>Email:</b> ${esc(u.email||"")}</p>`:'<button class="btn" onclick="openAuth(\'login\')">Login करें</button>';}
 function renderStudentMockPage(){
  const b=document.getElementById("studentMockPageList");if(!b)return;
  const names=[...new Set(tests.filter(t=>getFolderVisibilityStudent(t.exam||"") && t.published!==false).map(t=>t.exam||"अन्य परीक्षाएँ"))];
@@ -1159,7 +1166,7 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
 .tgy-books{margin-top:10px}.tgy-book{height:16px;border-radius:4px;margin:3px auto;width:190px}.tgy-book.b1{background:#1f5ea9}.tgy-book.b2{background:#e52329}.tgy-book.b3{background:#f2c400}
 .tgy-feature-panel{background:rgba(255,255,255,.76);border:1px solid #d4e2ef;border-radius:18px;padding:20px 18px;box-shadow:0 6px 20px rgba(21,74,130,.05)}
 .tgy-feature-item{display:flex;align-items:center;gap:13px;margin:13px 0;font-size:16px;font-weight:800}.tgy-feature-icon{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:22px;flex:0 0 44px}.tgy-feature-item:nth-child(1) .tgy-feature-icon{background:#38ad66}.tgy-feature-item:nth-child(2) .tgy-feature-icon{background:#6c50d9}.tgy-feature-item:nth-child(3) .tgy-feature-icon{background:#f39a13}
-.tgy-shortcuts{width:94%;max-width:1500px;margin:0 auto 25px;display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.tgy-shortcut{border-radius:15px;padding:17px 16px;display:flex;align-items:center;gap:13px;min-height:90px}.tgy-shortcut:nth-child(1){background:#edfbf1}.tgy-shortcut:nth-child(2){background:#f1efff}.tgy-shortcut:nth-child(3){background:#fff8df}.tgy-shortcut:nth-child(4){background:#eaf6ff}.tgy-shortcut:nth-child(5){background:#fff0f0}.tgy-shortcut-icon{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:25px;flex:0 0 52px}.tgy-shortcut:nth-child(1) .tgy-shortcut-icon{background:#42b96e}.tgy-shortcut:nth-child(2) .tgy-shortcut-icon{background:#7055d9}.tgy-shortcut:nth-child(3) .tgy-shortcut-icon{background:#f1b01b}.tgy-shortcut:nth-child(4) .tgy-shortcut-icon{background:#56a5df}.tgy-shortcut:nth-child(5) .tgy-shortcut-icon{background:#ef6d76}.tgy-shortcut b{font-size:18px}.tgy-shortcut span{display:block;font-size:13px;margin-top:4px;color:#42546b;line-height:1.35}
+.tgy-shortcuts{display:none!important;width:94%;max-width:1500px;margin:0 auto 25px;display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.tgy-shortcut{border-radius:15px;padding:17px 16px;display:flex;align-items:center;gap:13px;min-height:90px}.tgy-shortcut:nth-child(1){background:#edfbf1}.tgy-shortcut:nth-child(2){background:#f1efff}.tgy-shortcut:nth-child(3){background:#fff8df}.tgy-shortcut:nth-child(4){background:#eaf6ff}.tgy-shortcut:nth-child(5){background:#fff0f0}.tgy-shortcut-icon{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:25px;flex:0 0 52px}.tgy-shortcut:nth-child(1) .tgy-shortcut-icon{background:#42b96e}.tgy-shortcut:nth-child(2) .tgy-shortcut-icon{background:#7055d9}.tgy-shortcut:nth-child(3) .tgy-shortcut-icon{background:#f1b01b}.tgy-shortcut:nth-child(4) .tgy-shortcut-icon{background:#56a5df}.tgy-shortcut:nth-child(5) .tgy-shortcut-icon{background:#ef6d76}.tgy-shortcut b{font-size:18px}.tgy-shortcut span{display:block;font-size:13px;margin-top:4px;color:#42546b;line-height:1.35}
 .tgy-section{width:94%;max-width:1500px;margin:0 auto 30px}.tgy-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.tgy-section-title{font-size:30px;font-weight:900;color:#092e57;border-bottom:4px solid #075bd3;padding-bottom:6px}.tgy-all-btn{padding:9px 14px;border:1px solid #d7e1ed;border-radius:10px;background:#fff;color:#075bd3;text-decoration:none;font-weight:800}
 .tgy-exam-grid{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:15px}.tgy-exam-card{background:#fff;border:1px solid #e0e7ef;border-radius:16px;padding:17px 12px;text-align:center;box-shadow:0 5px 18px rgba(21,74,130,.08);transition:.18s}.tgy-exam-card:hover{transform:translateY(-3px);box-shadow:0 9px 24px rgba(21,74,130,.13)}.tgy-exam-logo{width:90px;height:90px;object-fit:contain;margin:0 auto 9px;display:block}.tgy-exam-name{font-size:18px;font-weight:900;color:#172334;min-height:46px;display:flex;align-items:center;justify-content:center;flex-direction:column}.tgy-exam-sub{font-size:12px;color:#65778c;min-height:28px}.tgy-view-btn{display:inline-block;margin-top:9px;background:#075bd3;color:#fff!important;text-decoration:none;border:0;border-radius:9px;padding:10px 20px;font-weight:900;cursor:pointer}
 .tgy-footer-new{background:#092e57;color:#fff;margin-top:40px;padding:22px 4%;display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}.tgy-footer-new a{color:#fff;text-decoration:none;margin-left:18px}
