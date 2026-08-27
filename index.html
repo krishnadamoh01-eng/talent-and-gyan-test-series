@@ -857,58 +857,27 @@ function renderMyPurchasedTests(){
 
 </script>
 <script id="student-notes-viewer">
-function getNotes(){
- try{return JSON.parse(localStorage.getItem("tgy_pdf_notes")||"[]")}catch(e){return []}
-}
-function hasPurchasedNote(n){
- const u=getCurrentStudent();if(!u)return false;
- const a=u.purchasedNotes||[];
- return a.some(x=>x===n.title||x===n.id||x===n.fileName);
-}
+function getNotes(){try{return JSON.parse(localStorage.getItem("tgy_pdf_notes")||"[]")}catch(e){return []}}
+function getPdfFolders(){try{return JSON.parse(localStorage.getItem("tgy_pdf_folders")||"[]")}catch(e){return []}}
+function hasPurchasedNote(n){const u=getCurrentStudent();if(!u)return false;const a=u.purchasedNotes||[],folders=u.purchasedNoteFolders||[];return a.some(x=>x===n.title||x===n.id||x===n.fileName)||folders.includes((n.exam||"").trim())}
+function hasPurchasedPdfFolder(f){const u=getCurrentStudent();if(!u)return false;return (u.purchasedNoteFolders||[]).includes((f.exam||"").trim())}
 function renderStudentNotes(){
- const b=document.getElementById("studentNotesList");if(!b)return;
- const today=new Date().toISOString().slice(0,10); const notes=getNotes().filter(n=>!n.availableUntil||n.availableUntil>=today);
- if(!notes.length){b.innerHTML='<p>अभी कोई PDF Notes उपलब्ध नहीं है।</p>';return}
- const groups={};
- notes.forEach((n,i)=>{const exam=(n.exam||"अन्य Notes").trim()||"अन्य Notes";(groups[exam]||(groups[exam]=[])).push({...n,_i:i})});
- b.innerHTML=`<p class="muted">हर परीक्षा के PDF Notes एक ही Folder में दिखेंगे। Open करने के लिए Login जरूरी है।</p>`+
- Object.entries(groups).map(([exam,items])=>`<div class="card" style="border:2px solid #1d65a6;margin:12px 0">
- <h2>📁 ${esc(exam)} — PDF Notes</h2><p class="muted">इस Folder में <b>${items.length}</b> Notes हैं।</p>
- <div class="grid">${items.map(n=>{
-   const price=Number(n.offer)||Number(n.mrp)||0,owned=hasPurchasedNote(n);
-   const btn=owned||!price
-    ? `<button class="btn" onclick="viewPdfNote(${n._i})">📖 साइट पर पढ़ें</button>`
-    : `<button class="btn orange" onclick="buyPdfNote(${n._i})">💳 ₹${price} — खरीदें</button>`;
-   return `<div class="card" style="margin:0"><h3>📄 ${esc(n.title||("Notes "+(n._i+1)))}</h3><p class="muted">${n.pages?`${n.pages} Pages • `:""}${price?`MRP ₹${n.mrp||0}${n.offer?` • Offer ₹${n.offer}`:""}`:"FREE"}</p>${btn}</div>`;
- }).join("")}</div></div>`).join("");
+ const b=document.getElementById("studentNotesList");if(!b)return;const today=new Date().toISOString().slice(0,10);
+ const notes=getNotes().filter(n=>!n.availableUntil||n.availableUntil>=today), storedFolders=getPdfFolders();
+ const groups={}; notes.forEach((n,i)=>{const exam=(n.exam||"अन्य Notes").trim()||"अन्य Notes";(groups[exam]||(groups[exam]=[])).push({...n,_i:i})});
+ const folderNames=Object.keys(groups); if(!folderNames.length){b.innerHTML='<p>अभी कोई PDF Notes उपलब्ध नहीं है।</p>';return}
+ b.innerHTML=`<p class="muted">हर परीक्षा का PDF Notes एक अलग Folder में है। Folder खरीदने पर उसके सभी Notes खुल जाएँगे।</p>`+
+ folderNames.map(exam=>{const items=groups[exam], f=storedFolders.find(x=>x.exam===exam)||{exam,mrp:0,offer:0,logoDataUrl:""};const price=Number(f.offer)||Number(f.mrp)||0,owned=hasPurchasedPdfFolder(f);
+ const folderBtn=owned||!price?`<button class="btn" onclick="openPdfFolder(${JSON.stringify(exam)})">📂 Folder खोलें</button>`:`<button class="btn orange" onclick="buyPdfFolder(${JSON.stringify(exam)})">💳 ₹${price} — पूरा Folder खरीदें</button>`;
+ return `<div class="card" style="border:2px solid #1d65a6;margin:12px 0"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">${f.logoDataUrl?`<img src="${f.logoDataUrl}" style="width:65px;height:65px;object-fit:contain;border-radius:10px">`:`<div style="font-size:42px">📁</div>`}<div><h2 style="margin:0">${esc(exam)}</h2><p class="muted" style="margin:4px 0">${items.length} Notes • ${price?`Folder Price ₹${price}`:"FREE"}</p></div></div><div style="margin-top:10px">${folderBtn}</div><div class="grid" style="margin-top:12px">${items.map(n=>{const np=Number(n.offer)||Number(n.mrp)||0,ownedNote=owned||hasPurchasedNote(n);const btn=ownedNote||!np?`<button class="btn" onclick="viewPdfNote(${n._i})">📖 साइट पर पढ़ें</button>`:`<button class="btn orange" onclick="buyPdfNote(${n._i})">💳 ₹${np} — खरीदें</button>`;return `<div class="card" style="margin:0"><h3>📄 ${esc(n.title||("Notes "+(n._i+1)))}</h3><p class="muted">${np?`MRP ₹${n.mrp||0}${n.offer?` • Offer ₹${n.offer}`:""}`:"FREE"}</p>${btn}</div>`}).join("")}</div></div>`}).join("");
 }
-function buyPdfNote(i){
- const n=getNotes()[i];if(!n)return;
- if(!requireStudentLogin({type:"note",index:i}))return;
- const price=Number(n.offer)||Number(n.mrp)||0;
- const u=getCurrentStudent()||{};
- document.getElementById("modalContent").innerHTML=`<h2>💳 PDF Notes खरीदें</h2><div class="pay"><p><b>Notes:</b> ${esc(n.title||"PDF Notes")}</p><p><b>Price:</b> ₹${price}</p><input id="pn" value="${esc(u.name||"")}" placeholder="नाम"><input id="pemail" value="${esc(u.email||"")}" placeholder="Email"><input id="utr" placeholder="Payment UTR / Transaction ID"><button class="btn orange" onclick="submitPayment('PDF: ${esc(n.title||"PDF Notes")}',0,${price})">Payment Details भेजें</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
- tgyShowModal();
-}
-function viewPdfNote(i){
- const n=getNotes()[i];if(!n)return;
- if(!requireStudentLogin({type:"note",index:i}))return;
- if((Number(n.offer)||Number(n.mrp)||0)>0 && !hasPurchasedNote(n)){buyPdfNote(i);return;}
- const o=document.getElementById("studentPageOverlay");
- const viewer=`<div style="background:#fff;border-radius:12px;padding:10px"><div style="display:flex;justify-content:space-between;align-items:center"><h3>📄 ${esc(n.title||"PDF Notes")}</h3><button class="btn" onclick="closeNoteViewer()">✕ बंद करें</button></div><div id="pdfNoteViewer" style="height:75vh;overflow:auto;background:#555"></div></div>`;
- o.querySelector(".student-page-body").innerHTML=viewer;
- const box=document.getElementById("pdfNoteViewer");
- if(n.url){const iframe=document.createElement("iframe");iframe.src=n.url+"#toolbar=0&navpanes=0&scrollbar=1";iframe.style.cssText="width:100%;height:100%;border:0;background:white";iframe.setAttribute("sandbox","allow-same-origin allow-scripts");box.appendChild(iframe)}
- else if(n.dataUrl){const iframe=document.createElement("iframe");iframe.src=n.dataUrl+"#toolbar=0&navpanes=0&scrollbar=1";iframe.style.cssText="width:100%;height:100%;border:0;background:white";iframe.setAttribute("sandbox","allow-same-origin");box.appendChild(iframe)}
- else box.innerHTML="<p style='color:white;padding:20px'>PDF उपलब्ध नहीं है।</p>";
- box.addEventListener("contextmenu",e=>e.preventDefault()); box.addEventListener("dragstart",e=>e.preventDefault());
-}
-
+function openPdfFolder(exam){const f=getPdfFolders().find(x=>x.exam===exam)||{exam};const notes=getNotes().map((n,i)=>({...n,_i:i})).filter(n=>(n.exam||"").trim()===exam);const o=document.getElementById("studentPageOverlay");if(!o)return;o.querySelector(".student-page-body").innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2>📁 ${esc(exam)}</h2><button class="btn" onclick="openStudentPage('notes')">✕ बंद करें</button></div><p class="muted">इस Folder में ${notes.length} Notes हैं।</p>${notes.map(n=>`<div class="card" style="margin:8px 0"><b>📄 ${esc(n.title||n.fileName||"PDF")}</b><br><button class="btn" onclick="viewPdfNote(${n._i})">📖 पढ़ें</button></div>`).join("")}</div>`}
+function buyPdfFolder(exam){const f=getPdfFolders().find(x=>x.exam===exam);if(!f)return;if(!requireStudentLogin({type:"noteFolder",exam}))return;const price=Number(f.offer)||Number(f.mrp)||0,u=getCurrentStudent()||{};document.getElementById("modalContent").innerHTML=`<h2>💳 PDF Notes Folder खरीदें</h2><div class="pay"><p><b>Folder:</b> ${esc(exam)}</p><p><b>Price:</b> ₹${price}</p><input id="pn" value="${esc(u.name||"")}" placeholder="नाम"><input id="pemail" value="${esc(u.email||"")}" placeholder="Email"><input id="utr" placeholder="Payment UTR / Transaction ID"><button class="btn orange" onclick="submitPayment('PDF_FOLDER: ${esc(exam)}',0,${price})">Payment Details भेजें</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;tgyShowModal()}
+function buyPdfNote(i){const n=getNotes()[i];if(!n)return;if(!requireStudentLogin({type:"note",index:i}))return;const price=Number(n.offer)||Number(n.mrp)||0;if(!price){viewPdfNote(i);return}const u=getCurrentStudent()||{};document.getElementById("modalContent").innerHTML=`<h2>💳 PDF Notes खरीदें</h2><div class="pay"><p><b>Notes:</b> ${esc(n.title||"PDF Notes")}</p><p><b>Price:</b> ₹${price}</p><input id="pn" value="${esc(u.name||"")}" placeholder="नाम"><input id="pemail" value="${esc(u.email||"")}" placeholder="Email"><input id="utr" placeholder="Payment UTR / Transaction ID"><button class="btn orange" onclick="submitPayment('PDF: ${esc(n.title||"PDF Notes")}',0,${price})">Payment Details भेजें</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;tgyShowModal()}
+function viewPdfNote(i){const n=getNotes()[i];if(!n)return;if(!requireStudentLogin({type:"note",index:i}))return;if((Number(n.offer)||Number(n.mrp)||0)>0&&!hasPurchasedNote(n)){buyPdfNote(i);return}const o=document.getElementById("studentPageOverlay");const viewer=`<div style="background:#fff;border-radius:12px;padding:10px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3>📄 ${esc(n.title||"PDF Notes")}</h3><div><button class="btn" onclick="pdfZoom(-.1)">➖</button> <button class="btn" onclick="pdfZoom(.1)">➕</button> <button class="btn" onclick="pdfZoom(0,true)">↺</button> <button class="btn gray" onclick="closeNoteViewer()">✕ बंद करें</button></div></div><div id="pdfNoteViewer" style="height:75vh;overflow:auto;background:#555"><iframe id="pdfNoteFrame" src="${n.dataUrl||n.url||""}#toolbar=0&navpanes=0" style="width:100%;height:100%;border:0;background:white;transform-origin:top left"></iframe></div></div>`;o.querySelector(".student-page-body").innerHTML=viewer;window._pdfNoteScale=1;document.getElementById("pdfNoteViewer").addEventListener("contextmenu",e=>e.preventDefault())}
+function pdfZoom(delta,reset){const f=document.getElementById("pdfNoteFrame");if(!f)return;window._pdfNoteScale=reset?1:Math.max(.7,Math.min(2.5,(window._pdfNoteScale||1)+delta));f.style.transform=`scale(${window._pdfNoteScale})`;f.style.width=(100/window._pdfNoteScale)+"%";f.style.height=(100/window._pdfNoteScale)+"%"}
 function closeNoteViewer(){openStudentPage("notes")}
-document.addEventListener("keydown",e=>{
- const viewer=document.getElementById("pdfNoteViewer");
- if(viewer && (e.ctrlKey||e.metaKey) && ["s","p","u"].includes(e.key.toLowerCase())){e.preventDefault();e.stopPropagation()}
-});
+document.addEventListener("keydown",e=>{const viewer=document.getElementById("pdfNoteViewer");if(viewer&&(e.ctrlKey||e.metaKey)&&["s","p","u"].includes(e.key.toLowerCase())){e.preventDefault();e.stopPropagation()}});
 </script>
 <script id="home-headline-script">
 function renderHomeHeadline(){

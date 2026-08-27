@@ -138,11 +138,11 @@ function checkAdmin(){
 <section id="notes" class="sec">
  <h1>📄 PDF Notes</h1>
  <div class="card">
-  <p>यहाँ से PDF सीधे अपलोड करें। विद्यार्थी इसे वेबसाइट पर पढ़ सकेगा; Download button नहीं दिया जाएगा।</p>
+  <p>यहाँ PDF Notes अपलोड करें। चुनी हुई परीक्षा के नाम से Folder अपने-आप बनेगा और उसी Folder में उसके सभी Notes रहेंगे।</p>
   <label>Notes का नाम</label>
   <input id="noteTitle" placeholder="जैसे MP पटवारी Notes">
-  <label>Exam</label>
-  <select id="noteExam"></select><small id="noteExamHelp" class="muted">📋 परीक्षा प्रबंधन में बनाई गई परीक्षा चुनें।</small>
+  <label>Exam / Folder</label>
+  <select id="noteExam"></select><small id="noteExamHelp" class="muted">📁 परीक्षा चुनें — उसी नाम का PDF Notes Folder बनेगा।</small>
   <div class="row">
    <div><label>💰 MRP (₹)</label><input id="noteMrp" type="number" min="0" placeholder="जैसे 50"></div>
    <div><label>🏷️ Offer Price (₹)</label><input id="noteOffer" type="number" min="0" placeholder="जैसे 30"></div>
@@ -151,37 +151,59 @@ function checkAdmin(){
   <label>📄 PDF Upload करें</label>
   <input id="notePdfFile" type="file" accept="application/pdf,.pdf" style="width:100%;padding:10px">
   <div id="noteUploadStatus" class="muted" style="margin:8px 0"></div>
-  <button class="btn orange" onclick="uploadPdfNote()">⬆️ PDF Upload करके Save करें</button>
+  <button class="btn orange" id="noteSaveBtn" onclick="uploadPdfNote()">⬆️ PDF Upload करके Save करें</button>
+ </div>
+ <div class="card" style="margin-top:14px">
+  <h2>📁 PDF Notes Folders</h2>
+  <p class="muted">हर परीक्षा का अलग Folder बनेगा। Folder की pricing और logo यहीं से manage करें।</p>
+  <div id="adminPdfFolders"></div>
  </div>
  <div id="adminNotesList"></div>
 </section>
 <script id="pdf-notes-admin-upload">
 function getAdminNotes(){try{return JSON.parse(localStorage.getItem("tgy_pdf_notes")||"[]")}catch(e){return[]}}
 function saveAdminNotes(a){localStorage.setItem("tgy_pdf_notes",JSON.stringify(a));try{window.dispatchEvent(new StorageEvent("storage",{key:"tgy_pdf_notes",newValue:JSON.stringify(a)}))}catch(e){} if(window.tgyBroadcast)tgyBroadcast("tgy_pdf_notes");}
+function getPdfFolders(){try{return JSON.parse(localStorage.getItem("tgy_pdf_folders")||"[]")}catch(e){return[]}}
+function savePdfFolders(a){localStorage.setItem("tgy_pdf_folders",JSON.stringify(a));try{window.dispatchEvent(new StorageEvent("storage",{key:"tgy_pdf_folders",newValue:JSON.stringify(a)}))}catch(e){} if(window.tgyBroadcast)tgyBroadcast("tgy_pdf_folders");}
+function ensurePdfFolder(exam){
+ exam=(exam||"अन्य Notes").trim()||"अन्य Notes"; let a=getPdfFolders(); let f=a.find(x=>x.exam===exam);
+ if(!f){f={id:"pdf-folder-"+Date.now()+"-"+Math.random().toString(36).slice(2,7),exam,logoDataUrl:"",mrp:0,offer:0,availableUntil:""};a.push(f);savePdfFolders(a)}
+ return f;
+}
 function uploadPdfNote(){
  const title=document.getElementById("noteTitle").value.trim(),exam=document.getElementById("noteExam").value.trim();
  const file=document.getElementById("notePdfFile").files[0],st=document.getElementById("noteUploadStatus");
- if(!title){alert("Notes का नाम लिखें।");return} if(!file){alert("पहले PDF चुनें।");return}
+ if(!title){alert("Notes का नाम लिखें।");return} if(!exam){alert("पहले Exam / Folder चुनें।");return} if(!file){alert("पहले PDF चुनें।");return}
  const r=new FileReader();r.onload=function(){let a=getAdminNotes();
- a.push({title,exam,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:""});
- const until=document.getElementById("noteUntil")?.value||""; a.push({title,exam,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:until}); saveAdminNotes(a);["noteTitle","noteExam","notePdfFile","noteMrp","noteOffer","noteUntil"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
- st.textContent="✅ PDF Notes Save हो गई।";renderAdminNotes()};r.readAsDataURL(file);
+ const until=document.getElementById("noteUntil")?.value||"";
+ const folder=ensurePdfFolder(exam);
+ a.push({id:"pdf-note-"+Date.now()+"-"+Math.random().toString(36).slice(2,7),title,exam,folderId:folder.id,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:until});
+ saveAdminNotes(a);["noteTitle","noteExam","notePdfFile","noteMrp","noteOffer","noteUntil"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});
+ st.textContent="✅ PDF Notes Save हो गई और Folder में जोड़ दी गई।";renderAdminNotes();renderPdfFolders()};r.readAsDataURL(file);
 }
 function editPdfNote(i){
  const n=getAdminNotes()[i];if(!n)return;
- document.getElementById("noteTitle").value=n.title||"";document.getElementById("noteExam").value=n.exam||"";
- document.getElementById("noteMrp").value=n.mrp??"";document.getElementById("noteOffer").value=n.offer??"";
- const b=document.getElementById("adminNotesList");b.dataset.editIndex=i;
- const btn=document.querySelector('#notes button[onclick*="uploadPdfNote"]');if(btn)btn.textContent="💾 Update Notes";
- btn.onclick=function(){let a=getAdminNotes(),x=a[i];x.title=document.getElementById("noteTitle").value.trim();x.exam=document.getElementById("noteExam").value.trim();x.mrp=Number(document.getElementById("noteMrp").value)||0;x.offer=Number(document.getElementById("noteOffer").value)||0;x.availableUntil=document.getElementById("noteUntil").value;saveAdminNotes(a);renderAdminNotes();alert("✅ Notes की जानकारी Update हो गई।");btn.textContent="⬆️ PDF Upload करके Save करें";btn.onclick=uploadPdfNote};
+ populateExamSelect("noteExam",n.exam||""); document.getElementById("noteTitle").value=n.title||"";
+ document.getElementById("noteMrp").value=n.mrp??"";document.getElementById("noteOffer").value=n.offer??"";document.getElementById("noteUntil").value=n.availableUntil||"";
+ const btn=document.getElementById("noteSaveBtn");btn.textContent="💾 Update Notes";btn.onclick=function(){let a=getAdminNotes(),x=a[i];x.title=document.getElementById("noteTitle").value.trim();x.exam=document.getElementById("noteExam").value.trim();x.mrp=Number(document.getElementById("noteMrp").value)||0;x.offer=Number(document.getElementById("noteOffer").value)||0;x.availableUntil=document.getElementById("noteUntil").value;const f=ensurePdfFolder(x.exam);x.folderId=f.id;saveAdminNotes(a);resetPdfNoteForm();renderAdminNotes();renderPdfFolders();alert("✅ Notes की जानकारी Update हो गई।")};
 }
+function resetPdfNoteForm(){["noteTitle","noteExam","notePdfFile","noteMrp","noteOffer","noteUntil"].forEach(id=>{const el=document.getElementById(id);if(el)el.value=""});const btn=document.getElementById("noteSaveBtn");if(btn){btn.textContent="⬆️ PDF Upload करके Save करें";btn.onclick=uploadPdfNote}}
+function deletePdfNote(i){let a=getAdminNotes();a.splice(i,1);saveAdminNotes(a);renderAdminNotes();renderPdfFolders()}
 function renderAdminNotes(){const b=document.getElementById("adminNotesList");if(!b)return;const a=getAdminNotes();
- b.innerHTML=a.map((n,i)=>`<div class="card" style="margin:10px 0"><b>📄 ${esc(n.title)}</b> — ${esc(n.exam||"")}<br><span class="muted">${esc(n.fileName||"PDF")}</span><br><b>MRP:</b> ₹${n.mrp||0} &nbsp; <b>Offer:</b> ₹${n.offer||0} ${n.availableUntil?`&nbsp; <b>Valid Till:</b> ${esc(n.availableUntil)}`:""}<br>
- <button class="btn" onclick="previewAdminPdfNote(${i})">👁️ Preview</button><button class="btn" onclick="editPdfNote(${i})">✏️ Edit</button><button class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी कोई PDF Notes नहीं हैं।</p>";
+ b.innerHTML=`<h2 style="margin-top:18px">📄 सभी PDF Notes</h2>`+(a.map((n,i)=>`<div class="card" style="margin:10px 0"><b>📄 ${esc(n.title)}</b> — ${esc(n.exam||"")}<br><span class="muted">${esc(n.fileName||"PDF")}</span><br><b>MRP:</b> ₹${n.mrp||0} &nbsp; <b>Offer:</b> ₹${n.offer||0} ${n.availableUntil?`&nbsp; <b>Valid Till:</b> ${esc(n.availableUntil)}`:""}<br><button class="btn" onclick="previewAdminPdfNote(${i})">👁️ Preview</button> <button class="btn" onclick="editPdfNote(${i})">✏️ Edit</button> <button class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी कोई PDF Notes नहीं हैं।</p>");
 }
-function previewAdminPdfNote(i){const n=getAdminNotes()[i];if(!n?.dataUrl)return;const w=window.open("","_blank");if(!w)return;w.document.write(`<title>${esc(n.title)}</title><iframe src="${n.dataUrl}#toolbar=0&navpanes=0" style="width:100%;height:100vh;border:0"></iframe>`);w.document.close()}
-function deletePdfNote(i){let a=getAdminNotes();a.splice(i,1);saveAdminNotes(a);renderAdminNotes()}
-document.addEventListener("DOMContentLoaded",renderAdminNotes);</script>
+function previewAdminPdfNote(i){const n=getAdminNotes()[i];if(!n?.dataUrl)return;const m=document.getElementById("modal");if(!m)return;document.getElementById("modalContent").innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><h2>📄 ${esc(n.title)}</h2><button class="btn gray" onclick="closeM()">✕ बंद करें</button></div><div style="display:flex;gap:8px;margin:8px 0"><button class="btn" onclick="adminPdfZoom(-.1)">➖ Zoom Out</button><button class="btn" onclick="adminPdfZoom(.1)">➕ Zoom In</button><button class="btn" onclick="adminPdfZoom(0,true)">↺ Reset</button></div><div id="adminPdfViewer" style="height:75vh;overflow:auto;background:#555"><iframe id="adminPdfFrame" src="${n.dataUrl}#toolbar=0&navpanes=0" style="width:100%;height:100%;border:0;background:white;transform-origin:top left"></iframe></div>`;m.style.display="flex";window._adminPdfScale=1}
+function adminPdfZoom(delta,reset){let f=document.getElementById("adminPdfFrame");if(!f)return;window._adminPdfScale=reset?1:Math.max(.7,Math.min(2.5,(window._adminPdfScale||1)+delta));f.style.transform=`scale(${window._adminPdfScale})`;f.style.width=(100/window._adminPdfScale)+"%";f.style.height=(100/window._adminPdfScale)+"%"}
+function pdfFolderNotes(exam){return getAdminNotes().filter(n=>(n.exam||"").trim()===exam)}
+function renderPdfFolders(){const b=document.getElementById("adminPdfFolders");if(!b)return;let folders=getPdfFolders();const notes=getAdminNotes();
+ // Repair/migrate folders for older Notes automatically.
+ notes.forEach(n=>{if(n.exam&&!folders.some(f=>f.exam===n.exam)){folders.push({id:"pdf-folder-"+Date.now()+"-"+Math.random().toString(36).slice(2,7),exam:n.exam,logoDataUrl:"",mrp:0,offer:0,availableUntil:""});}});savePdfFolders(folders);
+ b.innerHTML=folders.length?folders.map((f,i)=>{const ns=notes.filter(n=>(n.folderId===f.id)||((n.exam||"").trim()===f.exam&&!n.folderId));return `<div class="card" style="margin:10px 0;border:2px solid #1d65a6"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="min-width:220px"><h3 style="margin:0">📁 ${esc(f.exam)}</h3><p class="muted" style="margin:4px 0">${ns.length} Notes • Folder Pricing: ₹${Number(f.offer)||Number(f.mrp)||0}</p>${f.logoDataUrl?`<img src="${f.logoDataUrl}" style="width:55px;height:55px;object-fit:contain;border-radius:8px">`:`<span class="muted">Logo नहीं है</span>`}</div><div style="flex:1;min-width:280px"><div class="row"><div><label>MRP ₹</label><input id="pfmrp${i}" type="number" value="${Number(f.mrp)||0}"></div><div><label>Offer ₹</label><input id="pfoffer${i}" type="number" value="${Number(f.offer)||0}"></div><div><label>Valid Till</label><input id="pfuntil${i}" type="date" value="${esc(f.availableUntil||"")}"></div></div><input id="pflogo${i}" type="file" accept="image/*" style="margin-top:6px"><br><button class="btn orange" onclick="savePdfFolder(${i})">💾 Folder Save</button> <button class="btn" onclick="viewPdfFolderNotes(${i})">📂 Notes देखें</button></div></div></div>`}).join(""):"<p>अभी कोई PDF Notes Folder नहीं बना है। पहला Note upload करते ही Folder अपने-आप बनेगा।</p>";
+}
+function savePdfFolder(i){const a=getPdfFolders(),f=a[i];if(!f)return;f.mrp=Number(document.getElementById("pfmrp"+i).value)||0;f.offer=Number(document.getElementById("pfoffer"+i).value)||0;f.availableUntil=document.getElementById("pfuntil"+i).value||"";const file=document.getElementById("pflogo"+i).files[0];const done=()=>{savePdfFolders(a);renderPdfFolders();alert("✅ PDF Folder की Pricing/Logo Save हो गई।")};if(file){const r=new FileReader();r.onload=()=>{f.logoDataUrl=r.result;done()};r.readAsDataURL(file)}else done()}
+function viewPdfFolderNotes(i){const f=getPdfFolders()[i];if(!f)return;alert(`${f.exam} Folder में ${pdfFolderNotes(f.exam).length} PDF Notes हैं।`)}
+document.addEventListener("DOMContentLoaded",function(){renderAdminNotes();renderPdfFolders()});
+</script>
 <section id="headline-manager" class="sec">
 <h1>📢 Home Headline</h1>
 <div class="card"><p>यह Headline Home Page के सफेद हिस्से में चलेगी।</p>
@@ -527,7 +549,11 @@ function activate(i){
  localStorage.setItem("tgy_payments",JSON.stringify(a));
  let users=JSON.parse(localStorage.getItem("tgy_users")||"[]"),u=users.find(x=>x.email===p.email);
  if(u){
-   if(String(p.course||"").startsWith("PDF:")){
+   if(String(p.course||"").startsWith("PDF_FOLDER:")){
+     u.purchasedNoteFolders=u.purchasedNoteFolders||[];
+     const folderName=String(p.course).replace(/^PDF_FOLDER:\s*/,"");
+     if(folderName&&!u.purchasedNoteFolders.includes(folderName))u.purchasedNoteFolders.push(folderName);
+   }else if(String(p.course||"").startsWith("PDF:")){
      u.purchasedNotes=u.purchasedNotes||[];
      const noteTitle=String(p.course).replace(/^PDF:\s*/,"");
      if(noteTitle&&!u.purchasedNotes.includes(noteTitle))u.purchasedNotes.push(noteTitle);
