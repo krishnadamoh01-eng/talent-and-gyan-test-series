@@ -300,8 +300,7 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
     <input id="apOffer" type="number" min="0" placeholder="खाली छोड़ सकते हैं">
   </div>
 
-  <div><label>🖼️ Folder Logo (Optional)</label><input id="apLogo" type="file" accept="image/*" style="width:100%;padding:9px"></div>
-<div>
+  <div>
     <label>⏳ Validity</label>
     <input id="apDuration" type="number" min="1" max="6" value="15" placeholder="15">
   </div>
@@ -1431,53 +1430,25 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
-<script id="tgy-admin-final-hardening">
+<script id="tgy-safe-final-admin">
 (function(){
- const ls=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??d}catch(e){return d}};
- const sv=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
- const escA=window.esc||((v)=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])));
- // Exam Logo save: preserve existing exam data and upload only when a file is selected.
- const oldSave=window.saveExamMaster;
- window.saveExamMaster=function(){
-   const name=document.getElementById('examNewName')?.value.trim();if(!name)return alert('परीक्षा का नाम लिखें।');
-   const visible=document.getElementById('examNewVisible')?.value!=='false',file=document.getElementById('examNewLogo')?.files?.[0];
-   let a=ls('tgy_exams',[]); if(!Array.isArray(a))a=[];let i=a.findIndex(x=>(typeof x==='string'?x:x.name)===name);let old=i>=0&&typeof a[i]==='object'?a[i]:{name,visible:true};
-   const finish=(data)=>{const obj={...old,name,visible};if(data)obj.logo=data;if(i>=0)a[i]=obj;else a.push(obj);sv('tgy_exams',a);document.getElementById('examNewName').value='';if(document.getElementById('examNewLogo'))document.getElementById('examNewLogo').value='';if(typeof renderExamMaster==='function')renderExamMaster();if(typeof refreshAllExamDropdowns==='function')refreshAllExamDropdowns(name);alert('✅ परीक्षा और Logo Save हो गया।');};
-   if(file){const r=new FileReader();r.onload=()=>finish(r.result);r.readAsDataURL(file)}else finish(old.logo||null);
- };
- // Keep folder logo in access pricing records.
- const oldSavePrice=window.saveAccessPricing;
- window.saveAccessPricing=function(){
-   const exam=document.getElementById('apExam')?.value,type=document.getElementById('apType')?.value||'folder',count=type==='testseries'?Number(document.getElementById('apCount')?.value||10):0;
-   const name=type==='testseries'?(document.getElementById('apName')?.value.trim()||`${count} Test Series`):`${exam} — पूरा Test Series`;
-   const durationValue=Number(document.getElementById('apDuration')?.value)||0,unit=document.getElementById('apUnit')?.value||'days',mrp=Number(document.getElementById('apMrp')?.value)||0,offer=Number(document.getElementById('apOffer')?.value)||0;
-   if(!exam||durationValue<1||mrp<=0)return alert('परीक्षा, Validity और MRP भरें।');
-   let a=ls('tgy_access_pricing',[]),i=a.findIndex(x=>x.exam===exam&&x.type===type&&Number(x.count||0)===count),old=i>=0?a[i]:{};const file=document.getElementById('apLogo')?.files?.[0];
-   const finish=(data)=>{const obj={...old,exam,type,count,name,durationValue,unit,days:unit==='months'?durationValue*30:durationValue,mrp,offer,scope:type==='folder'?'full':'custom'};if(data)obj.logo=data;if(i>=0)a[i]=obj;else a.push(obj);sv('tgy_access_pricing',a);if(typeof renderAccessPricing==='function')renderAccessPricing();alert('✅ Pricing/Folder details Save हो गई।');};
-   if(file){const r=new FileReader();r.onload=()=>finish(r.result);r.readAsDataURL(file)}else finish(old.logo||null);
- };
- // Admin payment activation: grant PDF folder access and notify student for both series and notes.
- const oldActivate=window.activate;
- window.activate=function(i){
-   let a=ls('tgy_payments',[]),p=a[i];if(!p)return; p.status='Access Activated';p.activatedAt=new Date().toISOString();sv('tgy_payments',a);
-   let users=ls('tgy_users',[]),u=users.find(x=>x.email===p.email);
-   if(u){
-     if(p.type==='pdfFolder'){
-       u.notesFolderAccess=u.notesFolderAccess||[];const days=Number(p.days)||0;const expires=days?new Date(Date.now()+days*86400000).toISOString():null;
-       u.notesFolderAccess=u.notesFolderAccess.filter(x=>x.folder!==p.folder);u.notesFolderAccess.push({folder:p.folder,amount:Number(p.amount)||0,activatedAt:p.activatedAt,expiresAt:expires});
-       u.access=`PDF Folder: ${p.folder}`;
-     }else if(p.type==='testseries'||p.seriesCount){
-       u.seriesAccess=u.seriesAccess||[];const days=Number(p.days)||0,expires=days?new Date(Date.now()+days*86400000).toISOString():null;const item={exam:p.exam||p.course,count:p.accessType==='folder'?999999:(Number(p.seriesCount)||100),amount:Number(p.amount)||0,accessName:p.accessName||p.course,accessType:p.accessType||'testseries',activatedAt:p.activatedAt,expiresAt:expires};u.seriesAccess=u.seriesAccess.filter(x=>!(x.exam===item.exam&&x.accessName===item.accessName));u.seriesAccess.push(item);u.access=`Series: ${(u.seriesAccess||[]).length}`;
-     }else{u.purchasedTests=u.purchasedTests||[];if(p.course&&!u.purchasedTests.includes(p.course))u.purchasedTests.push(p.course);}
-     const k='tgy_notifications_'+u.email,ns=ls(k,[]),daysText=p.days?` • ${p.days} दिन`:'',msg=`🎉 Access Activate हो गया: ${p.accessName||p.folder||p.course}${daysText}`;ns.unshift({text:msg,date:new Date().toLocaleString(),read:false});sv(k,ns);sv('tgy_users',users);
-   }
-   if(typeof renderPayments==='function')renderPayments();if(typeof renderUsers==='function')renderUsers();alert('✅ Access Activated और Student Notification भेज दी गई।');
- };
- // Folder list shows logo and pricing.
- const oldRenderPrice=window.renderAccessPricing;
- window.renderAccessPricing=function(){if(typeof oldRenderPrice==='function')oldRenderPrice();const a=ls('tgy_access_pricing',[]),b=document.getElementById('accessPricingList');if(!b)return;const cards=b.querySelectorAll('.card');cards.forEach((card,idx)=>{const item=a[idx];if(item?.logo&&!card.querySelector('.tgy-price-logo')){const im=document.createElement('img');im.className='tgy-price-logo';im.src=item.logo;im.style.cssText='width:44px;height:44px;object-fit:contain;vertical-align:middle;margin-right:8px;border:1px solid #ddd;border-radius:6px';card.prepend(im)}})};
- document.addEventListener('DOMContentLoaded',()=>{try{if(typeof renderExamMaster==='function')renderExamMaster();if(typeof renderAccessPricing==='function')renderAccessPricing()}catch(e){}});
+ const J=(k,d)=>{try{const x=JSON.parse(localStorage.getItem(k)||'null');return x==null?d:x}catch(e){return d}};
+ const S=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+ const E=window.esc||((v)=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])));
+ function addExamLogoField(){const inp=document.getElementById('examNewName');if(!inp||document.getElementById('examNewLogo'))return;const row=inp.closest('.row')||inp.parentElement?.parentElement;const d=document.createElement('div');d.innerHTML='<label>🖼️ Exam Logo Upload</label><input id="examNewLogo" type="file" accept="image/*" style="width:100%;padding:9px"><small class="muted">SSC, MPPSC, MP पटवारी आदि का Logo सेव करें।</small>';row?.appendChild(d)}
+ window.saveExamMaster=function(){const inp=document.getElementById('examNewName'),name=(inp?.value||'').trim();if(!name)return alert('परीक्षा का नाम लिखें।');let a=J('tgy_exams',[]),i=a.findIndex(x=>(typeof x==='string'?x:x.name)===name),old=i>=0&&typeof a[i]==='object'?a[i]:{name};const visible=document.getElementById('examNewVisible')?.value!=='false',file=document.getElementById('examNewLogo')?.files?.[0];const done=(logo)=>{const obj={...old,name,visible};if(logo)obj.logo=logo;if(i>=0)a[i]=obj;else a.push(obj);S('tgy_exams',a);inp.value='';if(document.getElementById('examNewLogo'))document.getElementById('examNewLogo').value='';if(typeof renderExamMaster==='function')renderExamMaster();if(typeof refreshAllExamDropdowns==='function')refreshAllExamDropdowns(name);alert('✅ परीक्षा Save हो गई।');};if(file){const r=new FileReader();r.onload=()=>done(r.result);r.readAsDataURL(file)}else done(old.logo||null)};
+ window.renderExamMaster=function(){const b=document.getElementById('examMasterList');if(!b)return;const a=J('tgy_exams',[]);b.innerHTML=a.map((x,i)=>{const o=typeof x==='object'?x:{name:x};return `<div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><img src="${E(o.logo||'talent-and-gyan-logo.png')}" style="width:52px;height:52px;object-fit:contain"><b>${E(o.name||'')}</b><span>${o.visible===false?'🙈 Hidden':'👁️ Active'}</span><button class="btn" onclick="editExamMaster(${i})">✏️ Edit</button><button class="btn danger" onclick="deleteExamMaster(${i})">🗑️ Delete</button></div>`}).join('')||'<p>अभी कोई परीक्षा नहीं है।</p>'};
+ window.editExamMaster=function(i){const a=J('tgy_exams',[]),x=a[i];if(!x)return;const inp=document.getElementById('examNewName');if(inp)inp.value=typeof x==='string'?x:x.name||'';const v=document.getElementById('examNewVisible');if(v)v.value=x.visible===false?'false':'true';alert('✏️ परीक्षा का नाम form में आ गया है। नया Logo चाहें तो upload करके Save करें।')};
+ // PDF folder metadata: folder-level pricing/logo/validity. Existing note records are never rewritten here.
+ window.tgyPdfFolders=function(){const notes=J('tgy_pdf_notes',[]),meta=J('tgy_pdf_folder_meta',[]),names=[...new Set(notes.map(n=>(n.folder||n.exam||'अन्य Notes').trim()).filter(Boolean))];return names.map(folder=>({...((meta.find(x=>x.folder===folder))||{}),folder,count:notes.filter(n=>(n.folder||n.exam||'').trim()===folder).length}))};
+ window.tgySavePdfFolder=function(folder){const key=encodeURIComponent(folder),mrp=Number(document.getElementById('tgy_fmrp_'+key)?.value)||0,offer=Number(document.getElementById('tgy_foffer_'+key)?.value)||0,days=Number(document.getElementById('tgy_fdays_'+key)?.value)||0,file=document.getElementById('tgy_flogo_'+key)?.files?.[0];if(mrp<0||offer<0||days<0)return alert('Price/Validity सही भरें।');let a=J('tgy_pdf_folder_meta',[]),i=a.findIndex(x=>x.folder===folder);const old=i>=0?a[i]:{folder};const done=(logo)=>{const o={...old,folder,mrp,offer,days};if(logo)o.logo=logo;if(i>=0)a[i]=o;else a.push(o);S('tgy_pdf_folder_meta',a);renderAdminNotes();alert('✅ Folder Pricing/Logo Save हो गया।')};if(file){const r=new FileReader();r.onload=()=>done(r.result);r.readAsDataURL(file)}else done(old.logo||null)};
+ window.renderAdminNotes=function(){const b=document.getElementById('adminNotesList');if(!b)return;const fs=window.tgyPdfFolders();if(!fs.length){b.innerHTML='<div class="card"><h3>📁 PDF Notes Folders</h3><p>अभी कोई Notes नहीं हैं।</p></div>';return}b.innerHTML=fs.map(f=>{const k=encodeURIComponent(f.folder);const notes=J('tgy_pdf_notes',[]).filter(n=>(n.folder||n.exam||'').trim()===f.folder);return `<div class="card" style="margin:12px 0;border:2px solid #1d65a6"><div style="display:flex;align-items:center;gap:10px"><img src="${E(f.logo||'talent-and-gyan-logo.png')}" style="width:55px;height:55px;object-fit:contain"><h2 style="margin:0">📁 ${E(f.folder)}</h2></div><p><b>${f.count}</b> Notes</p><div class="row"><div><label>MRP ₹</label><input id="tgy_fmrp_${k}" type="number" value="${f.mrp||''}"></div><div><label>Offer ₹</label><input id="tgy_foffer_${k}" type="number" value="${f.offer||''}"></div><div><label>Validity (दिन)</label><input id="tgy_fdays_${k}" type="number" value="${f.days||''}"></div><div><label>Folder Logo</label><input id="tgy_flogo_${k}" type="file" accept="image/*"></div></div><button class="btn orange" onclick="tgySavePdfFolder(${JSON.stringify(f.folder)})">💾 Folder Save</button><div>${notes.map(n=>`<div style="padding:8px;border-top:1px solid #eee"><b>📄 ${E(n.title||'Notes')}</b> <button class="btn" onclick="previewAdminPdfNote(${J('tgy_pdf_notes',[]).findIndex(x=>x.id===n.id)})">👁️ Preview</button><button class="btn" onclick="editPdfNote(${J('tgy_pdf_notes',[]).findIndex(x=>x.id===n.id)})">✏️ Edit</button><button class="btn danger" onclick="deletePdfNote(${J('tgy_pdf_notes',[]).findIndex(x=>x.id===n.id)})">🗑️ Delete</button></div>`).join('')}</div></div>`}).join('')};
+ // New PDF always appends a record; Update Notes remains only for editing the selected record.
+ function addFolderField(){const exam=document.getElementById('noteExam');if(!exam||document.getElementById('noteFolderName'))return;const l=document.createElement('label');l.textContent='📁 Exam / Folder का नाम';const i=document.createElement('input');i.id='noteFolderName';i.placeholder='जैसे MP पटवारी Sub Group 4';exam.parentNode.insertBefore(l,exam);exam.parentNode.insertBefore(i,exam)}
+ const originalUpload=window.uploadPdfNote;window.tgyUploadNewPdfNote=function(){const folder=(document.getElementById('noteFolderName')?.value||document.getElementById('noteExam')?.value||'').trim(),title=(document.getElementById('noteTitle')?.value||'').trim(),file=document.getElementById('notePdfFile')?.files?.[0];if(!folder)return alert('Exam / Folder का नाम लिखें।');if(!title)return alert('Notes का नाम लिखें।');if(!file)return alert('पहले PDF चुनें।');const r=new FileReader();r.onload=()=>{const a=J('tgy_pdf_notes',[]);a.push({id:'note_'+Date.now(),title,exam:folder,folder,fileName:file.name,dataUrl:r.result,mrp:0,offer:0,availableUntil:''});S('tgy_pdf_notes',a);document.getElementById('noteTitle').value='';if(document.getElementById('noteFolderName'))document.getElementById('noteFolderName').value='';document.getElementById('notePdfFile').value='';if(typeof renderAdminNotes==='function')renderAdminNotes();alert('✅ नया PDF Note अलग से Save हो गया।')};r.readAsDataURL(file)};
+ // Payment activation: preserves all users and only appends/replaces access records for the approved user.
+ window.activate=function(i){const p=J('tgy_payments',[])[i];if(!p)return;const payments=J('tgy_payments',[]);payments[i]={...p,status:'Access Activated',activatedAt:new Date().toISOString()};S('tgy_payments',payments);let users=J('tgy_users',[]),u=users.find(x=>x.email===p.email);if(!u)return renderPayments&&renderPayments();const days=Number(p.days)||0,expires=days?new Date(Date.now()+days*86400000).toISOString():null;if(p.type==='pdfFolder'){u.notesFolderAccess=u.notesFolderAccess||[];u.notesFolderAccess=u.notesFolderAccess.filter(x=>x.folder!==p.folder);u.notesFolderAccess.push({folder:p.folder,amount:Number(p.amount)||0,activatedAt:payments[i].activatedAt,expiresAt:expires})}else{u.seriesAccess=u.seriesAccess||[];const item={exam:p.exam||p.course,accessName:p.accessName||p.course,accessType:p.accessType||'testseries',count:p.accessType==='folder'?999999:Number(p.seriesCount)||999999,amount:Number(p.amount)||0,activatedAt:payments[i].activatedAt,expiresAt:expires};u.seriesAccess=u.seriesAccess.filter(x=>!(x.exam===item.exam&&x.accessName===item.accessName));u.seriesAccess.push(item)}S('tgy_users',users);const k='tgy_notifications_'+p.email,ns=J(k,[]);ns.unshift({text:`🎉 Access Activate हो गया: ${p.accessName||p.folder||p.course}${days?' • '+days+' दिन':''}`,date:new Date().toLocaleString(),read:false});S(k,ns);if(typeof renderPayments==='function')renderPayments();if(typeof renderUsers==='function')renderUsers();alert('✅ Access Activated और Student को Notification भेज दी गई।')};
+ document.addEventListener('DOMContentLoaded',()=>{addExamLogoField();setTimeout(addExamLogoField,400);const btn=document.querySelector('#notes button[onclick="uploadPdfNote()"]');if(btn){btn.onclick=window.tgyUploadNewPdfNote;btn.textContent='⬆️ PDF Upload करके नया Note Save करें'}if(typeof renderExamMaster==='function')renderExamMaster();if(typeof renderAdminNotes==='function')renderAdminNotes()});
 })();
 </script>
-<style>.tgy-price-logo{display:inline-block}</style>
 </body></html>
