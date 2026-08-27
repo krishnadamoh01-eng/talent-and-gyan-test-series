@@ -89,15 +89,33 @@ body{padding-left:0!important;background:#fff!important;color:var(--ink)}
 @media(max-width:1100px){.tgy-exam-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tgy-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tgy-header{gap:10px!important}.tgy-brand-info{display:none}.tgy-brand-title{font-size:30px}.tgy-youtube{font-size:13px;padding:10px}}
 @media(max-width:760px){.tgy-topbar{height:25px}.tgy-header{height:auto!important;min-height:95px!important;padding:8px 12px!important;flex-wrap:wrap!important}.tgy-brand-logo{width:78px;height:78px;flex-basis:78px;margin-top:-22px}.tgy-brand-title{font-size:22px;white-space:normal}.tgy-youtube{display:none}.tgy-notify{font-size:24px}.tgy-login{margin-left:auto}.brand-nav-row{overflow-x:auto;flex-wrap:nowrap!important}.brand-nav-row a{white-space:nowrap}.hero.tgy-modern-hero{grid-template-columns:1fr;margin:0 12px!important;padding:25px 20px!important}.tgy-hero-art{display:none}.tgy-exam-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tgy-quick-grid{grid-template-columns:1fr;margin:18px auto}.tgy-exam-card{min-height:205px}.tgy-exam-logo{width:70px;height:70px}}
 </style>
+
+<style id="tgy-header-final-fix">
+.tgy-header-final{height:auto!important;padding:0!important;display:block!important;background:transparent!important;border:0!important;box-shadow:none!important;position:relative!important;top:auto!important;overflow:visible!important}
+.tgy-blue-strip{height:112px;background:#075dcc;display:flex;align-items:center;padding:0 3.5% 0 4.5%;gap:26px;position:relative;color:#fff}
+.tgy-blue-strip .tgy-brand-logo{position:absolute!important;left:4.2%;top:7px;width:132px!important;height:132px!important;object-fit:contain;z-index:5;margin:0!important;flex:none!important}
+.tgy-blue-strip .tgy-brand-title{margin-left:150px;font-size:clamp(34px,4vw,56px)!important;font-weight:900!important;color:#fff!important;line-height:1!important;white-space:nowrap;flex:1;text-shadow:0 1px 1px rgba(0,0,0,.12)}
+.tgy-blue-strip .tgy-youtube{background:#e30613;color:#fff;text-decoration:none;padding:13px 18px;border-radius:9px;font-size:16px;font-weight:900;white-space:nowrap;flex:0 0 auto}
+.tgy-news-strip{height:48px!important;display:flex!important;align-items:center!important;overflow:hidden!important;white-space:nowrap;background:#df1017!important;color:#fff!important;padding:0 3.5%!important;font-weight:800;min-height:48px!important}
+.tgy-news-strip .ticker-label{flex:0 0 auto;padding:0 18px 0 154px;border-right:2px solid rgba(255,255,255,.5);font-size:17px}
+.tgy-news-strip .ticker-window{overflow:hidden;flex:1;min-width:0}
+.tgy-news-strip .ticker-track{display:inline-block;padding-left:100%;animation:tgyTickerFinal 22s linear infinite}
+.tgy-news-strip .ticker-item{margin-right:100px}
+@keyframes tgyTickerFinal{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+@media(max-width:1100px){.tgy-blue-strip{gap:14px}.tgy-blue-strip .tgy-brand-logo{left:2.5%;width:112px!important;height:112px!important}.tgy-blue-strip .tgy-brand-title{margin-left:122px;font-size:34px!important}.tgy-news-strip .ticker-label{padding-left:128px}.tgy-blue-strip .tgy-youtube{font-size:13px;padding:10px 12px}}
+@media(max-width:760px){.tgy-blue-strip{height:82px;padding:0 10px 0 94px;gap:8px}.tgy-blue-strip .tgy-brand-logo{left:10px;top:4px;width:96px!important;height:96px!important}.tgy-blue-strip .tgy-brand-title{margin-left:0;font-size:22px!important;white-space:normal;line-height:1.05}.tgy-blue-strip .tgy-youtube{display:none}.tgy-news-strip{height:40px!important;min-height:40px!important;padding:0!important}.tgy-news-strip .ticker-label{padding:0 9px 0 92px;font-size:13px}.tgy-news-strip .ticker-track{animation-duration:24s}}
+</style>
 </head><body>
-<div class="tgy-topbar"></div>
-<header class="tgy-header">
-  <img class="tgy-brand-logo" src="talent-and-gyan-logo.png" alt="Talent And Gyan Logo">
-  <div class="tgy-brand-title">Talent And Gyan Test Series</div>
-  <div class="tgy-brand-info">महत्वपूर्ण जानकारी</div>
-  <a class="tgy-youtube" href="https://www.youtube.com/@TGMOTIVATION70?sub_confirmation=1" target="_blank" rel="noopener">▶ YouTube Subscribe करें</a>
-  <a class="tgy-notify" href="#" onclick="openStudentPage('notifications');return false" aria-label="Notifications">🔔</a>
-  <span id="studentAuthTop" class="tgy-login"></span>
+<header class="tgy-header tgy-header-final">
+  <div class="tgy-blue-strip">
+    <img class="tgy-brand-logo" src="talent-and-gyan-logo.png" alt="Talent And Gyan Logo">
+    <div class="tgy-brand-title">Talent And Gyan Test Series</div>
+    <a class="tgy-youtube" href="https://www.youtube.com/@TGMOTIVATION70?sub_confirmation=1" target="_blank" rel="noopener">▶ YouTube Subscribe करें</a>
+  </div>
+  <div class="tgy-news-strip" id="homeNewsTicker">
+    <div class="ticker-label">📢 महत्वपूर्ण जानकारी</div>
+    <div class="ticker-window"><div class="ticker-track"><span class="ticker-item">अभी कोई महत्वपूर्ण जानकारी उपलब्ध नहीं है।</span></div></div>
+  </div>
 </header>
 <div class="brand-nav-row" id="studentNavigation">
   <a href="#" onclick="studentGoHome();return false">🏠 Home</a>
