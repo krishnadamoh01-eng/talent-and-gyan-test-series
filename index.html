@@ -1332,17 +1332,35 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
 </script>
 
 
-<script id="tgy-v5-student-exam-source">
-/* V5: Student exam cards come ONLY from Exam Management's tgy_exams list. */
+
+
+
+<script id="tgy-v9-student-exam-master-sync">
 (function(){
-  const KEY='tgy_exams', CLEAN='tgy_exam_cleanup_v5_student_done';
-  const legacy=(name)=>{const n=String(name||'').trim().toLowerCase().replace(/\s+/g,' ');return n==='mppsc'||n==='ssc'||n==='railway'||n==='banking'||n==='mp पुलिस'||n==='mp police'||n==='ग्रुप 4'||n==='group 4'||n==='hospital assistant'||n==='mp पटवारी'||n==='mp patwari'||n.includes('mp patwari 2026')||n.includes('mp patwari sub. 2 sub group 4')};
-  function clean(){if(localStorage.getItem(CLEAN)==='1')return;try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');localStorage.setItem(KEY,JSON.stringify((Array.isArray(a)?a:[]).map(x=>typeof x==='string'?{name:x,visible:true}:x).filter(x=>x&&x.name&&!legacy(x.name))))}catch(e){localStorage.setItem(KEY,'[]')}['tgy_tests','tgy_pdf_notes','tgy_pricing','tgy_offers','tgy_access_pricing'].forEach(function(k){try{const v=JSON.parse(localStorage.getItem(k)||'[]');if(Array.isArray(v))localStorage.setItem(k,JSON.stringify(v.filter(function(x){return !legacy(x&&((x.exam||x.folder||'')))})))}catch(e){}});try{const d=JSON.parse(localStorage.getItem('tgy_exam_structure')||'{}');if(d&&d.exams){Object.keys(d.exams).forEach(function(k){if(legacy(k))delete d.exams[k]});localStorage.setItem('tgy_exam_structure',JSON.stringify(d))}}catch(e){}localStorage.setItem(CLEAN,'1')}
-  clean();
-  function render(){const box=document.getElementById('tgyHomeExamGrid');if(!box)return;let a=[];try{a=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){a=[]}a=(Array.isArray(a)?a:[]).map(x=>typeof x==='string'?{name:x,visible:true}:x).filter(x=>x&&x.name&&x.visible!==false);box.innerHTML=a.length?a.map(x=>`<div class="tgy-exam-card"><img class="tgy-exam-logo" src="${E(x.logo||'talent-and-gyan-logo.png')}"><div class="tgy-exam-name">${E(x.name)}</div><div class="tgy-exam-sub">Mock Test + PDF Notes</div><button class="tgy-view-btn" onclick="openExam(${JSON.stringify(x.name)})">View Tests</button></div>`).join(''):'<div class="tgy-exam-card" style="grid-column:1/-1"><div class="tgy-exam-name">अभी कोई परीक्षा उपलब्ध नहीं है</div></div>'}
-  document.addEventListener('DOMContentLoaded',()=>{render();setTimeout(render,400)});
-  window.addEventListener('storage',e=>{if(e.key===KEY)render()});
+  const KEY='tgy_exams', BLOCK='tgy_exam_master_deleted';
+  const J=(k,d)=>{try{const x=JSON.parse(localStorage.getItem(k)||'null');return x==null?d:x}catch(e){return d}};
+  const S=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const norm=x=>String(typeof x==='string'?x:(x&&x.name)||'').trim();
+  function sync(){
+    let a=J(KEY,[]); if(!Array.isArray(a))a=[];
+    a=a.map(x=>typeof x==='string'?{name:x,visible:true}:x).filter(x=>x&&norm(x));
+    const blocked=new Set((Array.isArray(J(BLOCK,[]))?J(BLOCK,[]):[]).map(norm));
+    const seen=new Set(a.map(norm));
+    const add=n=>{n=norm(n);if(n&&!seen.has(n)&&!blocked.has(n)){a.push({name:n,visible:true});seen.add(n)}};
+    const tests=J('tgy_tests',[]); if(Array.isArray(tests))tests.forEach(x=>add(x&&x.exam));
+    const notes=J('tgy_pdf_notes',[]); if(Array.isArray(notes))notes.forEach(x=>add(x&&(x.exam||x.folder)));
+    ['tgy_pricing','tgy_offers','tgy_access_pricing','tgy_bundle_pricing'].forEach(k=>{const q=J(k,[]);if(Array.isArray(q))q.forEach(x=>add(x&&x.exam))});
+    const st=J('tgy_exam_structure',{}); if(st&&st.exams)Object.keys(st.exams).forEach(add);
+    S(KEY,a); return a;
+  }
+  function render(){
+    const box=document.getElementById('tgyHomeExamGrid'); if(!box)return;
+    const a=sync().filter(x=>x.visible!==false);
+    box.innerHTML=a.length?a.map(x=>`<div class="tgy-exam-card"><img class="tgy-exam-logo" src="${E(x.logo||'talent-and-gyan-logo.png')}"><div class="tgy-exam-name">${E(x.name)}</div><div class="tgy-exam-sub">Mock Test + PDF Notes</div><button class="tgy-view-btn" onclick="openExam(${JSON.stringify(x.name)})">View Tests</button></div>`).join(''):'<div class="tgy-exam-card" style="grid-column:1/-1"><div class="tgy-exam-name">अभी कोई परीक्षा उपलब्ध नहीं है</div></div>';
+  }
+  document.addEventListener('DOMContentLoaded',()=>{sync();render();setTimeout(render,400)});
+  window.addEventListener('storage',e=>{if(['tgy_exams','tgy_tests','tgy_pdf_notes','tgy_pricing','tgy_offers','tgy_access_pricing','tgy_bundle_pricing'].includes(e.key))render()});
+  window.tgySyncExamMaster=sync;
 })();
 </script>
-
 </body></html>

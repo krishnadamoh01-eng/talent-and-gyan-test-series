@@ -1833,4 +1833,36 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
+
+<script id="tgy-v9-admin-exam-master">
+(function(){
+  const KEY='tgy_exams', BLOCK='tgy_exam_master_deleted';
+  const J=(k,d)=>{try{const x=JSON.parse(localStorage.getItem(k)||'null');return x==null?d:x}catch(e){return d}};
+  const S=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const nameOf=x=>String(typeof x==='string'?x:(x&&x.name)||'').trim();
+  const E=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  function read(){let a=J(KEY,[]);return (Array.isArray(a)?a:[]).map(x=>typeof x==='string'?{name:x,visible:true}:x).filter(x=>x&&nameOf(x))}
+  function write(a){S(KEY,a)}
+  function recover(){
+    let a=read(); const blocked=new Set((Array.isArray(J(BLOCK,[]))?J(BLOCK,[]):[]).map(nameOf)); const seen=new Set(a.map(nameOf));
+    const add=n=>{n=String(n||'').trim();if(n&&!seen.has(n)&&!blocked.has(n)){a.push({name:n,visible:true});seen.add(n)}};
+    const tests=J('tgy_tests',[]);if(Array.isArray(tests))tests.forEach(x=>add(x&&x.exam));
+    const notes=J('tgy_pdf_notes',[]);if(Array.isArray(notes))notes.forEach(x=>add(x&&(x.exam||x.folder)));
+    ['tgy_pricing','tgy_offers','tgy_access_pricing','tgy_bundle_pricing'].forEach(k=>{const q=J(k,[]);if(Array.isArray(q))q.forEach(x=>add(x&&x.exam))});
+    const st=J('tgy_exam_structure',{});if(st&&st.exams)Object.keys(st.exams).forEach(add);
+    write(a);return a;
+  }
+  function render(){
+    const b=document.getElementById('examMasterList');if(!b)return;const a=recover();
+    b.innerHTML=a.length?a.map((x,i)=>`<div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0"><img src="${E(x.logo||'talent-and-gyan-logo.png')}" style="width:68px;height:68px;object-fit:contain;border:1px solid #e1e8ef;border-radius:8px;background:#fff"><div style="min-width:240px;flex:1"><b style="font-size:17px">${E(nameOf(x))}</b><div>${x.visible===false?'🙈 Student Site पर Hidden':'👁️ Student Site पर Active'}</div></div><button class="btn" onclick="tgyV9EditExam(${i})">✏️ नाम / Logo Edit</button><button class="btn" onclick="tgyV9ToggleExam(${i})">${x.visible===false?'👁️ Show':'🙈 Hide'}</button><button class="btn danger" onclick="tgyV9DeleteExam(${i})">🗑️ Delete</button></div>`).join(''):'<div class="card"><p>अभी कोई परीक्षा सेव नहीं है।</p></div>';
+  }
+  function refresh(preferred=''){['mtExam','prExam','ofExam','noteExam','apExam','bqmExam','tgyBundleExam'].forEach(id=>{const el=document.getElementById(id);if(!el)return;const old=preferred||el.value||'';const a=recover().filter(x=>x.visible!==false||nameOf(x)===old);el.innerHTML='<option value="">— परीक्षा चुनें —</option>'+a.map(x=>`<option value="${E(nameOf(x))}">${E(nameOf(x))}</option>`).join('');if(old&&a.some(x=>nameOf(x)===old))el.value=old});try{if(typeof populateExamTests==='function'){populateExamTests('prExam','prTest');populateExamTests('ofExam','ofTest')}}catch(e){}}
+  window.tgyV9EditExam=function(i){const a=recover(),x=a[i];if(!x)return;window.editingExamIndex=i;const n=document.getElementById('examNewName'),v=document.getElementById('examNewVisible'),p=document.getElementById('examLogoPreview');if(n)n.value=nameOf(x);if(v)v.value=x.visible===false?'false':'true';if(p)p.innerHTML=x.logo?`<img src="${E(x.logo)}" style="width:70px;height:70px;object-fit:contain;border:1px solid #ddd;border-radius:8px">`:'<span class="muted">कोई Logo नहीं</span>';document.getElementById('examManagement')?.scrollIntoView({behavior:'smooth',block:'start'})};
+  window.tgyV9ToggleExam=function(i){const a=recover(),x=a[i];if(!x)return;x.visible=x.visible===false;write(a);render();refresh(nameOf(x));alert(x.visible?'👁️ परीक्षा Student Site पर Show है।':'🙈 परीक्षा Student Site पर Hide है।')};
+  window.tgyV9DeleteExam=function(i){const a=recover(),x=a[i];if(!x)return;const n=nameOf(x);if(!confirm(`"${n}" को परीक्षा Management से हटाएँ?\n\nMock Test/PDF data delete नहीं होगा।`))return;a.splice(i,1);let blocked=Array.isArray(J(BLOCK,[]))?J(BLOCK,[]):[];if(!blocked.includes(n))blocked.push(n);S(BLOCK,blocked);write(a);render();refresh('');alert('🗑️ परीक्षा सूची से हटा दी गई है। बाकी data सुरक्षित है।')};
+  window.tgySaveExamMasterFixed=function(){const inp=document.getElementById('examNewName'),name=String(inp&&inp.value||'').trim();if(!name){inp?.focus();alert('परीक्षा का नाम लिखें।');return}let a=recover(),idx=Number.isInteger(window.editingExamIndex)?window.editingExamIndex:-1;if(idx<0||idx>=a.length)idx=-1;const dup=a.findIndex((x,i)=>i!==idx&&nameOf(x).toLowerCase()===name.toLowerCase());if(dup>=0)return alert('यह परीक्षा पहले से मौजूद है।');const old=idx>=0?a[idx]:{};const visible=document.getElementById('examNewVisible')?.value!=='false';const file=document.getElementById('examNewLogo')?.files?.[0];const finish=logo=>{const obj={...old,name,visible};if(logo)obj.logo=logo;if(idx>=0)a[idx]=obj;else a.push(obj);write(a);let blocked=Array.isArray(J(BLOCK,[]))?J(BLOCK,[]):[];blocked=blocked.filter(x=>x!==name);S(BLOCK,blocked);window.editingExamIndex=-1;if(inp)inp.value='';const f=document.getElementById('examNewLogo');if(f)f.value='';const p=document.getElementById('examLogoPreview');if(p)p.innerHTML='';render();refresh(name);alert(idx>=0?'✅ परीक्षा Update हो गई।':'✅ नई परीक्षा Save हो गई।')};if(file){const r=new FileReader();r.onload=()=>finish(r.result);r.onerror=()=>alert('Logo पढ़ा नहीं जा सका।');r.readAsDataURL(file)}else finish(old.logo||null)};
+  window.saveExamMaster=window.tgySaveExamMasterFixed;window.renderExamMaster=render;window.getExamMaster=recover;window.refreshAllExamDropdowns=refresh;window.editExamMaster=window.tgyV9EditExam;window.deleteExamMaster=window.tgyV9DeleteExam;
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{render();refresh('')},150));window.addEventListener('storage',e=>{if(['tgy_exams','tgy_tests','tgy_pdf_notes','tgy_pricing','tgy_offers','tgy_access_pricing','tgy_exam_structure','tgy_bundle_pricing'].includes(e.key)){render();refresh('')}});
+})();
+</script>
 </body></html>
