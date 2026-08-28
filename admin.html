@@ -74,7 +74,7 @@ function checkAdmin(){
 }
 </script>
 <header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
-<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('pricing',this)">💰 Pricing</button><button onclick="show('offers',this)">🎟️ Offers</button><button onclick="show('examManagement',this)">📋 परीक्षा प्रबंधन</button>
+<button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('pricing',this)">💰 Pricing</button><button onclick="show('offers',this)">🎟️ Offers</button><button onclick="show('examManagement',this)">📋 परीक्षा प्रबंधन</button><button onclick="show('examCatalog',this)">📚 नई परीक्षा सूची</button>
 <button onclick="show('accessPricing',this)">📁 Access Pricing</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 
@@ -263,6 +263,23 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
   <p class="muted">यहाँ से जो परीक्षा आप Add करेंगे, वही Student Site और बाकी सभी sections में परीक्षा की मुख्य सूची रहेगी। इसी जगह से नाम Edit, Logo बदलें और Delete करें। Test/Question/PDF का data अलग sections में रहेगा।</p>
   <div id="examMasterList"></div>
 </div>
+</section>
+
+
+<section id="examCatalog" class="sec">
+<h1>📚 नई परीक्षा सूची</h1>
+<div class="card">
+  <h3>➕ नई परीक्षा जोड़ें</h3>
+  <div class="row">
+    <div><label>परीक्षा का नाम</label><input id="catalogExamName" placeholder="जैसे MP पटवारी"></div>
+    <div><label>🖼️ परीक्षा का Logo</label><input id="catalogExamLogo" type="file" accept="image/*" style="width:100%;padding:9px"></div>
+  </div>
+  <div id="catalogLogoPreview" style="margin:8px 0"></div>
+  <button class="btn orange" onclick="window.catalogSaveExam()">💾 परीक्षा जोड़ें / Save</button>
+  <button class="btn gray" onclick="window.catalogClearForm()">↩️ Form साफ करें</button>
+  <p class="muted">नई परीक्षा नीचे इसी सूची में दिखाई देगी। वहीं से नाम, Logo, Show/Hide और Delete किया जा सकता है।</p>
+</div>
+<div class="card"><h3>📋 सभी परीक्षाएँ</h3><div id="catalogExamList"></div></div>
 </section>
 
 <section id="accessPricing" class="sec">
@@ -2026,6 +2043,35 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.tgyV11Edit=edit;window.tgyV11Logo=logo;window.tgyV11Toggle=toggle;window.tgyV11Delete=del;window.saveExamMaster=save;window.renderExamMaster=render;window.refreshAllExamDropdowns=refresh;
   document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{render();refresh('')},250));
   window.addEventListener('storage',e=>{if(e.key===KEY){render();refresh('')}});
+})();
+</script>
+
+
+<script id="tgy-exam-catalog-v1">
+(function(){
+ const KEY='tgy_exam_catalog_v1';
+ const q=id=>document.getElementById(id);
+ const read=()=>{try{let a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}};
+ const write=a=>localStorage.setItem(KEY,JSON.stringify(a));
+ const nm=x=>String(x?.name||x||'').trim();
+ const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+ let editIndex=-1;
+ function render(){const box=q('catalogExamList');if(!box)return;const a=read();if(!a.length){box.innerHTML='<p class="muted">अभी कोई नई परीक्षा नहीं है। ऊपर से परीक्षा जोड़ें।</p>';return;}box.innerHTML=a.map((x,i)=>`<div class="card" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0"><img src="${esc(x.logo||'talent-and-gyan-logo.png')}" onerror="this.src='talent-and-gyan-logo.png'" style="width:72px;height:72px;object-fit:contain;border:1px solid #ddd;border-radius:8px;background:#fff"><div style="flex:1;min-width:220px"><div style="font-size:18px;font-weight:700">${esc(nm(x))}</div><div class="muted">${x.visible===false?'🙈 Hidden':'👁️ Student Site पर दिखाई देगा'}</div></div><button class="btn" onclick="catalogEdit(${i})">✏️ Edit नाम</button><button class="btn" onclick="catalogLogo(${i})">🖼️ Logo बदलें</button><button class="btn" onclick="catalogToggle(${i})">${x.visible===false?'👁️ Show':'🙈 Hide'}</button><button class="btn danger" onclick="catalogDelete(${i})">🗑️ Delete</button></div>`).join('');}
+ function syncToLegacy(){
+   const a=read();
+   // Keep the new catalog as the authoritative exam list for existing Mock/PDF dropdowns.
+   localStorage.setItem('tgy_exams',JSON.stringify(a));
+   ['mtExam','prExam','ofExam','noteExam','apExam','bqmExam','tgyBundleExam'].forEach(id=>{const el=q(id);if(!el)return;const old=el.value;el.innerHTML='<option value="">— परीक्षा चुनें —</option>'+a.filter(x=>x.visible!==false).map(x=>`<option value="${esc(nm(x))}">${esc(nm(x))}</option>`).join('');if(old)el.value=old;});
+ }
+ function clear(){editIndex=-1;if(q('catalogExamName'))q('catalogExamName').value='';if(q('catalogExamLogo'))q('catalogExamLogo').value='';if(q('catalogLogoPreview'))q('catalogLogoPreview').innerHTML='';}
+ function edit(i){const a=read(),x=a[i];if(!x)return;editIndex=i;q('catalogExamName').value=nm(x);q('catalogLogoPreview').innerHTML=x.logo?`<img src="${esc(x.logo)}" style="width:72px;height:72px;object-fit:contain;border:1px solid #ddd;border-radius:8px">`:'<span class="muted">Logo नहीं है</span>';q('examCatalog')?.scrollIntoView({behavior:'smooth',block:'start'});}
+ function logo(i){edit(i);q('catalogExamLogo')?.click();}
+ function toggle(i){const a=read();a[i].visible=a[i].visible===false;write(a);syncToLegacy();render();}
+ function del(i){const a=read();if(!a[i])return;if(!confirm('"'+nm(a[i])+'" को नई परीक्षा सूची से हटाएँ?\n\nइससे परीक्षा की master entry हटेगी।'))return;a.splice(i,1);write(a);syncToLegacy();render();}
+ function save(){const n=String(q('catalogExamName')?.value||'').trim();if(!n){alert('परीक्षा का नाम लिखें।');q('catalogExamName')?.focus();return;}const a=read();const dup=a.findIndex((x,i)=>i!==editIndex&&nm(x).toLowerCase()===n.toLowerCase());if(dup>=0){alert('यह परीक्षा पहले से मौजूद है।');return;}const old=editIndex>=0?a[editIndex]:{};const file=q('catalogExamLogo')?.files?.[0];const finish=data=>{const obj={...old,name:n,visible:old.visible!==false,logo:data||old.logo||''};if(editIndex>=0)a[editIndex]=obj;else a.push(obj);write(a);syncToLegacy();render();clear();alert(editIndex>=0?'✅ परीक्षा Update हो गई।':'✅ नई परीक्षा जोड़ दी गई।');};if(file){const r=new FileReader();r.onload=()=>finish(r.result);r.onerror=()=>alert('Logo पढ़ा नहीं जा सका।');r.readAsDataURL(file);}else finish('');}
+ window.catalogSaveExam=save;window.catalogClearForm=clear;window.catalogEdit=edit;window.catalogLogo=logo;window.catalogToggle=toggle;window.catalogDelete=del;
+ document.addEventListener('DOMContentLoaded',()=>{render();syncToLegacy();});
+ window.addEventListener('storage',e=>{if(e.key===KEY){render();syncToLegacy();}});
 })();
 </script>
 

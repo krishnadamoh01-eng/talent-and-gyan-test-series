@@ -1355,4 +1355,18 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
   window.tgySyncExamMaster=sync;
 })();
 </script>
+
+<script id="tgy-student-exam-catalog-v1">
+(function(){
+ const KEY='tgy_exam_catalog_v1';
+ const J=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+ const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+ function exams(){return J(KEY).filter(x=>x&&x.name&&x.visible!==false);}
+ function render(){const box=document.getElementById('tgyHomeExamGrid');if(!box)return;const a=exams();box.innerHTML=a.length?a.map(x=>`<div class="tgy-exam-card"><img class="tgy-exam-logo" src="${esc(x.logo||'talent-and-gyan-logo.png')}" onerror="this.src='talent-and-gyan-logo.png'"><div class="tgy-exam-name">${esc(x.name)}</div><div class="tgy-exam-sub">Mock Test + PDF Notes</div><button class="tgy-view-btn" onclick="openExam(${JSON.stringify(x.name)})">View Tests</button></div>`).join(''):'<div class="tgy-exam-card" style="grid-column:1/-1"><div class="tgy-exam-name">अभी कोई परीक्षा उपलब्ध नहीं है</div></div>';}
+ document.addEventListener('DOMContentLoaded',()=>setTimeout(render,350));
+ window.addEventListener('storage',e=>{if(e.key===KEY)render();});
+ window.tgyCatalogExams=exams;
+})();
+</script>
+
 </body></html>
