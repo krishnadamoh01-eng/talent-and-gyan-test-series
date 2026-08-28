@@ -232,6 +232,11 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
 
 <section id="examManagement" class="sec">
 <h1>📋 परीक्षा प्रबंधन</h1>
+<div class="card" style="border:2px solid #d9534f;background:#fff8f8">
+  <h3>🧹 पुरानी परीक्षा व्यवस्था साफ करें</h3>
+  <p class="muted">पुरानी परीक्षाएँ, Mock Tests, PDF Notes और उनके परीक्षा-संबंधी Pricing/Folder records साफ होंगे। Users/Payments जैसे दूसरे data को नहीं छेड़ा जाएगा। इसके बाद नई परीक्षा यहीं से बनाइए।</p>
+  <button class="btn danger" onclick="window.tgyResetExamSystem()">🧹 पुरानी परीक्षाएँ व Test/PDF साफ करें</button>
+</div>
 <div class="card">
   <h3>➕ नई परीक्षा जोड़ें</h3>
   <div class="row">
@@ -717,15 +722,9 @@ function mtSaveStore(x){
 function mtEsc(v){return typeof esc==="function"?esc(v):String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 
 function mtEnsureDefaults(){
-  let arr=[];
-  try{arr=JSON.parse(localStorage.getItem("tgy_tests")||"[]")}catch(e){arr=[]}
-  if(!Array.isArray(arr)||!arr.length){
-    arr=[
-      {name:"MP पटवारी Mock Test 01",exam:"MP पटवारी",time:60,published:true,questions:[]},
-      {name:"MPPSC Mock Test 01",exam:"MPPSC",time:60,published:true,questions:[]}
-    ];
-    localStorage.setItem("tgy_tests",JSON.stringify(arr));
-  }
+  // Intentionally empty: exams/tests are created only by Admin.
+  // Do not recreate legacy demo exams after the clean reset.
+  return;
 }
 function mtInit(){
  mtEnsureDefaults();
@@ -1102,8 +1101,7 @@ function getExamMaster(){
    const old=a.find(x=>(typeof x==="string"?x:x.name)===name);
    return typeof old==="object"?old:{name,visible:true};
  });
- if(!result.length) result=["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant"].map(name=>({name,visible:true}));
- setAdminList("tgy_exams",result);
+  setAdminList("tgy_exams",result);
  return result;
 }
 function getAdminTestsFlat(){
@@ -1866,6 +1864,22 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
+<script id="tgy-clean-exam-system">
+(function(){
+  const CLEAN_KEYS=['tgy_exams','tgy_tests','tgy_pdf_notes','tgy_exam_structure','tgy_pricing','tgy_offers','tgy_access_pricing','tgy_bundle_pricing','tgy_pdf_folder_pricing','tgy_pdf_folder_meta'];
+  window.tgyResetExamSystem=function(){
+    if(!confirm('पुरानी सभी परीक्षाएँ, Mock Tests और PDF Notes हटाकर नई परीक्षा व्यवस्था शुरू करें?\n\nUsers/Payments नहीं हटेंगे।')) return;
+    CLEAN_KEYS.forEach(k=>localStorage.removeItem(k));
+    window.editingExamIndex=-1;
+    try{ if(typeof clearExamForm==='function') clearExamForm(); }catch(e){}
+    try{ if(typeof renderExamMaster==='function') renderExamMaster(); }catch(e){}
+    try{ if(typeof refreshAllExamDropdowns==='function') refreshAllExamDropdowns(''); }catch(e){}
+    try{ if(typeof mtInit==='function') mtInit(); }catch(e){}
+    try{ if(typeof renderAdminNotes==='function') renderAdminNotes(); }catch(e){}
+    alert('✅ पुरानी परीक्षा व्यवस्था साफ हो गई है। अब नई परीक्षाएँ यहीं से जोड़ें।');
+  };
+})();
+</script>
 <script id="tgy-v10-authoritative-exam-manager">
 /* V10: One authoritative Exam Management list. Recover existing exam names from every legacy store. */
 (function(){

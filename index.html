@@ -256,15 +256,7 @@ function esc(v){
 }
 </script>
 <script>
-const defaultTests=[
-{name:"MP Patwari Mock Test - 01",time:60,questions:[
-["मध्य प्रदेश की राजधानी क्या है?",["इंदौर","भोपाल","उज्जैन","जबलपुर"],1,"भोपाल मध्य प्रदेश की राजधानी है।"],
-["भारत का संविधान कब लागू हुआ?",["15 अगस्त 1947","26 जनवरी 1950","26 नवंबर 1949","2 अक्टूबर 1950"],1,"भारत का संविधान 26 जनवरी 1950 को लागू हुआ।"],
-["2 + 8 × 3 = ?",["30","26","24","18"],1,"गुणा पहले होगा: 8×3=24, फिर 2 जोड़ने पर 26।"]]},
-{name:"MP Patwari Practice Set - 02",time:30,questions:[
-["सांची स्तूप किस जिले में स्थित है?",["भोपाल","रायसेन","सीहोर","विदिशा"],1,"सांची स्तूप रायसेन जिले में स्थित है।"],
-["'कमल' का पर्यायवाची कौन सा है?",["पंकज","पवन","पर्वत","पल्लव"],0,"पंकज कमल का पर्यायवाची है।"]]}
-];
+const defaultTests=[];
 let tests=JSON.parse(localStorage.getItem("tgy_tests")||"[]")||[];
 tests=tests.map(t=>({...t,exam:t.exam||"MP पटवारी",visible:t.visible!==false,pricing:t.pricing||{oneTest:{mrp:0,offer:0},plans:{}}}));
 let results=JSON.parse(localStorage.getItem("tgy_results")||"[]");
@@ -276,7 +268,7 @@ const demoQuestions = [
 ["सांची स्तूप किस जिले में है?",["भोपाल","रायसेन","सीहोर","विदिशा"],1,"सांची रायसेन जिले में है।"],
 ["'कमल' का पर्यायवाची है?",["पंकज","पवन","पर्वत","पल्लव"],0,"पंकज कमल का पर्यायवाची है।"]
 ];
-const examDemo = ["MP पटवारी","MPPSC","MP पुलिस","ग्रुप 4","Hospital Assistant","अन्य परीक्षाएँ"];
+const examDemo = [];
 function getFolderVisibilityStudent(exam){
  try{
    const a=JSON.parse(localStorage.getItem("tgy_exams")||"[]");
