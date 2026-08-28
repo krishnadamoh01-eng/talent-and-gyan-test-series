@@ -83,8 +83,8 @@ function checkAdmin(){
 <div class="card">
 <p>यहाँ परीक्षा एक बार जोड़ें। यही Common Exam List Test, Questions, PDF Notes, Pricing और Offers में उपयोग होगी।</p>
 <div class="row">
-<div><label>नई परीक्षा का नाम</label><input id="examNewName" placeholder="जैसे MP शिक्षक भर्ती"></div>
-<div><label>स्थिति</label><select id="examNewVisible"><option value="true">Student Site पर दिखाएँ</option><option value="false">Hide करें</option></select></div>
+<div><label>नई परीक्षा का नाम</label><input id="legacyExamNewName" placeholder="जैसे MP शिक्षक भर्ती"></div>
+<div><label>स्थिति</label><select id="legacyExamNewVisible"><option value="true">Student Site पर दिखाएँ</option><option value="false">Hide करें</option></select></div>
 </div>
 <button class="btn orange" onclick="saveExamMaster()">💾 परीक्षा Save करें</button>
 </div>
@@ -768,20 +768,31 @@ function mtNegativeChanged(){
  const yes=document.getElementById("mtNegative")?.value==="yes";
  const w=document.getElementById("mtNegativeValueWrap");if(w)w.style.display=yes?"block":"none";
 }
+function mtResetEntryForm(){
+  const ids=['mtName','mtTime','mtBulkText','mtNegativeValue'];
+  ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value=id==='mtTime'?'60':(id==='mtNegativeValue'?'0.25':'');});
+  const neg=document.getElementById('mtNegative');if(neg)neg.value='no';
+  const pdf=document.getElementById('mtPdf');if(pdf)pdf.value='';
+  const pv=document.getElementById('mtPreview');if(pv)pv.innerHTML='';
+  const st=document.getElementById('mtStatus');if(st)st.textContent='';
+  mtPreview=[];mtNegativeChanged();mtRenderQuestions();
+}
 function mtFinalSave(){
- const e=document.getElementById("mtExam")?.value,n=(document.getElementById("mtName")?.value||"").trim();
- const time=Number(document.getElementById("mtTime")?.value)||60,negative=document.getElementById("mtNegative")?.value==="yes";
- const negativeMarks=negative?Number(document.getElementById("mtNegativeValue")?.value)||0:0;
- if(!e){alert("पहले परीक्षा चुनें।");return}if(!n){alert("Test का नाम लिखें।");return}
- if(negative&&negativeMarks<=0){alert("Negative Marks की value डालें।");return}
+ const e=document.getElementById('mtExam')?.value,n=(document.getElementById('mtName')?.value||'').trim();
+ const time=Number(document.getElementById('mtTime')?.value)||60,negative=document.getElementById('mtNegative')?.value==='yes';
+ const negativeMarks=negative?Number(document.getElementById('mtNegativeValue')?.value)||0:0;
+ if(!e){alert('पहले परीक्षा चुनें।');return}if(!n){alert('Test का नाम लिखें।');return}
+ if(negative&&negativeMarks<=0){alert('Negative Marks की value डालें।');return}
  const d=mtStore();d.exams=d.exams||{};d.exams[e]=d.exams[e]||{tests:{}};
  const obj=d.exams[e].tests[n]||{name:n,exam:e,questions:[],published:true,visible:true};
  obj.name=n;obj.exam=e;obj.time=time;obj.negativeMarking=negative;obj.negativeMarks=negativeMarks;obj.questions=obj.questions||[];
  const base=obj.questions.length;
  (mtPreview||[]).forEach((x,i)=>obj.questions.push({q:x.q,o:x.o,answer:x.answer,ex:x.ex,number:base+i+1}));
- mtPreview=[];d.exams[e].tests[n]=obj;mtSaveStore(d);mtRenderAll();mtRenderQuestions();mtRenderPreview();
- document.getElementById("mtStatus").innerHTML="✅ Test और Questions Save हो गए।";
+ d.exams[e].tests[n]=obj;mtSaveStore(d);mtRenderAll();
+ alert(`✅ ${n} पूरा Test Save हो गया। कुल Questions: ${obj.questions.length}`);
+ mtResetEntryForm();
 }
+
 function mtParse(raw){
  let text=String(raw||"").replace(/\u00a0/g," ").replace(/\r/g,"\n");
  // Preserve line boundaries enough for OCR/text PDFs but also handle one-line PDFs.
@@ -995,34 +1006,54 @@ function mtSelectTest(e,t){
 function mtOpenTestEditor(e,t){
  e=decodeURIComponent(e);t=decodeURIComponent(t);
  const d=mtStore(),obj=d.exams?.[e]?.tests?.[t];
- if(!obj){alert("यह Test नहीं मिला।");return;}
- document.getElementById("mtExam").value=e;
- mtLoadTests();
- document.getElementById("mtName").value=t;
- mtLoadSelected();
-
+ if(!obj){alert('यह Test नहीं मिला।');return;}
  const qs=(obj.questions||[]).map(mtNormQuestion);
- const mb=document.getElementById("mb"),modal=document.getElementById("modal");
- mb.innerHTML=`<h2>📋 ${mtEsc(t)} — Questions</h2>
+ const mb=document.getElementById('mb'),modal=document.getElementById('modal');
+ mb.innerHTML=`<h2>✏️ ${mtEsc(t)} — Test Editor</h2>
  <p><b>परीक्षा:</b> ${mtEsc(e)} &nbsp; | &nbsp; <b>कुल Questions:</b> ${qs.length} &nbsp; | &nbsp; <b>समय:</b> ${obj.time||60} मिनट</p>
- <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
-   <button class="btn orange" onclick="closeM();mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}');document.getElementById('mtQuestions').scrollIntoView({behavior:'smooth',block:'start'})">⬇️ Questions पर जाएँ</button>
-   <button class="btn gray" onclick="closeM()">✖ बंद करें</button>
- </div>
- <div style="max-height:65vh;overflow:auto">
- ${qs.length ? qs.map((x,i)=>`<div class="qrow" style="margin-bottom:12px">
-   <div><b>प्रश्न ${i+1}.</b> ${mtEsc(x.q)}</div>
-   <div style="margin:8px 0">(A) ${mtEsc(x.o[0])}<br>(B) ${mtEsc(x.o[1])}<br>(C) ${mtEsc(x.o[2])}<br>(D) ${mtEsc(x.o[3])}</div>
-   <div><b>सही उत्तर:</b> ${mtEsc(x.answer||"-")}</div>
-   ${x.ex?`<div><b>जानकारी/Explanation:</b> ${mtEsc(x.ex)}</div>`:""}
-   <div style="margin-top:8px">
-     <button class="btn" onclick="closeM();mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}');setTimeout(()=>mtEditQuestion(${i}),50)">✏️ Edit</button>
-     <button class="btn danger" onclick="closeM();mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}');setTimeout(()=>mtDeleteQuestion(${i}),50)">🗑️ Delete</button>
+ <div class="card" style="margin:10px 0;background:#f7f9fc">
+   <h3>➕ Questions जोड़ें</h3>
+   <div class="row">
+     <div><label>📝 Bulk Questions</label><textarea id="editBulkText" rows="7" placeholder="प्रश्न 1. ...\n(A) ...\n(B) ...\n(C) ...\n(D) ...\nसही उत्तर: (A)\nजानकारी: ..."></textarea></div>
+     <div><label>📄 PDF से Questions</label><input id="editBulkPdf" type="file" accept=".pdf,application/pdf" style="width:100%;padding:9px"><button class="btn orange" style="margin-top:7px" onclick="mtEditorPdfParse()">📄 PDF पढ़ें</button></div>
    </div>
- </div>`).join("") : `<div class="card"><h3>अभी इस Test में कोई Question नहीं है।</h3><p>नीचे PDF/Bulk Text से Questions जोड़ सकते हैं।</p></div>`}
- </div>`;
- modal.style.display="flex";
+   <div id="editBulkStatus" class="muted" style="margin:8px 0"></div>
+   <button class="btn" onclick="mtEditorBulkAdd('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">➕ Bulk Questions Add करें</button>
+   <button class="btn" onclick="mtEditorManualAdd('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">✏️ Manual Question Add करें</button>
+ </div>
+ <div class="card" style="margin:10px 0">
+   <h3>📋 Saved Questions</h3>
+   <div id="editQuestionsList" style="max-height:55vh;overflow:auto">
+   ${qs.length ? qs.map((x,i)=>`<div class="qrow" style="margin-bottom:12px">
+     <div><b>प्रश्न ${i+1}.</b> ${mtEsc(x.q)}</div>
+     <div style="margin:8px 0">(A) ${mtEsc(x.o[0])}<br>(B) ${mtEsc(x.o[1])}<br>(C) ${mtEsc(x.o[2])}<br>(D) ${mtEsc(x.o[3])}</div>
+     <div><b>सही उत्तर:</b> ${mtEsc(x.answer||'-')}</div>${x.ex?`<div><b>जानकारी/Explanation:</b> ${mtEsc(x.ex)}</div>`:''}
+     <div style="margin-top:8px"><button class="btn" onclick="mtEditorEditQuestion('${encodeURIComponent(e)}','${encodeURIComponent(t)}',${i})">✏️ Edit</button>
+     <button class="btn danger" onclick="mtEditorDeleteQuestion('${encodeURIComponent(e)}','${encodeURIComponent(t)}',${i})">🗑️ Delete</button></div>
+   </div>`).join('') : '<p>अभी कोई Question नहीं है।</p>'}
+   </div>
+ </div>
+ <button class="btn gray" onclick="closeM()">✖ बंद करें</button>`;
+ modal.style.display='flex';
+ window.mtEditorExam=e;window.mtEditorTest=t;
 }
+window.mtEditorBulkAdd=function(e,t){
+ e=decodeURIComponent(e);t=decodeURIComponent(t);const raw=document.getElementById('editBulkText')?.value||'';if(!raw.trim())return alert('पहले Bulk Questions डालें।');
+ const qs=mtParse(raw);if(!qs.length)return alert('Question format पहचान में नहीं आया।');
+ const d=mtStore(),obj=d.exams?.[e]?.tests?.[t];if(!obj)return;
+ obj.questions=obj.questions||[];const base=obj.questions.length;qs.forEach((x,i)=>obj.questions.push({q:x.q,o:x.o,answer:x.answer,ex:x.ex,number:base+i+1}));
+ mtSaveStore(d);mtRenderAll();alert(`✅ ${qs.length} Questions इसी Test में Add हो गए।`);mtOpenTestEditor(encodeURIComponent(e),encodeURIComponent(t));
+};
+window.mtEditorManualAdd=function(e,t){
+ e=decodeURIComponent(e);t=decodeURIComponent(t);const q=prompt('Question:');if(q===null||!q.trim())return;
+ const o=[prompt('Option A:'),prompt('Option B:'),prompt('Option C:'),prompt('Option D:')];if(o.some(v=>v===null||!String(v).trim()))return alert('चारों Options भरें।');
+ const ans=(prompt('सही उत्तर A/B/C/D:','A')||'A').trim().toUpperCase();if(!/^[ABCD]$/.test(ans))return alert('सही उत्तर A/B/C/D में दें।');
+ const ex=prompt('जानकारी / Explanation:','')||'';const d=mtStore(),obj=d.exams?.[e]?.tests?.[t];if(!obj)return;obj.questions=obj.questions||[];obj.questions.push({q:q.trim(),o:o.map(v=>String(v).trim()),answer:ans,ex,number:obj.questions.length+1});mtSaveStore(d);mtRenderAll();alert('✅ Question इसी Test में Add हो गया।');mtOpenTestEditor(encodeURIComponent(e),encodeURIComponent(t));
+};
+window.mtEditorEditQuestion=function(e,t,i){e=decodeURIComponent(e);t=decodeURIComponent(t);const d=mtStore(),obj=d.exams?.[e]?.tests?.[t],x=obj?.questions?.[i];if(!x)return;const n=mtNormQuestion(x,i);const q=prompt('Question:',n.q);if(q===null)return;const o=[prompt('Option A:',n.o[0]),prompt('Option B:',n.o[1]),prompt('Option C:',n.o[2]),prompt('Option D:',n.o[3])];if(o.some(v=>v===null))return;const ans=(prompt('सही उत्तर A/B/C/D:',n.answer||'A')||n.answer||'A').toUpperCase(),ex=prompt('जानकारी / Explanation:',n.ex||'');if(!/^[ABCD]$/.test(ans))return alert('सही उत्तर A/B/C/D में दें।');obj.questions[i]={q:q.trim(),o:o.map(v=>String(v).trim()),answer:ans,ex:ex??'',number:i+1};mtSaveStore(d);mtRenderAll();mtOpenTestEditor(encodeURIComponent(e),encodeURIComponent(t));};
+window.mtEditorDeleteQuestion=function(e,t,i){e=decodeURIComponent(e);t=decodeURIComponent(t);if(!confirm('यह Question हटाएँ?'))return;const d=mtStore(),obj=d.exams?.[e]?.tests?.[t];if(!obj?.questions?.[i])return;obj.questions.splice(i,1);obj.questions.forEach((q,n)=>q.number=n+1);mtSaveStore(d);mtRenderAll();mtOpenTestEditor(encodeURIComponent(e),encodeURIComponent(t));};
+window.mtEditorPdfParse=async function(){const f=document.getElementById('editBulkPdf')?.files?.[0],st=document.getElementById('editBulkStatus');if(!f)return alert('पहले PDF चुनें।');try{const pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';const pdf=await pdfjs.getDocument({data:await f.arrayBuffer()}).promise;let text='';for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i),c=await page.getTextContent();text+=c.items.map(x=>x.str).join(' ')+'\n';}document.getElementById('editBulkText').value=text;st.textContent='✅ PDF पढ़ ली गई है। अब Bulk Questions Add करें।';}catch(err){st.textContent='❌ PDF पढ़ने में समस्या: '+err.message;}};
+
 function mtRenameTest(e,t){
  e=decodeURIComponent(e);t=decodeURIComponent(t);const n=prompt("Test का नया नाम:",t);if(n===null)return;const name=n.trim();if(!name||name===t)return;
  const d=mtStore(),ts=d.exams?.[e]?.tests||{};if(ts[name])return alert("यह नाम पहले से मौजूद है।");
@@ -1449,15 +1480,15 @@ document.addEventListener("DOMContentLoaded",()=>{
    const tests=J('tgy_tests',[]); (Array.isArray(tests)?tests:[]).forEach(t=>{const n=String(t&&t.exam||'').trim();if(n&&!seen.has(n)){a.push({name:n,visible:true});seen.add(n)}});
    S('tgy_exams',a); return a;
  }
- function clearExamForm(){const n=document.getElementById('examNewName');if(n)n.value='';const v=document.getElementById('examNewVisible');if(v)v.value='true';const f=document.getElementById('examNewLogo');if(f)f.value='';const pr=document.getElementById('examLogoPreview');if(pr)pr.innerHTML='';window.editingExamIndex=-1;}
+ function clearExamForm(){const n=document.getElementById('examNewName');if(n)n.value='';const v=document.getElementById('examNewVisible');if(v)v.value='true';const f=document.querySelector('#examManagement #examNewLogo');if(f)f.value='';const pr=document.getElementById('examLogoPreview');if(pr)pr.innerHTML='';window.editingExamIndex=-1;}
  function previewExamLogo(){const f=document.getElementById('examNewLogo'),p=document.getElementById('examLogoPreview');if(!f||!p)return;p.innerHTML='';const file=f.files&&f.files[0];if(file){const r=new FileReader();r.onload=()=>p.innerHTML='<img src="'+E(r.result)+'" style="width:70px;height:70px;object-fit:contain;border:1px solid #ddd;border-radius:8px">';r.readAsDataURL(file)}}
  window.saveExamMaster=function(){
-   const inp=document.getElementById('examNewName'),name=(inp?.value||'').trim(); if(!name)return alert('परीक्षा का नाम लिखें।');
+   const inp=document.querySelector('#examManagement #examNewName'),name=(inp?.value||'').trim(); if(!name)return alert('परीक्षा का नाम लिखें।');
    let a=normalizeExamStore(), idx=Number.isInteger(window.editingExamIndex)?window.editingExamIndex:-1;
    if(idx<0) idx=a.findIndex(x=>(typeof x==='string'?x:x.name)===name);
    const old=idx>=0?(typeof a[idx]==='object'?a[idx]:{name:a[idx]}):null;
    if(idx<0 && a.some(x=>(typeof x==='string'?x:x.name)===name)) return alert('यह परीक्षा पहले से मौजूद है।');
-   const visible=document.getElementById('examNewVisible')?.value!=='false', file=document.getElementById('examNewLogo')?.files?.[0];
+   const visible=document.querySelector('#examManagement #examNewVisible')?.value!=='false', file=document.querySelector('#examManagement #examNewLogo')?.files?.[0];
    const finish=(logo)=>{
      const obj={...(old||{}),name,visible}; if(logo)obj.logo=logo;
      if(idx>=0)a[idx]=obj; else a.push(obj); S('tgy_exams',a);
@@ -1475,9 +1506,9 @@ document.addEventListener("DOMContentLoaded",()=>{
      <button class="btn danger" onclick="deleteExamMaster(${i})">🗑️ Delete</button>
    </div>`}).join('')||'<p>अभी कोई परीक्षा नहीं है। ऊपर से नई परीक्षा जोड़ें।</p>';
  };
- window.editExamMaster=function(i){const a=normalizeExamStore(),x=a[i];if(!x)return;const o=typeof x==='object'?x:{name:x};window.editingExamIndex=i;const n=document.getElementById('examNewName');if(n)n.value=o.name||'';const v=document.getElementById('examNewVisible');if(v)v.value=o.visible===false?'false':'true';const pr=document.getElementById('examLogoPreview');if(pr)pr.innerHTML=o.logo?'<img src="'+E(o.logo)+'" style="width:70px;height:70px;object-fit:contain;border:1px solid #ddd;border-radius:8px">':'<span class="muted">कोई Logo नहीं</span>';const f=document.getElementById('examNewLogo');if(f)f.value='';alert('✏️ परीक्षा Edit mode में आ गई है। नाम/Logo बदलकर Save करें।');};
+ window.editExamMaster=function(i){const a=normalizeExamStore(),x=a[i];if(!x)return;const o=typeof x==='object'?x:{name:x};window.editingExamIndex=i;const n=document.querySelector('#examManagement #examNewName');if(n)n.value=o.name||'';const v=document.querySelector('#examManagement #examNewVisible');if(v)v.value=o.visible===false?'false':'true';const pr=document.getElementById('examLogoPreview');if(pr)pr.innerHTML=o.logo?'<img src="'+E(o.logo)+'" style="width:70px;height:70px;object-fit:contain;border:1px solid #ddd;border-radius:8px">':'<span class="muted">कोई Logo नहीं</span>';const f=document.querySelector('#examManagement #examNewLogo');if(f)f.value='';alert('✏️ परीक्षा Edit mode में आ गई है। नाम/Logo बदलकर Save करें।');};
  window.deleteExamMaster=function(i){const a=normalizeExamStore(),x=a[i];if(!x)return;const name=typeof x==='object'?x.name:x;if(!confirm(`"${name}" को परीक्षा Management से हटाएँ?\n\nसिर्फ Exam List से हटेगा। Mock Test, Questions, PDF Notes, Payments या बाकी data delete नहीं होगा।`))return;a.splice(i,1);S('tgy_exams',a);if(typeof refreshAllExamDropdowns==='function')refreshAllExamDropdowns('');renderExamMaster();alert('🗑️ परीक्षा Exam Management से हट गई है। बाकी data सुरक्षित है।');};
- document.addEventListener('DOMContentLoaded',()=>{document.getElementById('examNewLogo')?.addEventListener('change',previewExamLogo);});
+ document.addEventListener('DOMContentLoaded',()=>{document.querySelector('#examManagement #examNewLogo')?.addEventListener('change',previewExamLogo);});
  // PDF folder metadata: folder-level pricing/logo/validity. Existing note records are never rewritten here.
  window.tgyPdfFolders=function(){const notes=J('tgy_pdf_notes',[]),meta=J('tgy_pdf_folder_meta',[]),names=[...new Set(notes.map(n=>(n.folder||n.exam||'अन्य Notes').trim()).filter(Boolean))];return names.map(folder=>({...((meta.find(x=>x.folder===folder))||{}),folder,count:notes.filter(n=>(n.folder||n.exam||'').trim()===folder).length}))};
  window.tgySavePdfFolder=function(folder){const key=encodeURIComponent(folder),mrp=Number(document.getElementById('tgy_fmrp_'+key)?.value)||0,offer=Number(document.getElementById('tgy_foffer_'+key)?.value)||0,days=Number(document.getElementById('tgy_fdays_'+key)?.value)||0,file=document.getElementById('tgy_flogo_'+key)?.files?.[0];if(mrp<0||offer<0||days<0)return alert('Price/Validity सही भरें।');let a=J('tgy_pdf_folder_meta',[]),i=a.findIndex(x=>x.folder===folder);const old=i>=0?a[i]:{folder};const done=(logo)=>{const o={...old,folder,mrp,offer,days};if(logo)o.logo=logo;if(i>=0)a[i]=o;else a.push(o);S('tgy_pdf_folder_meta',a);renderAdminNotes();alert('✅ Folder Pricing/Logo Save हो गया।')};if(file){const r=new FileReader();r.onload=()=>done(r.result);r.readAsDataURL(file)}else done(old.logo||null)};
