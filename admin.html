@@ -250,7 +250,7 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
       <div id="examLogoPreview" style="margin-top:8px"></div>
     </div>
   </div>
-  <button class="btn orange" onclick="saveExamMaster()">💾 नई परीक्षा Save करें</button>
+  <button class="btn orange" onclick="window.tgySaveExamMasterFixed()">💾 नई परीक्षा Save करें</button>
   <button class="btn gray" onclick="clearExamForm()">↩️ Form साफ करें</button>
 </div>
 <div class="card">
@@ -1475,28 +1475,55 @@ document.addEventListener("DOMContentLoaded",()=>{
  function addExamLogoField(){const inp=document.getElementById('examNewName');if(!inp||document.getElementById('examNewLogo'))return;const row=inp.closest('.row')||inp.parentElement?.parentElement;const d=document.createElement('div');d.innerHTML='<label>🖼️ Exam Logo Upload</label><input id="examNewLogo" type="file" accept="image/*" style="width:100%;padding:9px"><small class="muted">SSC, MPPSC, MP पटवारी आदि का Logo सेव करें।</small>';row?.appendChild(d)}
  function normalizeExamStore(){
    let a=J('tgy_exams',[]); if(!Array.isArray(a)) a=[];
-   const seen=new Set(a.map(x=>typeof x==='string'?x:(x&&x.name)||'').filter(Boolean));
-   // Bring any legacy exams used by old tests into the Exam Management list.
-   const tests=J('tgy_tests',[]); (Array.isArray(tests)?tests:[]).forEach(t=>{const n=String(t&&t.exam||'').trim();if(n&&!seen.has(n)){a.push({name:n,visible:true});seen.add(n)}});
+   const seen=new Set(a.map(x=>typeof x==='string'?x:(x&&x.name)||'').map(x=>String(x).trim()).filter(Boolean));
+   const add=(n)=>{n=String(n||'').trim();if(n&&!seen.has(n)){a.push({name:n,visible:true});seen.add(n)}};
+   // Bring every legacy exam name back into Exam Management without deleting any data.
+   const tests=J('tgy_tests',[]); (Array.isArray(tests)?tests:[]).forEach(t=>add(t&&t.exam));
+   const notes=J('tgy_pdf_notes',[]); (Array.isArray(notes)?notes:[]).forEach(n=>add(n&&(n.exam||n.folder)));
+   const prices=J('tgy_pricing',[]); (Array.isArray(prices)?prices:[]).forEach(x=>add(x&&x.exam));
+   const offers=J('tgy_offers',[]); (Array.isArray(offers)?offers:[]).forEach(x=>add(x&&x.exam));
+   const ap=J('tgy_access_pricing',[]); (Array.isArray(ap)?ap:[]).forEach(x=>add(x&&x.exam));
+   try{const d=J('tgy_exam_structure',{});Object.keys(d&&d.exams||{}).forEach(add)}catch(e){}
    S('tgy_exams',a); return a;
  }
  function clearExamForm(){const n=document.getElementById('examNewName');if(n)n.value='';const v=document.getElementById('examNewVisible');if(v)v.value='true';const f=document.querySelector('#examManagement #examNewLogo');if(f)f.value='';const pr=document.getElementById('examLogoPreview');if(pr)pr.innerHTML='';window.editingExamIndex=-1;}
  function previewExamLogo(){const f=document.getElementById('examNewLogo'),p=document.getElementById('examLogoPreview');if(!f||!p)return;p.innerHTML='';const file=f.files&&f.files[0];if(file){const r=new FileReader();r.onload=()=>p.innerHTML='<img src="'+E(r.result)+'" style="width:70px;height:70px;object-fit:contain;border:1px solid #ddd;border-radius:8px">';r.readAsDataURL(file)}}
- window.saveExamMaster=function(){
-   const inp=document.querySelector('#examManagement #examNewName'),name=(inp?.value||'').trim(); if(!name)return alert('परीक्षा का नाम लिखें।');
-   let a=normalizeExamStore(), idx=Number.isInteger(window.editingExamIndex)?window.editingExamIndex:-1;
-   if(idx<0) idx=a.findIndex(x=>(typeof x==='string'?x:x.name)===name);
+ window.tgySaveExamMasterFixed=function(){
+   // Use the exact visible Exam Management controls. This avoids the legacy duplicate field/function issue.
+   const inp=document.getElementById('examNewName');
+   const name=String(inp && inp.value || '').trim();
+   if(!name){ inp?.focus(); return alert('परीक्षा का नाम लिखें।'); }
+   let a=normalizeExamStore();
+   let idx=Number.isInteger(window.editingExamIndex)?window.editingExamIndex:-1;
+   if(idx<0 || idx>=a.length) idx=a.findIndex(x=>String(typeof x==='string'?x:x?.name||'').trim()===name);
    const old=idx>=0?(typeof a[idx]==='object'?a[idx]:{name:a[idx]}):null;
-   if(idx<0 && a.some(x=>(typeof x==='string'?x:x.name)===name)) return alert('यह परीक्षा पहले से मौजूद है।');
-   const visible=document.querySelector('#examManagement #examNewVisible')?.value!=='false', file=document.querySelector('#examManagement #examNewLogo')?.files?.[0];
+   if(idx<0 && a.some(x=>String(typeof x==='string'?x:x?.name||'').trim()===name)) return alert('यह परीक्षा पहले से मौजूद है।');
+   const visEl=document.getElementById('examNewVisible');
+   const visible=!visEl || visEl.value!=='false';
+   const file=document.getElementById('examNewLogo')?.files?.[0];
    const finish=(logo)=>{
-     const obj={...(old||{}),name,visible}; if(logo)obj.logo=logo;
-     if(idx>=0)a[idx]=obj; else a.push(obj); S('tgy_exams',a);
-     clearExamForm(); renderExamMaster(); if(typeof refreshAllExamDropdowns==='function')refreshAllExamDropdowns(name);
+     const obj={...(old||{}),name,visible};
+     if(logo) obj.logo=logo;
+     if(idx>=0) a[idx]=obj; else a.push(obj);
+     S('tgy_exams',a);
+     window.editingExamIndex=-1;
+     if(inp) inp.value='';
+     if(visEl) visEl.value='true';
+     const f=document.getElementById('examNewLogo'); if(f) f.value='';
+     const pr=document.getElementById('examLogoPreview'); if(pr) pr.innerHTML='';
+     if(typeof renderExamMaster==='function') renderExamMaster();
+     if(typeof refreshAllExamDropdowns==='function') refreshAllExamDropdowns(name);
      alert(idx>=0?'✅ परीक्षा Update हो गई।':'✅ नई परीक्षा Save हो गई।');
    };
-   if(file){const r=new FileReader();r.onload=()=>finish(r.result);r.readAsDataURL(file)}else finish(old&&old.logo?old.logo:null);
+   if(file){
+     const r=new FileReader();
+     r.onload=()=>finish(r.result);
+     r.onerror=()=>alert('Logo पढ़ा नहीं जा सका। फिर से Logo चुनें।');
+     r.readAsDataURL(file);
+   }else finish(old&&old.logo?old.logo:null);
  };
+ // Keep the old global name compatible with any other page code, but route it to the fixed handler.
+ window.saveExamMaster=window.tgySaveExamMasterFixed;
  window.renderExamMaster=function(){
    const b=document.getElementById('examMasterList');if(!b)return; const a=normalizeExamStore();
    b.innerHTML=a.map((x,i)=>{const o=typeof x==='object'?x:{name:x};return `<div class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0">
