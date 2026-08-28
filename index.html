@@ -930,6 +930,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     const qs=t.questions||[];
     if(!qs.length){alert("इस Test में अभी कोई Question नहीं है।");return}
     window.state={t,idx:0,answers:Array(qs.length).fill(null),review:Array(qs.length).fill(false),startedAt:Date.now()};
+    const cu=(typeof user==='function'?user():null)||JSON.parse(localStorage.getItem('tgy_user')||'null')||{};
+    window.tgyCandidateName=cu.name||'Candidate';
     const modal=document.getElementById("modal");
     const content=document.getElementById("modalContent");
     if(!modal||!content)return;
@@ -937,7 +939,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     modal.style.padding="0";
     content.style.cssText="padding:0;max-width:none;width:100%;height:100vh;border-radius:0;background:#f4f7fb";
     content.innerHTML=`<div class="tgy-exam-shell">
-      <div class="tgy-exam-top"><h2>📝 ${esc(t.name)}</h2><div><span id="tgyExamTimer">⏱️ ${Number(t.time||60)}:00</span></div></div>
+      <div class="tgy-exam-top"><div><h2 style="margin:0">📝 ${esc(t.name)}</h2><div id="tgyCandidateName" style="font-size:13px;margin-top:3px;opacity:.95"></div></div><div><span id="tgyExamTimer">⏱️ ${Number(t.time||60)}:00</span></div></div>
       <div class="tgy-exam-main"><div class="tgy-exam-question"><div id="tgyExamQuestion"></div></div>
       <aside class="tgy-palette"><h3 style="margin-top:0">Question Palette</h3>
        <p style="font-size:13px">🔴 Not Attempted &nbsp; 🟢 Attempted &nbsp; 🟡 Review</p>
@@ -946,10 +948,13 @@ document.addEventListener("DOMContentLoaded",()=>{
        <div><button class="btn gray" id="tgyPrevBtn" onclick="tgyPrevQ()">← Previous</button>
        <button class="btn" onclick="tgyMarkReview()">🟡 Mark for Review</button></div>
        <div><button class="btn gray" onclick="tgyExitExam()">✕ Exit</button>
-       <button class="btn orange" id="tgyNextBtn" onclick="tgyNextQ()">Next →</button></div>
+       <button class="btn" onclick="tgyExamFullScreen()">⛶ Full Screen</button>
+       <button class="btn" id="tgyNextBtn" onclick="tgyNextQ()">Next Question →</button>
+       <button class="btn orange" onclick="tgySubmitExam(false)">Submit Test</button></div>
       </div>
     </div>`;
     tgyRenderExamQ();
+    const cn=document.getElementById('tgyCandidateName');if(cn)cn.textContent='👤 '+window.tgyCandidateName;
     let sec=Number(t.time||60)*60;
     window.timer=setInterval(()=>{
       sec--;
@@ -969,7 +974,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       <div class="tgy-exam-options">${q[1].map((o,j)=>`<label><input type="radio" name="tgyAns" value="${j}" ${ans===j?"checked":""} onchange="state.answers[state.idx]=+this.value;tgyRenderPalette()"> ${String.fromCharCode(65+j)}. ${esc(o)}</label>`).join("")}</div>`;
     const prev=document.getElementById("tgyPrevBtn"),next=document.getElementById("tgyNextBtn");
     if(prev)prev.style.visibility=s.idx>0?"visible":"hidden";
-    if(next)next.textContent=s.idx===s.t.questions.length-1?"Submit Test":"Next →";
+    if(next)next.textContent=s.idx===s.t.questions.length-1?"Next Question →":"Next Question →";
     tgyRenderPalette();
   };
 
@@ -984,9 +989,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.tgyGoQ=function(i){state.idx=i;tgyRenderExamQ()};
   window.tgyPrevQ=function(){if(state.idx>0){state.idx--;tgyRenderExamQ()}};
   window.tgyNextQ=function(){
-    if(state.answers[state.idx]===null){alert("पहले कोई विकल्प चुनें।");return}
-    if(state.idx===state.t.questions.length-1)tgySubmitExam(false);
-    else{state.idx++;tgyRenderExamQ()}
+    if(state.idx===state.t.questions.length-1){tgySubmitExam(false);return;}
+    state.idx++;tgyRenderExamQ();
   };
   window.tgyMarkReview=function(){
     state.review[state.idx]=!state.review[state.idx];
@@ -1003,6 +1007,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   };
 
   window.closeTestModal=window.tgyExitExam;
+
+  window.tgyExamFullScreen=function(){const x=document.querySelector('.tgy-exam-shell');if(x?.requestFullscreen)x.requestFullscreen();};
 
   window.tgySubmitExam=function(auto){
     clearInterval(window.timer);
@@ -1298,20 +1304,26 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
   function openExamV4(exam){
     const ex=exams().find(x=>x.name===exam); if(!ex)return;
     const list=sortTests(J('tgy_tests',[]).filter(t=>t&&t.exam===exam&&t.published!==false&&t.visible!==false&&(!window.tgyDateValid||tgyDateValid(t.availableUntil))));
-    const realTests=list.filter(t=>t.demo!==true); const notes=noteItems(exam); const nmeta=meta(exam); const sp=window.getSeriesPricing?getSeriesPricing(exam):J('tgy_access_pricing',[]).filter(x=>x.exam===exam);
-    const bundle=bundlePrice(exam); const seriesOwned=hasSeriesAccess(exam), notesOwned=hasNoteAccess(exam);
-    let h=`<div class="exam-inner-head"><div style="display:flex;align-items:center;gap:12px"><img src="${E(ex.logo||'talent-and-gyan-logo.png')}" style="width:64px;height:64px;object-fit:contain"><div><h2 style="margin:0">📚 ${E(exam)}</h2><p class="muted" style="margin:4px 0">Mock Test + PDF Notes</p></div></div></div>`;
-    if(bundle){h+=`<div class="card" style="border:2px solid #f07800;background:#fff8ee;margin-top:12px"><h3>⭐ पूरा Folder — Test Series + PDF Notes</h3><p>एक साथ दोनों का Access</p><p><b>${bundle.offer?`MRP ₹${bundle.mrp} • Offer ₹${bundle.offer}`:`₹${bundle.mrp}`}</b> • ${bundle.days||0} दिन</p><button class="btn orange" onclick="tgyBuyBundle(${JSON.stringify(exam)})">🛒 पूरा Folder खरीदें</button></div>`}
-    h+=`<div class="card" style="margin-top:14px"><h3>🎯 Mock Test</h3><div class="grid">`;
-    h+=`<div class="card" style="margin:0;border:2px solid #25a65a"><h3>🆓 Demo</h3><p>Free Demo Test</p><button class="btn" onclick="startExamDemo(${JSON.stringify(exam)})">▶️ Demo शुरू करें</button></div>`;
-    if(realTests.length){realTests.forEach(t=>{const idx=J('tgy_tests',[]).indexOf(t);const free=t.demo===true;const own=seriesOwned;h+=`<div class="card" style="margin:0"><h3>📝 ${E(t.name||'Mock Test')}</h3><p>${Number(t.questions?.length||0)} Questions • ${Number(t.time||0)} मिनट</p><p class="muted">${own?'✅ Access Active':'🔒 Locked'}</p>${own?`<button class="btn" onclick="openTestFromSeries(${idx})">▶️ Test खोलें</button>`:`<button class="btn orange" onclick="tgyBuySeriesForExam(${JSON.stringify(exam)})">🔒 Access लें</button>`}</div>`})}else h+=`<div class="card"><p>अभी कोई Mock Test नहीं है।</p></div>`;
-    h+=`</div></div>`;
-    h+=`<div class="card" style="margin-top:14px"><h3>📄 PDF Notes</h3><p class="muted">Folder खुलते ही सभी Notes की सूची। खरीदने से पहले हर PDF के पहले 3 पेज Preview देख सकते हैं।</p>`;
-    if(notes.length){h+=`<div class="grid">`;notes.forEach(n=>{const pr=Number(nmeta.offer)||Number(nmeta.mrp)||0;h+=`<div class="card" style="margin:0"><h3>📄 ${E(n.title||'PDF Notes')}</h3><p class="muted">${pr?`₹${pr} • ${nmeta.days||0} दिन`:'FREE'} • 🔒 ${notesOwned?'Access Active':'Preview only'}</p><button class="btn" onclick="tgyPreviewNotePages(${n._i})">👁️ 3 Page Preview</button>${notesOwned||!pr?`<button class="btn orange" onclick="viewPdfNote(${n._i})">📖 ${notesOwned?'पूरा PDF खोलें':'देखें'}</button>`:`<button class="btn orange" onclick="tgyBuyPdfForExam(${JSON.stringify(exam)})">🔒 PDF Folder खरीदें</button>`}</div>`});h+=`</div>`}else h+=`<div class="card"><p>अभी इस परीक्षा के PDF Notes नहीं हैं।</p></div>`;
-    if(nmeta.mrp||nmeta.offer)h+=`<p style="margin-top:12px"><b>📁 PDF Folder Price:</b> ${nmeta.offer?`MRP ₹${nmeta.mrp} • Offer ₹${nmeta.offer}`:`₹${nmeta.mrp}`} • ${nmeta.days||0} दिन</p>`;
-    h+=`</div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn gray" onclick="closeExam()">← पीछे</button></div>`;
-    const c=document.getElementById('examContent');if(c)c.innerHTML=h;const m=document.getElementById('examModal');if(m)m.style.display='flex';
+    const notes=noteItems(exam); const nmeta=meta(exam); const bundle=bundlePrice(exam);
+    const modal=document.getElementById('examModal'),box=document.getElementById('examContent');if(!modal||!box)return;
+    let h=`<div class="exam-inner-head"><div style="display:flex;align-items:center;gap:12px"><img src="${E(ex.logo||'talent-and-gyan-logo.png')}" style="width:76px;height:76px;object-fit:contain"><div><h2 style="margin:0">📁 ${E(exam)}</h2><p class="muted" style="margin:4px 0">इस परीक्षा के उपलब्ध Sections</p></div></div></div>`;
+    if(bundle)h+=`<div class="card" style="border:2px solid #f07800;background:#fff8ee;margin-top:12px"><h3>⭐ पूरा Folder — Test Series + PDF Notes</h3><p><b>${bundle.offer?`MRP ₹${bundle.mrp} • Offer ₹${bundle.offer}`:`₹${bundle.mrp}`}</b> • ${bundle.days||0} दिन</p><button class="btn orange" onclick="tgyBuyBundle(${JSON.stringify(exam)})">🛒 पूरा Folder खरीदें</button></div>`;
+    h+=`<div class="grid" style="margin-top:14px">
+      <div class="card" style="margin:0;border:2px solid #1d65a6;text-align:center"><div style="font-size:48px">📝</div><h2>Test Series</h2><p>${list.length} Tests उपलब्ध</p><p class="muted">Demo + सभी Mock Tests</p><button class="btn orange" onclick="tgyOpenSeriesInside(${JSON.stringify(exam)})">📂 Test Series खोलें</button></div>
+      <div class="card" style="margin:0;border:2px solid #1d65a6;text-align:center"><div style="font-size:48px">📄</div><h2>PDF Notes</h2><p>${notes.length} Notes उपलब्ध</p><p class="muted">पहले Preview, Access के बाद पूरा PDF</p><button class="btn orange" onclick="tgyOpenNotesInside(${JSON.stringify(exam)})">📂 PDF Notes खोलें</button></div>
+    </div><div style="margin-top:14px"><button class="btn gray" onclick="closeExam()">← पीछे</button><button class="btn gray" onclick="closeExam()">✕ बंद करें</button></div>`;
+    box.innerHTML=h;modal.style.display='flex';window.tgyNavLevel='folder';window.tgyNavExam=exam;
   }
+  window.tgyOpenNotesInside=function(exam){
+    const box=document.getElementById('examContent');if(!box)return;
+    const notes=noteItems(exam),nmeta=meta(exam),owned=hasNoteAccess(exam),price=Number(nmeta.offer)||Number(nmeta.mrp)||0;
+    let h=`<div class="exam-inner-head"><div style="display:flex;align-items:center;gap:12px"><div style="font-size:48px">📄</div><div><h2 style="margin:0">${E(exam)} — PDF Notes</h2><p class="muted">सभी Notes इसी परीक्षा के Folder में हैं।</p></div></div></div>`;
+    if(price&&!owned)h+=`<div class="card" style="border:2px solid #f07800;background:#fff8ee"><h3>🔒 PDF Notes Folder Access</h3><p>Price: <b>₹${price}</b> • ${nmeta.days||0} दिन</p><button class="btn orange" onclick="tgyBuyPdfForExam(${JSON.stringify(exam)})">💳 पूरा PDF Folder खरीदें</button></div>`;
+    h+=`<div class="student-test-grid" style="margin-top:14px">`;
+    notes.forEach(n=>{h+=`<div class="card" style="margin:0"><h3>📄 ${E(n.title||'PDF Notes')}</h3><p class="muted">${owned||!price?'✅ Access / Free':'🔒 Locked — Preview उपलब्ध'}</p><button class="btn" onclick="tgyPreviewNotePages(${n._i})">👁️ 3 Page Preview</button>${owned||!price?`<button class="btn orange" onclick="viewPdfNote(${n._i})">📖 पूरा PDF खोलें</button>`:`<button class="btn orange" onclick="tgyBuyPdfForExam(${JSON.stringify(exam)})">🔒 Access लें</button>`}</div>`});
+    if(!notes.length)h+=`<div class="card"><p>अभी कोई PDF Notes नहीं हैं।</p></div>`;
+    h+=`</div><div style="margin-top:14px"><button class="btn gray" onclick="openExam(${JSON.stringify(exam)})">← परीक्षा Folder पर वापस</button></div>`;box.innerHTML=h;
+  };
   window.openExam=openExamV4;
   window.tgyBuySeriesForExam=function(exam){const p=J('tgy_access_pricing',[]).filter(x=>x.exam===exam);if(p.length&&typeof buySeriesAccess==='function')buySeriesAccess(exam,0);else alert('इस परीक्षा की Test Series Pricing अभी Admin में नहीं बनाई गई है।')};
   window.tgyBuyPdfForExam=function(exam){const m=meta(exam),price=Number(m.offer)||Number(m.mrp)||0;if(typeof buyPdfFolder==='function')buyPdfFolder(exam,price,Number(m.days)||0);else alert('इस PDF Folder की Pricing अभी Admin में नहीं बनाई गई है।')};
@@ -1369,4 +1381,93 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
 })();
 </script>
 
+
+<style id="tgy-folder-flow-final-style">
+.tgy-folder-grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:18px;margin:16px 0}
+.tgy-folder-card{background:#fff;border:2px solid #dbe5f0;border-radius:14px;padding:24px;box-shadow:0 5px 18px rgba(18,59,104,.08);text-align:center}
+.tgy-folder-card h3{margin:8px 0;color:#123b68}.tgy-folder-icon{font-size:52px}.tgy-flow-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tgy-pdf-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.tgy-pdf-stage{height:78vh;overflow:auto;background:#4b5563;border-radius:10px;padding:8px;text-align:center}
+#tgyPdfFrameFinal{width:100%;height:100%;border:0;background:#fff;transform-origin:top left}
+@media(max-width:700px){.tgy-folder-grid{grid-template-columns:1fr}.tgy-pdf-stage{height:72vh}}
+</style>
+<script id="tgy-folder-flow-final-script">
+(function(){
+  const E=window.esc||function(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))};
+  function notes(){try{return JSON.parse(localStorage.getItem('tgy_pdf_notes')||'[]')}catch(e){return[]}}
+  function examNames(){
+    const set=new Set();
+    try{(JSON.parse(localStorage.getItem('tgy_exams')||'[]')||[]).forEach(x=>{const n=typeof x==='string'?x:x?.name;if(n)set.add(n)})}catch(e){}
+    (window.tests||[]).forEach(t=>{if(t.exam)set.add(t.exam)});
+    notes().forEach(n=>{if(n.exam)set.add(n.exam)});
+    return [...set].filter(Boolean);
+  }
+  function examHasTests(ex){return (window.tests||[]).some(t=>t.exam===ex&&t.published!==false&&t.visible!==false&&(!window.tgyDateValid||window.tgyDateValid(t.availableUntil)))}
+  function examHasNotes(ex){return notes().some(n=>(n.exam||'').trim()===ex)}
+  function goBackToExam(ex){window.openExam(ex)}
+
+  window.openExam=function(exam){
+    const tv=typeof getFolderVisibilityStudent==='function'?getFolderVisibilityStudent(exam):true;
+    const hasT=tv&&examHasTests(exam), hasN=examHasNotes(exam);
+    const box=document.getElementById('examContent'); if(!box)return;
+    box.innerHTML=`<div class="tgy-flow-head"><div><h2 style="margin:0">📁 ${E(exam)}</h2><p class="muted">इस परीक्षा में अपनी जरूरत का Folder चुनें।</p></div><button class="btn gray" onclick="closeExam()">✕ बंद करें</button></div>
+      <div class="tgy-folder-grid">
+       <div class="tgy-folder-card"><div class="tgy-folder-icon">🎯</div><h3>Mock Test / Test Series</h3><p class="muted">${hasT?'इस परीक्षा के सभी Mock Tests':'अभी कोई Mock Test उपलब्ध नहीं है।'}</p><button class="btn orange" ${hasT?'':'disabled'} onclick="tgyOpenExamFolder('${E(exam)}','tests')">📂 Folder खोलें</button></div>
+       <div class="tgy-folder-card"><div class="tgy-folder-icon">📄</div><h3>PDF Notes</h3><p class="muted">${hasN?'इस परीक्षा के सभी PDF Notes':'अभी कोई PDF Notes उपलब्ध नहीं है।'}</p><button class="btn" ${hasN?'':'disabled'} onclick="tgyOpenExamFolder('${E(exam)}','notes')">📂 Folder खोलें</button></div>
+      </div>
+      <div style="margin-top:12px"><button class="btn gray" onclick="closeExam()">← Home पर वापस</button></div>`;
+    document.getElementById('examModal').style.display='flex';
+  };
+
+  window.tgyOpenExamFolder=function(exam,type){
+    const box=document.getElementById('examContent');if(!box)return;
+    if(type==='tests'){
+      let arr=(window.tests||[]).filter(t=>t.exam===exam&&t.published!==false&&t.visible!==false&&(!window.tgyDateValid||window.tgyDateValid(t.availableUntil)));
+      arr.sort((a,b)=>{
+        if(a.demo===true&&b.demo!==true)return -1;if(a.demo!==true&&b.demo===true)return 1;
+        const na=parseInt(String(a.name||'').match(/(\d+)/)?.[1]||99999),nb=parseInt(String(b.name||'').match(/(\d+)/)?.[1]||99999);
+        return na-nb||String(a.name||'').localeCompare(String(b.name||''),'hi');
+      });
+      let html=`<div class="tgy-flow-head"><div><h2 style="margin:0">🎯 ${E(exam)} — Mock Tests</h2><p class="muted">Demo पहले, फिर Test क्रम से।</p></div><button class="btn gray" onclick="openExam('${E(exam)}')">← पीछे</button></div><div class="student-test-grid">`;
+      if(!arr.length)html+=`<div class="card" style="grid-column:1/-1"><h3>📭 कोई Test उपलब्ध नहीं है।</h3></div>`;
+      arr.forEach(t=>{const i=window.tests.indexOf(t),free=t.demo===true,owned=typeof hasPurchasedTest==='function'&&hasPurchasedTest(t),done=typeof tgyIsDone==='function'&&tgyIsDone(t);let action=(free||owned||done)?`<button class="btn orange" onclick="tgyOpenTestFromFolder(${i})">▶️ Test खोलें</button>`:`<button class="btn orange" onclick="buySeriesAccess('${E(exam)}',0)">🔒 Access लें</button>`;html+=`<div class="card"><h3>${E(t.name||'Test')}</h3><p>${(t.questions||[]).length} Questions • ${t.time||60} मिनट</p>${free?'<p style="color:#1f9d55;font-weight:800">FREE DEMO</p>':owned?'<p style="color:#1f9d55;font-weight:800">✅ Access उपलब्ध</p>':'<p class="muted">🔒 Locked</p>'}${action}</div>`});
+      html+=`</div>`;box.innerHTML=html;
+    }else{
+      const arr=notes().map((n,i)=>({...n,_i:i})).filter(n=>(n.exam||'').trim()===exam);
+      let html=`<div class="tgy-flow-head"><div><h2 style="margin:0">📄 ${E(exam)} — PDF Notes</h2><p class="muted">इस Folder के सभी Notes यहाँ हैं।</p></div><button class="btn gray" onclick="openExam('${E(exam)}')">← पीछे</button></div><div class="student-test-grid">`;
+      if(!arr.length)html+=`<div class="card" style="grid-column:1/-1"><h3>📭 कोई PDF उपलब्ध नहीं है।</h3></div>`;
+      arr.forEach(n=>{const price=Number(n.offer)||Number(n.mrp)||0,owned=typeof hasPurchasedNote==='function'&&hasPurchasedNote(n);const action=owned||!price?`<button class="btn" onclick="tgyOpenPdfFromFolder(${n._i},'${E(exam)}')">📖 PDF खोलें</button>`:`<button class="btn orange" onclick="buyPdfNote(${n._i})">🔒 ₹${price} — खरीदें</button>`;html+=`<div class="card"><h3>📄 ${E(n.title||'PDF Notes')}</h3><p class="muted">${n.pages?E(n.pages)+' Pages • ':''}${price?'Paid':'FREE'}</p>${action}</div>`});
+      html+=`</div>`;box.innerHTML=html;document.getElementById('examModal').style.display='flex';
+    }
+  };
+
+  window.tgyOpenPdfFromFolder=function(i,exam){
+    const n=notes()[i];if(!n)return;
+    if(typeof requireStudentLogin==='function'&&!requireStudentLogin({type:'note',index:i}))return;
+    const price=Number(n.offer)||Number(n.mrp)||0;if(price&&typeof hasPurchasedNote==='function'&&!hasPurchasedNote(n)){if(typeof buyPdfNote==='function')buyPdfNote(i);return;}
+    const o=document.getElementById('studentPageOverlay');
+    if(!o){openStudentPage('notes');return;}
+    o.style.display='block';document.body.classList.add('student-inner-open');
+    o.innerHTML=`<div class="student-page-head"><div style="display:flex;gap:8px;align-items:center"><button class="student-close" onclick="openExam('${E(exam)}')">← PDF Folder</button><h2 style="margin:0">📄 ${E(n.title||'PDF Notes')}</h2></div><button class="student-close" onclick="openExam('${E(exam)}')">✕ बंद करें</button></div><div class="student-page-body"><div class="tgy-pdf-toolbar"><button class="btn" onclick="tgyPdfZoomFinal(-0.1)">➖ Zoom Out</button><button class="btn" onclick="tgyPdfZoomFinal(0.1)">➕ Zoom In</button><button class="btn gray" onclick="tgyPdfZoomFinal(0)">↺ Reset</button><button class="btn orange" onclick="tgyPdfFullScreen()">⛶ Full Screen</button></div><div id="tgyPdfStageFinal" class="tgy-pdf-stage"><iframe id="tgyPdfFrameFinal" src="${E(n.dataUrl||n.url||'')}#toolbar=0&navpanes=0&scrollbar=1"></iframe></div></div>`;
+    window.tgyPdfScaleFinal=1;
+  };
+  window.tgyPdfZoomFinal=function(delta){const f=document.getElementById('tgyPdfFrameFinal');if(!f)return;window.tgyPdfScaleFinal=delta===0?1:Math.max(.6,Math.min(2,window.tgyPdfScaleFinal+delta));f.style.transform=`scale(${window.tgyPdfScaleFinal})`;f.style.width=(100/window.tgyPdfScaleFinal)+'%';f.style.height=(100/window.tgyPdfScaleFinal)+'%';};
+  window.tgyPdfFullScreen=function(){const x=document.getElementById('tgyPdfStageFinal')||document.getElementById('tgyPdfFrameFinal');if(x?.requestFullscreen)x.requestFullscreen();};
+
+  window.openStudentPage=function(key){
+    if(key==='home'){studentGoHome();return}
+    let overlay=document.getElementById('studentPageOverlay');if(!overlay){overlay=document.createElement('div');overlay.id='studentPageOverlay';overlay.className='student-page';document.body.appendChild(overlay)}
+    const titles={mock:'🎯 Mock Tests',series:'📚 Test Series',plans:'💳 Access Plans',results:'📊 My Results',info:'ℹ️ Exam Information',help:'📞 सहायता',purchased:'🎓 My Purchased Tests',notes:'📄 PDF Notes',profile:'👤 My Profile'};
+    if(key==='mock'||key==='series'||key==='notes'){
+      overlay.innerHTML=`<div class="student-page-head"><div style="display:flex;gap:8px;align-items:center"><button class="student-close" onclick="closeStudentPage()">← पीछे</button><h2 style="margin:0">${titles[key]}</h2></div><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body"><div class="card"><h2>${key==='notes'?'📄 PDF Notes':'🎯 Mock Test / Test Series'}</h2><p class="muted">पहले परीक्षा का Folder चुनें। फिर उसी Folder के अंदर के Tests/Notes खोलें।</p><div id="tgyStudentFolderList"></div></div></div>`;
+      overlay.style.display='block';document.body.classList.add('student-inner-open');
+      const b=document.getElementById('tgyStudentFolderList');const names=examNames().filter(ex=>key==='notes'?examHasNotes(ex):examHasTests(ex));
+      b.innerHTML=names.length?`<div class="grid">${names.map(ex=>`<div class="card"><h3>📁 ${E(ex)}</h3><p class="muted">${key==='notes'?'PDF Notes Folder':'Mock Test Folder'}</p><button class="btn orange" onclick="tgyOpenExamFolder('${E(ex)}','${key==='notes'?'notes':'tests'}')">📂 Folder खोलें</button></div>`).join('')}</div>`:'<p>अभी कोई Folder उपलब्ध नहीं है।</p>';
+      return;
+    }
+    // Preserve existing pages for the remaining navigation items.
+    let body=''; if(key==='plans')body='<div class="card"><h2>💳 Access Plans</h2><p>पहले Test Series चुनें, फिर Plan चुनें और Payment करें।</p></div>'; if(key==='results')body='<div class="card"><h2>📊 My Results</h2><div id="resultList">Login के बाद Results यहाँ दिखेंगे।</div></div>'; if(key==='purchased')body='<div class="card"><h2>🎓 My Purchased Tests</h2><div id="myPurchasedTests"></div></div>'; if(key==='profile')body='<div class="card"><h2>👤 My Profile</h2><div id="profileSummary"></div></div>'; if(key==='info')body='<div class="card"><h2>ℹ️ Exam Information</h2><p>परीक्षा की जानकारी यहाँ दिखाई जाएगी।</p></div>'; if(key==='help')body='<div class="card"><h2>📞 सहायता</h2><p>Payment, Login या Test से संबंधित सहायता के लिए यहाँ जानकारी दी जाएगी।</p></div>'; overlay.innerHTML='<div class="student-page-head"><button class="student-close" onclick="closeStudentPage()">← पीछे</button><h2 style="margin:0">'+titles[key]+'</h2><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body">'+body+'</div>'; overlay.style.display='block'; document.body.classList.add('student-inner-open'); if(key==='purchased'&&typeof renderMyPurchasedTests==='function')renderMyPurchasedTests(); if(key==='profile'&&typeof renderStudentProfile==='function')renderStudentProfile();
+  };
+  if(!window.__tgyOriginalOpenStudentPage){}
+})();
+</script>
 </body></html>

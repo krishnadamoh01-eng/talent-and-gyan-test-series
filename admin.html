@@ -1,7 +1,7 @@
 <!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin Panel - Talent And Gyan</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Devanagari",sans-serif;background:#f4f7fb;color:#172334}header{background:#123b68;color:#fff;padding:16px 24px;display:flex;justify-content:space-between}.layout{display:flex;min-height:calc(100vh - 58px)}aside{width:220px;background:#fff;padding:12px;border-right:1px solid #ddd}aside button{width:100%;padding:11px;border:0;background:none;text-align:left;border-radius:8px;margin:3px 0;cursor:pointer}aside button.active,aside button:hover{background:#e8f1fa;color:#123b68;font-weight:700}main{flex:1;padding:24px}.sec{display:none}.sec.show{display:block}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.card,table{background:#fff;border:1px solid #e1e8ef;border-radius:12px}.card{padding:18px}.stat{font-size:30px;font-weight:800;color:#123b68}table{width:100%;border-collapse:collapse}th,td{padding:11px;border-bottom:1px solid #e7edf2;text-align:left}th{background:#eef4fa}.btn{border:0;background:#1769aa;color:#fff;padding:10px 15px;border-radius:8px;font-weight:700;cursor:pointer}.orange{background:#f07800}.gray{background:#667789}.danger{background:#c62828}input,textarea,select{width:100%;padding:10px;border:1px solid #cbd6e2;border-radius:8px;margin:5px 0 12px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center;padding:18px}.box{background:#fff;width:min(900px,100%);max-height:92vh;overflow:auto;border-radius:14px;padding:22px}.badge{background:#fff0d6;color:#875100;padding:4px 8px;border-radius:12px;font-size:12px}.qrow{border:1px solid #dce5ee;border-radius:10px;padding:14px;margin:12px 0}@media(max-width:700px){aside{width:65px}aside button{font-size:0;text-align:center}aside button:first-letter{font-size:20px}main{padding:14px}.row{grid-template-columns:1fr}}
-</style><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+.mt-folder-tests{display:grid;grid-template-columns:repeat(4,minmax(190px,1fr));gap:14px;margin-top:12px}.mt-test-card{background:#fff;border:1px solid #dbe3ec;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}.mt-test-card .mt-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}.mt-test-card .btn{font-size:13px;padding:8px 10px}@media(max-width:1100px){.mt-folder-tests{grid-template-columns:repeat(3,minmax(190px,1fr))}}@media(max-width:800px){.mt-folder-tests{grid-template-columns:repeat(2,minmax(160px,1fr))}}@media(max-width:520px){.mt-folder-tests{grid-template-columns:1fr}}</style><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
 <style id="home-customizer-admin-style">
 .home-customize-card{background:#eef6ff;border:1px solid #c8ddf4;padding:14px;border-radius:12px;margin:12px 0}
 </style>
@@ -95,12 +95,13 @@ function checkAdmin(){
   <div class="card">
     <div class="row">
       <div><label>📋 परीक्षा</label><select id="mtExam" onchange="mtLoadTests()"></select></div>
-      <div><label>📝 Test का नाम</label><input id="mtName" placeholder="जैसे Mock Test 01 / Demo Test"></div>
+      <div><label>📝 Test Type</label><select id="mtType" onchange="mtTypeChanged()"><option value="demo">Demo</option><option value="test">Test</option></select></div>
+      <div id="mtNameWrap"><label>📝 Test का नाम</label><input id="mtName" placeholder="जैसे Test 1 / Test 2"></div>
       <div><label>⏱️ समय (मिनट)</label><input id="mtTime" type="number" min="1" value="60"></div>
       <div><label>❌ Negative Marking</label><select id="mtNegative" onchange="mtNegativeChanged()"><option value="no">नहीं</option><option value="yes">हाँ</option></select></div>
       <div id="mtNegativeValueWrap" style="display:none"><label>गलत उत्तर पर Marks</label><input id="mtNegativeValue" type="number" min="0" step="0.01" value="0.25"></div>
     </div>
-    <p class="muted">परीक्षा केवल परीक्षा Management से आएगी। Test का नाम, समय और Negative Marking यहाँ भरें।</p>
+    <p class="muted">पहले Test Type चुनें। Demo चुनने पर केवल Demo रहेगा; Test चुनने पर Test का नाम दें।</p>
   </div>
 
   <div class="card">
@@ -757,7 +758,9 @@ function mtInit(){
 function mtLoadTests(){
  const e=document.getElementById("mtExam")?.value;
  if(e){const d=mtStore();d.exams=d.exams||{};d.exams[e]=d.exams[e]||{tests:{}};mtSaveStore(d);}
- const n=document.getElementById("mtName");if(n)n.value="";
+ const type=document.getElementById("mtType");if(type)type.value="demo";
+ const n=document.getElementById("mtName");if(n)n.value="Demo";
+ mtTypeChanged();
  const tm=document.getElementById("mtTime");if(tm)tm.value=60;
  const neg=document.getElementById("mtNegative");if(neg)neg.value="no";
  mtNegativeChanged();mtRenderQuestions();mtRenderAll();
@@ -780,6 +783,14 @@ function mtAddTest(){return false;}
 function mtNewTest(){return false;}
 function mtSaveMeta(){mtFinalSave();}
 
+function mtTypeChanged(){
+ const type=document.getElementById('mtType')?.value||'demo';
+ const wrap=document.getElementById('mtNameWrap');
+ const name=document.getElementById('mtName');
+ if(wrap)wrap.style.display=type==='demo'?'none':'block';
+ if(type==='demo'&&name)name.value='Demo';
+ if(type==='test'&&name&&name.value==='Demo')name.value='';
+}
 function mtNegativeChanged(){
  const yes=document.getElementById("mtNegative")?.value==="yes";
  const w=document.getElementById("mtNegativeValueWrap");if(w)w.style.display=yes?"block":"none";
@@ -787,21 +798,23 @@ function mtNegativeChanged(){
 function mtResetEntryForm(){
   const ids=['mtName','mtTime','mtBulkText','mtNegativeValue'];
   ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value=id==='mtTime'?'60':(id==='mtNegativeValue'?'0.25':'');});
+  const type=document.getElementById('mtType');if(type)type.value='demo';
   const neg=document.getElementById('mtNegative');if(neg)neg.value='no';
   const pdf=document.getElementById('mtPdf');if(pdf)pdf.value='';
   const pv=document.getElementById('mtPreview');if(pv)pv.innerHTML='';
   const st=document.getElementById('mtStatus');if(st)st.textContent='';
-  mtPreview=[];mtNegativeChanged();mtRenderQuestions();
+  mtPreview=[];mtTypeChanged();mtNegativeChanged();mtRenderQuestions();
 }
 function mtFinalSave(){
- const e=document.getElementById('mtExam')?.value,n=(document.getElementById('mtName')?.value||'').trim();
+ const e=document.getElementById('mtExam')?.value,type=document.getElementById('mtType')?.value||'demo';
+ const n=(type==='demo'?'Demo':(document.getElementById('mtName')?.value||'').trim());
  const time=Number(document.getElementById('mtTime')?.value)||60,negative=document.getElementById('mtNegative')?.value==='yes';
  const negativeMarks=negative?Number(document.getElementById('mtNegativeValue')?.value)||0:0;
- if(!e){alert('पहले परीक्षा चुनें।');return}if(!n){alert('Test का नाम लिखें।');return}
+ if(!e){alert('पहले परीक्षा चुनें।');return}if(type==='test'&&!n){alert('Test का नाम लिखें।');return}
  if(negative&&negativeMarks<=0){alert('Negative Marks की value डालें।');return}
  const d=mtStore();d.exams=d.exams||{};d.exams[e]=d.exams[e]||{tests:{}};
  const obj=d.exams[e].tests[n]||{name:n,exam:e,questions:[],published:true,visible:true};
- obj.name=n;obj.exam=e;obj.time=time;obj.negativeMarking=negative;obj.negativeMarks=negativeMarks;obj.questions=obj.questions||[];
+ obj.name=n;obj.exam=e;obj.demo=(type==='demo');obj.time=time;obj.negativeMarking=negative;obj.negativeMarks=negativeMarks;obj.questions=obj.questions||[];
  const base=obj.questions.length;
  (mtPreview||[]).forEach((x,i)=>obj.questions.push({q:x.q,o:x.o,answer:x.answer,ex:x.ex,number:base+i+1}));
  d.exams[e].tests[n]=obj;mtSaveStore(d);mtRenderAll();
@@ -978,41 +991,33 @@ function mtToggleFolder(exam){
 function mtRenderAll(){
  const box=document.getElementById("mtAllTests");if(!box)return;
  const d=mtStore(),groups={};
- // IMPORTANT: Folders come ONLY from Exam Management.
- // Old/incorrect names stored in the Mock Test data are not rendered as folders.
- getExamMaster().forEach(x=>{
-   groups[x.name]=Object.entries(d.exams?.[x.name]?.tests||{});
- });
+ getExamMaster().forEach(x=>{groups[x.name]=Object.entries(d.exams?.[x.name]?.tests||{});});
  const exams=Object.keys(groups);
- if(!exams.length){
-   box.innerHTML='<div class="card"><h3>📭 अभी कोई परीक्षा नहीं है।</h3><p>पहले परीक्षा Management में परीक्षा जोड़ें।</p></div>';
-   return;
- }
+ if(!exams.length){box.innerHTML='<div class="card"><h3>📭 अभी कोई परीक्षा नहीं है।</h3><p>पहले परीक्षा Management में परीक्षा जोड़ें।</p></div>';return;}
  box.innerHTML=exams.map(e=>{
    const folderVisible=getFolderVisibility(e),tests=groups[e]||[];
+   const ordered=tests.slice().sort((a,b)=>{const da=a[1]?.demo===true,db=b[1]?.demo===true;if(da&&!db)return -1;if(!da&&db)return 1;return String(a[1]?.name||a[0]).localeCompare(String(b[1]?.name||b[0]),'en',{numeric:true});});
    return `<div class="card" style="margin:14px 0;border:2px solid #1d65a6">
      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
        <div><h2 style="margin:0">📁 ${mtEsc(e)}</h2><p class="muted" style="margin:4px 0">${tests.length} Test • Folder ${folderVisible?"दिख रहा है":"Hidden है"}</p></div>
        <button class="btn ${folderVisible?"gray":"orange"}" onclick="mtToggleFolder('${encodeURIComponent(e)}')">${folderVisible?"🙈 Folder Hide":"👁️ Folder Show"}</button>
      </div>
-     ${tests.length?`<div style="overflow:auto;margin-top:10px">
-     <table><thead><tr><th>Test</th><th>Questions</th><th>Time</th><th>Negative</th><th>Status</th><th>Action</th></tr></thead><tbody>
-     ${tests.map(([t,x])=>`<tr>
-       <td>${mtEsc(x.name||t)}</td><td>${x.questions?.length||0}</td><td>${x.time||60} min</td>
-       <td>${x.published===false?"🙈 Hidden":"👁️ Show"}</td>
-       <td>
+     ${ordered.length?`<div class="mt-folder-tests">${ordered.map(([t,x])=>`<div class="mt-test-card">
+       <div style="font-size:12px;font-weight:800;color:#667789">${x.demo===true?'🆓 DEMO':'📝 TEST'}</div>
+       <h3 style="margin:0">${mtEsc(x.name||t)}</h3><div>${x.questions?.length||0} Questions</div><div>${x.time||60} मिनट</div>
+       <div>${x.published===false?'🙈 Hidden':'👁️ Show'}</div>
+       <div class="mt-actions">
         <button class="btn" onclick="mtOpenTestEditor('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">👁️ देखें</button>
-        <button class="btn" onclick="mtRenameTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">✏️ Name Change</button>
+        <button class="btn" onclick="mtRenameTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">✏️ Edit</button>
         <button class="btn" onclick="mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}');document.getElementById('mtQuestions').scrollIntoView({behavior:'smooth'})">➕ Questions</button>
-        <button class="btn ${x.published===false?"orange":"gray"}" onclick="mtTogglePublish('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">${x.published===false?"👁️ Test Show":"🙈 Test Hide"}</button>
+        <button class="btn ${x.published===false?'orange':'gray'}" onclick="mtTogglePublish('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">${x.published===false?'👁️ Show':'🙈 Hide'}</button>
         <button class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">🗑️ Delete</button>
-       </td>
-     </tr>`).join("")}
-     </tbody></table></div>`:
-     `<div class="card" style="margin-top:10px;background:#f7f7f7"><h3>📭 इस Folder में अभी कोई Test नहीं है</h3><p>ऊपर इसी परीक्षा को चुनकर Test का नाम और Questions तैयार करें।</p></div>`}
+       </div></div>`).join('')}</div>`:
+     `<div class="card" style="margin-top:10px;background:#f7f7f7"><h3>📭 इस Folder में अभी कोई Test नहीं है</h3><p>ऊपर इसी परीक्षा को चुनकर Test तैयार करें।</p></div>`}
    </div>`;
  }).join("");
 }
+
 function mtSelectTest(e,t){
  e=decodeURIComponent(e);t=decodeURIComponent(t);
  const ex=document.getElementById("mtExam"),nm=document.getElementById("mtName"),tm=document.getElementById("mtTime");
