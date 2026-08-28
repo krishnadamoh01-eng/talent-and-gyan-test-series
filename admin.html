@@ -1963,4 +1963,70 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
+
+<script id="tgy-v11-final-exam-manager">
+(function(){
+  // Final authoritative Exam Management. Does not clear existing exam data.
+  const KEY='tgy_exams';
+  const q=id=>document.getElementById(id);
+  const read=()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}};
+  const write=a=>localStorage.setItem(KEY,JSON.stringify(a));
+  const name=x=>String(typeof x==='string'?x:(x&&x.name)||'').trim();
+  const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  function normalize(){
+    const a=read(), out=[], seen=new Set();
+    a.forEach(x=>{const n=name(x),k=n.toLowerCase();if(n&&!seen.has(k)){seen.add(k);out.push(typeof x==='string'?{name:n,visible:true}:{...x,name:n,visible:x.visible!==false})}});
+    write(out); return out;
+  }
+  function render(){
+    const box=q('examMasterList'); if(!box)return;
+    const a=normalize();
+    if(!a.length){box.innerHTML='<p class="muted">अभी कोई परीक्षा नहीं है। ऊपर से नई परीक्षा जोड़ें।</p>';return;}
+    box.innerHTML=a.map((x,i)=>`<div class="card" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0">
+      <img src="${esc(x.logo||'talent-and-gyan-logo.png')}" onerror="this.src='talent-and-gyan-logo.png'" style="width:72px;height:72px;object-fit:contain;border:1px solid #ddd;border-radius:8px;background:#fff">
+      <div style="flex:1;min-width:220px"><div style="font-size:18px;font-weight:700">${esc(name(x))}</div><div class="muted">${x.visible===false?'🙈 Hidden':'👁️ Student Site पर दिखाई देगा'}</div></div>
+      <button class="btn" onclick="tgyV11Edit(${i})">✏️ Edit</button>
+      <button class="btn" onclick="tgyV11Logo(${i})">🖼️ Logo बदलें</button>
+      <button class="btn" onclick="tgyV11Toggle(${i})">${x.visible===false?'👁️ Show':'🙈 Hide'}</button>
+      <button class="btn danger" onclick="tgyV11Delete(${i})">🗑️ Delete</button>
+    </div>`).join('');
+  }
+  function refresh(preferred){
+    const a=normalize();
+    ['mtExam','prExam','ofExam','noteExam','apExam','bqmExam','tgyBundleExam'].forEach(id=>{
+      const el=q(id); if(!el)return; const old=preferred||el.value||'';
+      el.innerHTML='<option value="">— परीक्षा चुनें —</option>'+a.filter(x=>x.visible!==false||name(x)===old).map(x=>`<option value="${esc(name(x))}">${esc(name(x))}</option>`).join('');
+      if(old)el.value=old;
+    });
+  }
+  function edit(i){
+    const a=normalize(),x=a[i];if(!x)return;
+    window.tgyV11Editing=i;
+    if(q('examNewName'))q('examNewName').value=name(x);
+    if(q('examNewVisible'))q('examNewVisible').value=x.visible===false?'false':'true';
+    if(q('examLogoPreview'))q('examLogoPreview').innerHTML=x.logo?`<img src="${esc(x.logo)}" style="width:72px;height:72px;object-fit:contain;border:1px solid #ddd;border-radius:8px"><div class="muted">वर्तमान Logo</div>`:'<span class="muted">Logo उपलब्ध नहीं है</span>';
+    q('examManagement')?.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  function logo(i){
+    const input=q('examNewLogo');if(!input){alert('Logo upload field नहीं मिला।');return;} edit(i); input.click();
+  }
+  function toggle(i){const a=normalize(),x=a[i];if(!x)return;x.visible=x.visible===false;write(a);render();refresh(name(x));}
+  function del(i){const a=normalize(),x=a[i];if(!x)return; if(!confirm('"'+name(x)+'" को Exam Management से हटाएँ?\n\nयह केवल परीक्षा की master entry हटाएगा। Mock Test/PDF का data नहीं मिटाएगा।'))return;a.splice(i,1);write(a);render();refresh('');}
+  function save(){
+    const input=q('examNewName'),n=String(input?.value||'').trim();
+    if(!n){alert('परीक्षा का नाम लिखें।');input?.focus();return;}
+    const a=normalize(); let i=Number.isInteger(window.tgyV11Editing)?window.tgyV11Editing:-1;
+    if(i<0||i>=a.length)i=-1;
+    const dup=a.findIndex((x,j)=>j!==i&&name(x).toLowerCase()===n.toLowerCase());
+    if(dup>=0){alert('यह परीक्षा पहले से मौजूद है। नीचे उसकी सूची में Edit कर सकते हैं।');return;}
+    const old=i>=0?a[i]:{}, vis=q('examNewVisible')?.value!=='false', file=q('examNewLogo')?.files?.[0];
+    const finish=logoData=>{const obj={...old,name:n,visible:vis};if(logoData)obj.logo=logoData;if(i>=0)a[i]=obj;else a.push(obj);write(a);window.tgyV11Editing=-1;if(q('examNewName'))q('examNewName').value='';if(q('examNewLogo'))q('examNewLogo').value='';if(q('examLogoPreview'))q('examLogoPreview').innerHTML='';render();refresh(n);alert(i>=0?'✅ परीक्षा Update हो गई।':'✅ नई परीक्षा Save हो गई।');};
+    if(file){const r=new FileReader();r.onload=()=>finish(r.result);r.onerror=()=>alert('Logo पढ़ा नहीं जा सका।');r.readAsDataURL(file);}else finish(old.logo||'');
+  }
+  window.tgyV11Edit=edit;window.tgyV11Logo=logo;window.tgyV11Toggle=toggle;window.tgyV11Delete=del;window.saveExamMaster=save;window.renderExamMaster=render;window.refreshAllExamDropdowns=refresh;
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{render();refresh('')},250));
+  window.addEventListener('storage',e=>{if(e.key===KEY){render();refresh('')}});
+})();
+</script>
+
 </body></html>
