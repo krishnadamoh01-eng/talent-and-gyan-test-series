@@ -1,9 +1,10 @@
-Talent And Gyan Test Series - Homepage Header Update
+Talent And Gyan Test Series — V5
 
-Base: existing Talent & Gyan student/admin system.
-Homepage header updated to:
-- Full blue upper band and full red information band.
-- Existing T&G logo positioned flush to the left and spanning both bands.
-- Large white Talent And Gyan Test Series title in blue band.
-- Red band contains important-information ticker and YouTube Subscribe button.
-- Existing homepage hero, shortcut cards, dynamic Exam + Logo cards, and admin/student functionality preserved.
+Updates:
+1. परीक्षा प्रबंधन is now the single source of truth for exam names and logos.
+2. Old/default exam names are removed from the Student Site on first load.
+3. Student Site shows only exams added from परीक्षा प्रबंधन and marked Show.
+4. Admin परीक्षा प्रबंधन shows saved exams with logo, Edit/Logo बदलें and Delete.
+5. Exam name + logo save uses the visible form controls and no duplicate legacy field.
+6. Mock Test/PDF/other exam dropdowns refresh from the Exam Management list.
+7. Existing Test/Question/PDF records are not deleted when an exam is removed from the Exam List.
