@@ -1263,7 +1263,7 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
       box.innerHTML='<div class="tgy-exam-card" style="grid-column:1/-1"><img class="tgy-exam-logo" src="talent-and-gyan-logo.png"><div class="tgy-exam-name">अभी कोई परीक्षा उपलब्ध नहीं है</div><div class="tgy-exam-sub">Admin Panel में पहले परीक्षा/Folder बनाइए।</div></div>';
       return;
     }
-    box.innerHTML=arr.map(function(x){var name=typeof x==='string'?x:x.name;var logo=typeof x==='object'&&x.logo?x.logo:'talent-and-gyan-logo.png';return '<div class="tgy-exam-card"><img class="tgy-exam-logo" src="'+escH(logo)+'" alt=""><div class="tgy-exam-name">'+escH(name)+'</div><div class="tgy-exam-sub">Demo + Online Mock Tests</div><button class="tgy-view-btn" onclick="window.openExam('+JSON.stringify(name)+')">View Tests</button></div>'}).join('');
+    box.innerHTML=arr.map(function(x){var name=typeof x==='string'?x:x.name;var logo=typeof x==='object'&&x.logo?x.logo:'talent-and-gyan-logo.png';return '<div class="tgy-exam-card"><img class="tgy-exam-logo" src="'+escH(logo)+'" alt=""><div class="tgy-exam-name">'+escH(name)+'</div><div class="tgy-exam-sub">Demo + Online Mock Tests</div><button class="tgy-view-btn" onclick="window.tgyOpenExamHub('+JSON.stringify(name)+')">View Tests</button></div>'}).join('');
   }
   function renderImportant(){
     var a=J('tgy_news_items',[]).filter(function(x){return x&&x.text&&x.enabled!==false});
@@ -1358,6 +1358,34 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
 })();
 </script>
 
+<script id="tgy-exam-hub-flow"><!-- Home Exams -> Folder Hub: Test Series + PDF -->
+(function(){
+  const E=window.esc||function(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))};
+  function J(k,d){try{const x=JSON.parse(localStorage.getItem(k)||'null');return x==null?d:x}catch(e){return d}}
+  function showModal(html){const box=document.getElementById('examContent'),modal=document.getElementById('examModal');if(!box||!modal)return false;box.innerHTML=html;modal.style.display='flex';return true}
+  function examTests(exam){return (window.tests||[]).filter(t=>t&&t.exam===exam&&t.published!==false&&t.visible!==false)}
+  function examNotes(exam){const notes=J('tgy_pdf_notes',[]);return notes.map((n,i)=>({...n,_i:i})).filter(n=>((n.folder||n.exam||'').trim()===String(exam).trim()))}
+  window.tgyOpenExamHub=function(exam){
+    const visible=typeof window.getFolderVisibilityStudent==='function'?window.getFolderVisibilityStudent(exam):true;if(!visible)return;
+    const tc=examTests(exam).length, pc=examNotes(exam).length;
+    showModal(`<div class="tgy-exam-hub"><div class="tgy-list-head"><div><div class="tgy-kicker">परीक्षा</div><h2>📁 ${E(exam)}</h2><p class="muted">इस परीक्षा के लिए नीचे Test Series और PDF Notes चुनें।</p></div><button class="btn gray" onclick="window.closeExamHub()">← पीछे</button></div><div class="tgy-hub-grid"><div class="tgy-hub-card"><div class="tgy-hub-icon">📝</div><h3>Test Series</h3><p>${tc} Tests उपलब्ध हैं</p><button class="btn orange" onclick="window.tgyOpenExamTestSeries('${E(exam)}')">📚 Test Series खोलें</button></div><div class="tgy-hub-card"><div class="tgy-hub-icon">📄</div><h3>PDF</h3><p>${pc} PDF Notes उपलब्ध हैं</p><button class="btn orange" onclick="window.tgyOpenExamPdf('${E(exam)}')">📄 PDF खोलें</button></div></div></div>`);
+  };
+  window.tgyOpenExamTestSeries=function(exam){
+    if(typeof window.tgyShowTestList==='function') window.tgyShowTestList(exam); else window.openExam(exam);
+  };
+  window.tgyOpenExamPdf=function(exam){
+    const notes=examNotes(exam), o=document.getElementById('studentPageOverlay');
+    if(!o){if(typeof window.openStudentPage==='function')window.openStudentPage('notes');}
+    const ov=document.getElementById('studentPageOverlay');if(!ov)return;
+    ov.style.display='block'; const body=ov.querySelector('.student-page-body');if(!body)return;
+    body.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div><div class="tgy-kicker">${E(exam)}</div><h2 style="margin:4px 0">📄 PDF Notes</h2><p class="muted">इस परीक्षा के सभी PDF यहाँ हैं।</p></div><button class="btn gray" onclick="window.tgyOpenExamHub('${E(exam)}')">← ${E(exam)} पर वापस</button></div>${notes.length?`<div class="grid" style="margin-top:14px">${notes.map(n=>{const price=Number(n.offer)||Number(n.mrp)||0;const owned=typeof window.hasPurchasedNote==='function'&&window.hasPurchasedNote(n);return `<div class="card" style="margin:0"><h3>📄 ${E(n.title||'PDF Notes')}</h3>${n.pages?`<p class="muted">${E(n.pages)} Pages</p>`:''}${price&&!owned?`<button class="btn orange" onclick="window.buyPdfFolder(${JSON.stringify(exam)},${Number(window.tgyFolderMeta(exam).offer)||Number(window.tgyFolderMeta(exam).mrp)||price},${Number(window.tgyFolderMeta(exam).days)||0})">💳 खरीदें</button>`:`<button class="btn orange" onclick="window.viewPdfNote(${n._i})">📖 PDF खोलें</button>`}</div>`}).join('')}</div>`:'<div class="card" style="margin-top:14px"><h3>📭 कोई PDF उपलब्ध नहीं है</h3><p class="muted">इस परीक्षा के लिए अभी PDF Notes नहीं जोड़े गए हैं।</p></div>'}</div>`;
+  };
+  window.closeExamHub=function(){const m=document.getElementById('examModal');if(m)m.style.display='none';};
+  document.addEventListener('DOMContentLoaded',function(){
+    if(!document.getElementById('tgy-exam-hub-css')){const st=document.createElement('style');st.id='tgy-exam-hub-css';st.textContent='.tgy-hub-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}.tgy-hub-card{background:#fff;border:1px solid #dbe5ef;border-radius:16px;padding:24px;text-align:center;box-shadow:0 3px 10px rgba(20,60,100,.06)}.tgy-hub-icon{font-size:42px}.tgy-hub-card h3{margin:10px 0 6px}.tgy-hub-card p{color:#607080;margin:0 0 14px}@media(max-width:650px){.tgy-hub-grid{grid-template-columns:1fr}}';document.head.appendChild(st)}
+  });
+})();
+</script>
 <script id="tgy-direct-test-flow">(function(){
   const E=window.esc||function(v){return String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]))};
   function visibleTests(exam){
