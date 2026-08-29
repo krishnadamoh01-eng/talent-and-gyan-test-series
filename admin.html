@@ -95,13 +95,12 @@ function checkAdmin(){
   <div class="card">
     <div class="row">
       <div><label>📋 परीक्षा</label><select id="mtExam" onchange="mtLoadTests()"></select></div>
-      <div><label>📝 Test Type</label><select id="mtType" onchange="mtTypeChanged()"><option value="test">Test</option><option value="demo">Demo</option></select></div>
-       <div id="mtNameWrap"><label>📝 Test का नाम</label><input id="mtName" placeholder="जैसे Mock Test 01"></div>
+      <div><label>📝 Test का नाम</label><input id="mtName" placeholder="जैसे Mock Test 01 / Demo Test"></div>
       <div><label>⏱️ समय (मिनट)</label><input id="mtTime" type="number" min="1" value="60"></div>
       <div><label>❌ Negative Marking</label><select id="mtNegative" onchange="mtNegativeChanged()"><option value="no">नहीं</option><option value="yes">हाँ</option></select></div>
       <div id="mtNegativeValueWrap" style="display:none"><label>गलत उत्तर पर Marks</label><input id="mtNegativeValue" type="number" min="0" step="0.01" value="0.25"></div>
     </div>
-    <p class="muted">परीक्षा केवल परीक्षा Management से आएगी। पहले Test या Demo चुनें। Demo के लिए नाम/अन्य Test settings की जरूरत नहीं है।</p>
+    <p class="muted">परीक्षा केवल परीक्षा Management से आएगी। Test का नाम, समय और Negative Marking यहाँ भरें।</p>
   </div>
 
   <div class="card">
@@ -1463,95 +1462,65 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
-<script id="tgy-final-fix-admin">
+<style id="tgy-admin-folder-final-css">
+#modal{z-index:99999!important}
+#mtAllTests .tgy-admin-folder{border:1px solid #cfdbe8!important;border-radius:12px!important;margin:10px 0!important;padding:0!important;overflow:hidden!important;background:#fff!important;box-shadow:0 2px 8px rgba(18,59,104,.06)}
+#mtAllTests .tgy-admin-folder-head{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;background:#f7faff}
+#mtAllTests .tgy-admin-folder-head h3{margin:0;font-size:18px}
+#mtAllTests .tgy-admin-folder-body{padding:10px 14px;border-top:1px solid #e4ebf2}
+#mtAllTests .tgy-admin-test-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #e1e8ef;border-radius:9px;padding:10px 12px;margin:7px 0;background:#fff}
+#mtAllTests .tgy-admin-test-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#mtAllTests .tgy-admin-test-actions .btn{padding:7px 10px;font-size:13px}
+@media(max-width:700px){#mtAllTests .tgy-admin-test-item{align-items:flex-start;flex-direction:column}#mtAllTests .tgy-admin-test-actions{justify-content:flex-start}}
+</style>
+<script id="tgy-admin-folder-final-fix">
 (function(){
-  function J(k,d){try{var x=JSON.parse(localStorage.getItem(k)||"null");return x==null?d:x}catch(e){return d}}
-  function S(k,v){localStorage.setItem(k,JSON.stringify(v))}
-  function escA(v){return typeof mtEsc==='function'?mtEsc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-
-  // Exam Management is the single source for folders; never resurrect hard-coded exams.
-  window.getExamMaster=function(){
-    var a=J('tgy_exams',[]); if(!Array.isArray(a))a=[];
-    var names=[],seen=new Set();
-    a.forEach(function(x){var n=typeof x==='string'?x:(x&&x.name);if(n&&!seen.has(n)){seen.add(n);names.push(n)}});
-    J('tgy_tests',[]).forEach(function(t){var n=t&&t.exam;if(n&&!seen.has(n)){seen.add(n);names.push(n)}});
-    J('tgy_pdf_notes',[]).forEach(function(n){var x=n&&(n.folder||n.exam);if(x&&!seen.has(x)){seen.add(x);names.push(x)}});
-    return names.map(function(n){var old=a.find(function(x){return (typeof x==='string'?x:x.name)===n});return typeof old==='object'?old:{name:n,visible:true}});
-  };
-  window.saveNewExamMaster=function(name,visible=true){
-    name=String(name||'').trim(); if(!name)return;
-    var a=J('tgy_exams',[]); if(!Array.isArray(a))a=[];
-    var i=a.findIndex(function(x){return (typeof x==='string'?x:x.name)===name});
-    var old=i>=0&&typeof a[i]==='object'?a[i]:{name:name};
-    old.name=name;old.visible=visible;
-    if(i>=0)a[i]=old;else a.push(old);
-    S('tgy_exams',a); if(typeof renderExamMaster==='function')renderExamMaster(); if(typeof refreshAllExamDropdowns==='function')refreshAllExamDropdowns(name);
-  };
-  window.renderExamMaster=function(){
-    var b=document.getElementById('examMasterList');if(!b)return;var a=getExamMaster();
-    b.innerHTML=a.length?a.map(function(x,i){return '<div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><img src="'+escA(x.logo||'talent-and-gyan-logo.png')+'" style="width:58px;height:58px;object-fit:contain;border-radius:8px"><b style="min-width:220px">'+escA(x.name)+'</b><span>'+(x.visible===false?'🙈 Hidden':'👁️ Active')+'</span><button class="btn" onclick="editExamMaster('+i+')">✏️ Edit</button><button class="btn danger" onclick="deleteExamMaster('+i+')">🗑️ Delete</button></div>'}).join(''):'<div class="card"><b>अभी कोई परीक्षा नहीं है।</b><p class="muted">ऊपर से नई परीक्षा जोड़ें।</p></div>';
-  };
-  window.editExamMaster=function(i){
-    var a=getExamMaster(),x=a[i];if(!x)return;var old=x.name,n=prompt('परीक्षा का नया नाम लिखें:',old);if(n===null)return;n=n.trim();if(!n)return;
-    if(n!==old&&a.some(function(v){return v.name===n}))return alert('यह परीक्षा नाम पहले से मौजूद है।');
-    x.name=n;
-    var file=document.getElementById('examNewLogo')?.files?.[0];
-    function done(logo){if(logo)x.logo=logo;x.visible=document.getElementById('examNewVisible')?.value!=='false';var all=J('tgy_exams',[]);var idx=all.findIndex(function(v){return (typeof v==='string'?v:v.name)===old});if(idx>=0)all[idx]=x;else all.push(x);S('tgy_exams',all);
-      // Keep linked data aligned when the exam is renamed.
-      var ts=J('tgy_tests',[]);ts.forEach(function(t){if(t.exam===old)t.exam=n});S('tgy_tests',ts);
-      var ns=J('tgy_pdf_notes',[]);ns.forEach(function(q){if((q.folder||q.exam)===old){q.folder=n;q.exam=n}});S('tgy_pdf_notes',ns);
-      if(typeof renderExamMaster==='function')renderExamMaster();if(typeof refreshAllExamDropdowns==='function')refreshAllExamDropdowns(n);if(typeof mtRenderAll==='function')mtRenderAll();if(typeof renderAdminNotes==='function')renderAdminNotes();alert('✅ परीक्षा Update हो गई।');
-    }
-    if(file){var r=new FileReader();r.onload=function(){done(r.result)};r.readAsDataURL(file)}else done(x.logo||null);
-  };
-  window.deleteExamMaster=function(i){
-    var a=getExamMaster(),x=a[i];if(!x)return;
-    if(!confirm('"'+x.name+'" की परीक्षा Folder सूची से हटाएँ?\n\nइससे केवल Exam Management की entry हटेगी। Tests/PDF data सुरक्षित रहेगा।'))return;
-    var all=J('tgy_exams',[]).filter(function(v){return (typeof v==='string'?v:v.name)!==x.name});S('tgy_exams',all);
-    if(typeof renderExamMaster==='function')renderExamMaster();if(typeof refreshAllExamDropdowns==='function')refreshAllExamDropdowns('');if(typeof mtRenderAll==='function')mtRenderAll();alert('🗑️ परीक्षा Folder entry हट गई।');
-  };
-
-  window.mtTypeChanged=function(){
-    var type=document.getElementById('mtType')?.value||'test', nw=document.getElementById('mtNameWrap'),n=document.getElementById('mtName'),tw=document.getElementById('mtTime'),neg=document.getElementById('mtNegative'),nw2=document.getElementById('mtNegativeValueWrap');
-    if(type==='demo'){
-      if(n)n.value='Demo'; if(nw)nw.style.display='none'; if(tw){tw.closest('div').style.display='none'} if(neg){neg.value='no';neg.closest('div').style.display='none'} if(nw2)nw2.style.display='none';
-    }else{if(nw)nw.style.display='block';if(tw)tw.closest('div').style.display='block';if(neg)neg.closest('div').style.display='block';}
-  };
-  window.mtFinalSave=function(){
-    var e=document.getElementById('mtExam')?.value||'',type=document.getElementById('mtType')?.value||'test',n=(document.getElementById('mtName')?.value||'').trim();
-    if(type==='demo')n='Demo';
-    var time=Number(document.getElementById('mtTime')?.value)||60,negative=document.getElementById('mtNegative')?.value==='yes',negativeMarks=negative?(Number(document.getElementById('mtNegativeValue')?.value)||0):0;
-    if(!e)return alert('पहले परीक्षा चुनें।');if(!n)return alert('Test का नाम लिखें।');if(type==='test'&&negative&&negativeMarks<=0)return alert('Negative Marks की value डालें।');
-    var d=mtStore();d.exams=d.exams||{};d.exams[e]=d.exams[e]||{tests:{}};
-    var obj=d.exams[e].tests[n]||{name:n,exam:e,questions:[],published:true,visible:true};
-    obj.name=n;obj.exam=e;obj.demo=type==='demo';obj.time=type==='demo'?10:time;obj.negativeMarking=type==='test'&&negative;obj.negativeMarks=type==='test'?negativeMarks:0;obj.questions=obj.questions||[];
-    var base=obj.questions.length;(mtPreview||[]).forEach(function(x,i){obj.questions.push({q:x.q,o:x.o,answer:x.answer,ex:x.ex,number:base+i+1})});
-    d.exams[e].tests[n]=obj;mtSaveStore(d);
-    // Clear the entire entry/preview area so the next Test can be added cleanly.
-    mtPreview=[];['mtName','mtBulkText','mtPdf'].forEach(function(id){var el=document.getElementById(id);if(el){if(el.type==='file')el.value='';else el.value=''}});
-    var st=document.getElementById('mtStatus'),pv=document.getElementById('mtPreview');if(st)st.innerHTML='✅ '+(type==='demo'?'Demo':'Test')+' Save हो गया। Form अगले Test के लिए साफ है।';if(pv)pv.innerHTML='';
-    var tc=document.getElementById('mtType');if(tc)tc.value='test';mtTypeChanged();
-    if(typeof mtRenderAll==='function')mtRenderAll();if(typeof mtRenderQuestions==='function')mtRenderQuestions();
-  };
-  window.mtLoadTests=function(){
-    var e=document.getElementById('mtExam')?.value||'',n=document.getElementById('mtName');if(n)n.value='';var tc=document.getElementById('mtType');if(tc)tc.value='test';mtTypeChanged();
-    var tm=document.getElementById('mtTime');if(tm)tm.value=60;var neg=document.getElementById('mtNegative');if(neg)neg.value='no';if(typeof mtNegativeChanged==='function')mtNegativeChanged();mtPreview=[];if(typeof mtRenderQuestions==='function')mtRenderQuestions();if(typeof mtRenderAll==='function')mtRenderAll();
-  };
-  window.mtRenderAll=function(){
-    var box=document.getElementById('mtAllTests');if(!box)return;var d=mtStore(),groups={};getExamMaster().forEach(function(x){groups[x.name]=Object.entries(d.exams?.[x.name]?.tests||{})});var exams=Object.keys(groups);
-    if(!exams.length){box.innerHTML='<div class="card"><h3>📭 अभी कोई परीक्षा Folder नहीं है।</h3><p>पहले परीक्षा Management में परीक्षा जोड़ें।</p></div>';return}
-    box.innerHTML='<div class="grid" style="align-items:stretch">'+exams.map(function(e){var ex=getExamMaster().find(function(x){return x.name===e})||{},tests=groups[e]||[];return '<div class="card" style="margin:0;border:2px solid #1d65a6;text-align:center;display:flex;flex-direction:column;justify-content:space-between"><div><img src="'+escA(ex.logo||'talent-and-gyan-logo.png')+'" style="width:95px;height:95px;object-fit:contain;border-radius:12px"><h2 style="margin:8px 0">📁 '+escA(e)+'</h2><p class="muted">'+tests.length+' Tests</p></div><button class="btn orange" onclick="mtOpenFolderAdmin('+JSON.stringify(e)+')">📂 Folder खोलें</button></div>'}).join('')+'</div>';
-  };
-  window.mtOpenFolderAdmin=function(exam){
-    var d=mtStore(),arr=Object.entries(d.exams?.[exam]?.tests||{}),mb=document.getElementById('mb'),modal=document.getElementById('modal');if(!mb||!modal)return;
-    arr.sort(function(a,b){return (a[1].demo===true?-1:1)-(b[1].demo===true?-1:1)});
-    var html='<div><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><h2>📁 '+escA(exam)+'</h2><p class="muted">Demo पहले, फिर Test क्रम से।</p></div><button class="btn gray" onclick="closeM()">✖ बंद करें</button></div>';
-    if(!arr.length)html+='<div class="card"><h3>📭 इस Folder में अभी कोई Test नहीं है।</h3></div>';
-    arr.forEach(function(pair){var t=pair[0],x=pair[1];html+='<div class="card" style="margin:10px 0;border:1px solid #ccd5df"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div style="font-weight:800;color:#1d65a6">'+(x.demo?'📘 DEMO':'📝 TEST')+'</div><h3 style="margin:5px 0">'+escA(x.name||t)+'</h3><p>'+((x.questions||[]).length)+' Questions • '+(x.time||60)+' मिनट</p><p>'+(x.published===false?'🙈 Hidden':'👁️ Show')+'</p></div><div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end"><button class="btn" onclick="mtOpenTestEditor('+JSON.stringify(encodeURIComponent(exam))+','+JSON.stringify(encodeURIComponent(t))+')">👁️ देखें</button><button class="btn" onclick="mtSelectTest('+JSON.stringify(encodeURIComponent(exam))+','+JSON.stringify(encodeURIComponent(t))+');closeM();document.getElementById(\'mtQuestions\').scrollIntoView({behavior:\'smooth\'})">✏️ Edit</button><button class="btn" onclick="mtSelectTest('+JSON.stringify(encodeURIComponent(exam))+','+JSON.stringify(encodeURIComponent(t))+');closeM();document.getElementById(\'mtQuestions\').scrollIntoView({behavior:\'smooth\'})">➕ Questions</button><button class="btn gray" onclick="mtTogglePublish('+JSON.stringify(encodeURIComponent(exam))+','+JSON.stringify(encodeURIComponent(t))+')">'+(x.published===false?'👁️ Show':'🙈 Hide')+'</button><button class="btn danger" onclick="mtDeleteTest('+JSON.stringify(encodeURIComponent(exam))+','+JSON.stringify(encodeURIComponent(t))+');mtOpenFolderAdmin('+JSON.stringify(exam)+')">🗑️ Delete</button></div></div></div>'});
-    html+='</div>';mb.innerHTML=html;modal.style.display='flex';
-  };
-  // Initial type state and refresh.
-  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){if(document.getElementById('mtType'))mtTypeChanged();if(typeof renderExamMaster==='function')renderExamMaster();if(typeof mtRenderAll==='function')mtRenderAll()},450)});
+ const X=window.mtEsc||window.esc||function(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))};
+ window.mtAdminFolderState=window.mtAdminFolderState||{};
+ window.mtToggleAdminFolder=function(encoded){const e=decodeURIComponent(encoded);window.mtAdminFolderState[e]=!window.mtAdminFolderState[e];window.mtRenderAll();};
+ window.mtRenderAll=function(){
+   const box=document.getElementById('mtAllTests');if(!box)return;
+   const d=mtStore(), groups={};
+   (typeof getExamMaster==='function'?getExamMaster():[]).forEach(x=>{const n=typeof x==='string'?x:x.name;if(n)groups[n]=Object.entries(d.exams?.[n]?.tests||{});});
+   const exams=Object.keys(groups);
+   if(!exams.length){box.innerHTML='<div class="card"><h3>📭 अभी कोई परीक्षा नहीं है।</h3><p>पहले परीक्षा Management में परीक्षा जोड़ें।</p></div>';return;}
+   box.innerHTML=exams.map(e=>{
+     const encoded=encodeURIComponent(e),open=window.mtAdminFolderState[e]===true, visible=getFolderVisibility(e), rows=groups[e]||[];
+     return `<div class="tgy-admin-folder">
+       <div class="tgy-admin-folder-head" onclick="mtToggleAdminFolder('${encoded}')">
+         <div><h3>📁 ${X(e)}</h3><div class="muted">${rows.length} Test • ${visible?'Student Site पर Show':'Student Site पर Hidden'}</div></div>
+         <div style="display:flex;gap:6px;align-items:center"><span class="badge">${open?'▲ बंद करें':'▼ खोलें'}</span><button class="btn ${visible?'gray':'orange'}" onclick="event.stopPropagation();mtToggleFolder('${encoded}')">${visible?'🙈 Hide':'👁️ Show'}</button></div>
+       </div>
+       ${open?`<div class="tgy-admin-folder-body">${rows.length?rows.map(([key,t])=>{
+         const te=encodeURIComponent(key), n=t.name||key, hidden=t.published===false;
+         return `<div class="tgy-admin-test-item">
+           <div><b>📝 ${X(n)}</b><div class="muted">${t.questions?.length||0} Questions • ${t.time||60} मिनट • ${hidden?'🙈 Hidden':'👁️ Show'}</div></div>
+           <div class="tgy-admin-test-actions">
+             <button class="btn" onclick="mtOpenTestEditor('${encoded}','${te}')">👁️ देखें</button>
+             <button class="btn" onclick="mtRenameTest('${encoded}','${te}')">✏️ Edit / Name</button>
+             <button class="btn" onclick="mtSelectTest('${encoded}','${te}');document.getElementById('mtQuestions').scrollIntoView({behavior:'smooth',block:'start'})">➕ Questions</button>
+             <button class="btn ${hidden?'orange':'gray'}" onclick="mtTogglePublish('${encoded}','${te}')">${hidden?'👁️ Show':'🙈 Hide'}</button>
+             <button class="btn danger" onclick="mtDeleteTest('${encoded}','${te}')">🗑️ Delete</button>
+           </div>
+         </div>`;
+       }).join(''):`<div class="muted">इस Folder में अभी कोई Test नहीं है।</div>`}</div>`:''}
+     </div>`;
+   }).join('');
+ };
+ const oldEditor=window.mtOpenTestEditor;
+ window.mtOpenTestEditor=function(e,t){
+   e=decodeURIComponent(e);t=decodeURIComponent(t);const d=mtStore(),obj=d.exams?.[e]?.tests?.[t];
+   if(!obj){alert('यह Test नहीं मिला।');return;}
+   const mb=document.getElementById('mb'),modal=document.getElementById('modal');if(!mb||!modal)return;
+   const qs=(obj.questions||[]).map(mtNormQuestion);
+   mb.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">📋 ${X(t)}</h2><button class="btn gray" onclick="closeM()">✕ बंद करें</button></div>
+    <p><b>परीक्षा:</b> ${X(e)} &nbsp; | &nbsp; <b>Questions:</b> ${qs.length} &nbsp; | &nbsp; <b>समय:</b> ${obj.time||60} मिनट</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><button class="btn orange" onclick="closeM();mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}');document.getElementById('mtQuestions').scrollIntoView({behavior:'smooth',block:'start'})">➕ Questions पर जाएँ</button><button class="btn" onclick="closeM();mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}');document.getElementById('mtName').focus()">✏️ Test Edit</button></div>
+    <div style="max-height:68vh;overflow:auto">${qs.length?qs.map((q,i)=>`<div class="qrow"><b>प्रश्न ${i+1}.</b> ${X(q.q)}<div style="margin:8px 0">(A) ${X(q.o[0])}<br>(B) ${X(q.o[1])}<br>(C) ${X(q.o[2])}<br>(D) ${X(q.o[3])}</div><b>सही उत्तर:</b> ${X(q.answer||'-')}${q.ex?`<div><b>Explanation:</b> ${X(q.ex)}</div>`:''}<div style="margin-top:8px"><button class="btn" onclick="closeM();mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}');setTimeout(()=>mtEditQuestion(${i}),50)">✏️ Question Edit</button><button class="btn danger" onclick="closeM();mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}');setTimeout(()=>mtDeleteQuestion(${i}),50)">🗑️ Delete</button></div></div>`).join(''):`<div class="card">अभी कोई Question नहीं है।</div>`}</div>`;
+   modal.style.display='flex';
+ };
+ document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>window.mtRenderAll&&window.mtRenderAll(),250));
 })();
 </script>
+
 </body></html>
