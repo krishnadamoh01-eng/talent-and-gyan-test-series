@@ -1523,4 +1523,27 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
+
+<script id="tgy-admin-final-sync-fix">
+(function(){
+  const oldSaveNews=window.saveNews;
+  function readNews(){try{const a=JSON.parse(localStorage.getItem('tgy_news_items')||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+  function writeNews(a){localStorage.setItem('tgy_news_items',JSON.stringify(a));let c={};try{c=JSON.parse(localStorage.getItem('tgy_home_custom')||'{}')}catch(e){}c.announcement=a.filter(x=>x&&x.enabled!==false&&x.text).map(x=>x.text).join(' • ');c.newsUpdatedAt=Date.now();localStorage.setItem('tgy_home_custom',JSON.stringify(c));localStorage.setItem('tgy_news_sync',String(Date.now()));}
+  window.tgySaveAdminNews=function(a){writeNews(a)};
+  window.tgyAdminNews=readNews;
+  window.addEventListener('storage',function(e){if(e.key==='tgy_news_items'||e.key==='tgy_news_sync')setTimeout(function(){if(typeof openNewsManager==='function'){}},50)});
+  // Keep Mock Test data in the flat student store. The admin structured editor already uses mtSaveStore;
+  // this guard makes sure every saved test has its exam, visibility and demo fields intact.
+  const originalMtSaveStore=window.mtSaveStore;
+  if(typeof originalMtSaveStore==='function'){
+    window.mtSaveStore=function(x){
+      try{Object.entries(x.exams||{}).forEach(([exam,v])=>Object.entries(v.tests||{}).forEach(([key,t])=>{t.exam=t.exam||exam;t.name=t.name||key;t.visible=t.visible!==false;t.published=t.published!==false;t.questions=Array.isArray(t.questions)?t.questions:[]}))}catch(e){}
+      return originalMtSaveStore(x);
+    };
+  }
+  // Quick add must use the same news store as the main News Manager.
+  window.quickAddImportantInfo=function(){const el=document.getElementById('quickImportantInfo');const text=(el?.value||'').trim();if(!text)return;const a=readNews();a.push({text,enabled:true,date:Date.now()});writeNews(a);if(el)el.value='';if(typeof openNewsManager==='function')openNewsManager();alert('📢 महत्वपूर्ण जानकारी Student Website में Save हो गई।');};
+})();
+</script>
+
 </body></html>
