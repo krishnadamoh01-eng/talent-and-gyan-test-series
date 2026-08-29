@@ -1555,4 +1555,74 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
 })();
 </script>
 
+
+<script id="tgy-folder-navigation-hotfix">
+(function(){
+  // Keep the main in-memory test array available to all later navigation scripts.
+  window.tests = tests;
+  window.__tgyTests = tests;
+
+  function E(v){return String(v??'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+  function allTests(exam){
+    return tests.filter(function(t){
+      return t && t.exam===exam && t.published!==false && t.visible!==false && (typeof tgyDateValid!=='function' || tgyDateValid(t.availableUntil));
+    });
+  }
+  function isDone(t){try{return localStorage.getItem('tgy_done_'+encodeURIComponent((t.exam||'')+'||'+(t.name||'')))==='1'}catch(e){return false}}
+  function resultFor(t){
+    try{
+      var arr=JSON.parse(localStorage.getItem('tgy_results')||'[]')||[];
+      return arr.find(function(r){return (r.test||r.name)===(t.name||'') && (!r.exam || r.exam===(t.exam||''));})||null;
+    }catch(e){return null}
+  }
+
+  window.tgyShowTestList=function(exam){
+    var box=document.getElementById('examContent'), modal=document.getElementById('examModal');
+    if(!box||!modal)return;
+    var arr=allTests(exam).slice().sort(function(a,b){return (isDone(a)?1:0)-(isDone(b)?1:0)});
+    var cards=arr.map(function(t,pos){
+      var i=tests.indexOf(t), free=t.demo===true, owned=typeof hasPurchasedTest==='function'&&hasPurchasedTest(t), locked=!free&&!owned;
+      var r=resultFor(t), rhtml='';
+      if(r){var pct=(r.percent!=null?r.percent:'');rhtml='<div style="margin-top:8px;padding:7px 9px;background:#eef8f1;border-radius:8px;font-weight:700;color:#18713c">📊 सही: '+E(r.correct??'-')+' • अंक: '+E(r.score??'-')+(pct!==''?' • '+E(pct)+'%':'')+'</div>';}
+      return '<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+E(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>'+(isDone(t)?'<span class="tgy-status done">✅ Complete</span>':free?'<span class="tgy-status free">FREE DEMO</span>':owned?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>')+rhtml+'</div><button class="btn '+(locked?'orange':'')+'" onclick="'+(locked?('buySeriesAccess('+JSON.stringify(exam)+',0)'):('tgyOpenTestPreview('+i+')'))+'">'+(locked?'🔒 Access लें':'▶️ Test खोलें')+'</button></div>';
+    }).join('');
+    box.innerHTML='<div class="tgy-list-head"><div><h2>🎯 '+E(exam)+' — Tests</h2><p class="muted">किसी Test को खोलें, विवरण देखें और फिर शुरू करें दबाएँ।</p></div><button class="btn gray" onclick="closeExam()">← पीछे</button></div>'+(arr.length?'<div id="tgyTestGrid" class="tgy-test-grid">'+cards+'</div>'+(arr.length>6?'<button id="tgyMoreTestsBtn" class="btn gray tgy-more-btn" onclick="tgyToggleMoreTests()">＋ और अधिक Tests देखें</button>':''):'<div class="card"><h3>📭 कोई Test उपलब्ध नहीं है</h3></div>');
+    modal.style.display='flex'; window.tgyNavExam=exam;
+  };
+
+  window.tgyOpenTestPreview=function(i){
+    var t=tests[i]; if(!t)return;
+    if(typeof requireStudentLogin==='function' && !requireStudentLogin({type:'test',index:i,exam:t.exam}))return;
+    var free=t.demo===true, owned=typeof hasPurchasedTest==='function'&&hasPurchasedTest(t), canStart=free||owned;
+    var box=document.getElementById('examContent'),modal=document.getElementById('examModal');if(!box||!modal)return;
+    box.innerHTML='<div class="tgy-test-preview"><div class="tgy-test-preview-head"><div><div class="tgy-kicker">'+E(t.exam||'Mock Test')+'</div><h2>📝 '+E(t.name||'Test')+'</h2></div><button class="btn gray" onclick="tgyShowTestList('+JSON.stringify(t.exam||'')+')">← Test List</button></div><div class="tgy-test-info-grid"><div><b>📋 Questions</b><span>'+((t.questions||[]).length)+'</span></div><div><b>⏱️ समय</b><span>'+Number(t.time||60)+' मिनट</span></div><div><b>🔐 Access</b><span>'+(canStart?(free?'FREE Demo':'Access Active'):'Access Required')+'</span></div></div><div class="tgy-start-card"><h3>🚀 Test शुरू करने के लिए तैयार?</h3><p class="muted">शुरू करें दबाने के बाद ही Test और Timer शुरू होगा।</p>'+(canStart?'<button class="btn orange tgy-start-btn" onclick="tgyStartSelectedTest('+i+')">▶️ शुरू करें</button>':'<button class="btn orange tgy-start-btn" onclick="buySeriesAccess('+JSON.stringify(t.exam||'')+',0)">🔒 Access लें</button>')+'</div></div>';
+    modal.style.display='flex';
+  };
+
+  window.tgyStartSelectedTest=function(i){
+    var t=tests[i];if(!t)return;
+    window.activeTestExam=t.exam||null;window.openedTestFromSeries=true;
+    var em=document.getElementById('examModal');if(em)em.style.display='none';
+    setTimeout(function(){if(typeof startFinalMockTest==='function')startFinalMockTest(i);else if(typeof openTest==='function')openTest(i)},30);
+  };
+
+  // Mock Test and Test Series exam cards should keep navigating forward, not become dead buttons.
+  window.openExam=function(exam){
+    if(typeof getFolderVisibilityStudent==='function' && !getFolderVisibilityStudent(exam))return;
+    tgyShowTestList(exam);
+  };
+  window.tgyOpenSeriesInside=function(exam){tgyShowTestList(exam)};
+  window.tgyOpenExamTestSeries=function(exam){tgyShowTestList(exam)};
+
+  // Home परीक्षा folder: first show the two choices; each choice must remain navigable.
+  window.tgyOpenExamHub=function(exam){
+    if(typeof getFolderVisibilityStudent==='function' && !getFolderVisibilityStudent(exam))return;
+    var notes=[];try{notes=JSON.parse(localStorage.getItem('tgy_pdf_notes')||'[]')||[]}catch(e){}
+    var pc=notes.filter(function(n){return String((n.folder||n.exam||'')).trim()===String(exam).trim()}).length;
+    var tc=allTests(exam).length,box=document.getElementById('examContent'),modal=document.getElementById('examModal');if(!box||!modal)return;
+    box.innerHTML='<div class="tgy-exam-hub"><div class="tgy-list-head"><div><div class="tgy-kicker">परीक्षा</div><h2>📁 '+E(exam)+'</h2><p class="muted">Test Series या PDF चुनें।</p></div><button class="btn gray" onclick="closeExam()">← पीछे</button></div><div class="tgy-hub-grid"><div class="tgy-hub-card"><div class="tgy-hub-icon">📝</div><h3>Test Series</h3><p>'+tc+' Tests उपलब्ध हैं</p><button class="btn orange" onclick="tgyOpenExamTestSeries('+JSON.stringify(exam)+')">📚 Test Series खोलें</button></div><div class="tgy-hub-card"><div class="tgy-hub-icon">📄</div><h3>PDF</h3><p>'+pc+' PDF Notes उपलब्ध हैं</p><button class="btn orange" onclick="tgyOpenExamPdf('+JSON.stringify(exam)+')">📄 PDF खोलें</button></div></div></div>';
+    modal.style.display='flex';
+  };
+})();
+</script>
 </body></html>
