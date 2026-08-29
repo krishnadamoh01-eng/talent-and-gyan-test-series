@@ -225,7 +225,7 @@ header{margin-left:0!important;padding-left:5%!important}
 <div class="modal" id="examModal"><div class="box" id="examContent"></div></div>
 <div id="plans" style="display:none"></div>
 <div class="container"><div class="ad"><h3>📢 Advertisement</h3><p class="muted">यहाँ आपके Advertisement दिखाए जा सकते हैं।</p></div></div>
-<div class="container" id="results"><div class="title">📊 मेरे रिजल्ट</div><div class="card" id="resultList">अभी कोई Result नहीं है।</div></div>
+<div class="container" id="results" style="display:none!important"><div id="resultList"></div></div>
 <div class="container" id="help"><div class="title">🛠️ सहायता / शिकायत</div><div class="card"><p>Payment, Login, Test, Result या किसी अन्य समस्या के लिए शिकायत भेजें।</p><label>नाम</label><input id="hname" placeholder="आपका नाम"><label>Email</label><input id="hemail" placeholder="आपकी Email ID"><label>समस्या</label><select id="htype"><option>Payment की समस्या</option><option>Login की समस्या</option><option>Test नहीं खुल रहा</option><option>Timer की समस्या</option><option>Result की समस्या</option><option>Payment किया लेकिन Access नहीं मिला</option><option>अन्य समस्या</option></select><label>Transaction / UTR</label><input id="hutr" placeholder="यदि लागू हो"><label>समस्या का विवरण</label><textarea id="hmsg" rows="4"></textarea><button class="btn" onclick="sendHelp()">शिकायत Submit करें</button></div></div>
 <footer class="tgy-footer-new"><div>© 2026 Talent And Gyan Test Series. All Rights Reserved.</div><div><a href="#">About Us</a><a href="#">Contact Us</a><a href="#">Privacy Policy</a><a href="#">Terms &amp; Conditions</a></div></footer>
 <div class="modal" id="modal"><div class="box" id="modalContent"></div></div>
@@ -349,8 +349,7 @@ function submitDemo(){
 function openAuth(mode){
  const logged=JSON.parse(localStorage.getItem("tgy_user")||"null");
  if(mode==="account" && logged){
-   document.getElementById("authContent").innerHTML=`<h2>👤 My Account</h2><div class="card"><b>नाम:</b> ${esc(logged.name)}<br><b>Email:</b> ${esc(logged.email)}<br><b>Mobile:</b> ${esc(logged.mobile||"-")}</div><h3>मेरे Results</h3><div id="myres"></div><button class="btn danger" onclick="logout()">Logout</button> <button class="btn gray" onclick="closeAuth()">बंद करें</button>`;
-   const rs=JSON.parse(localStorage.getItem("tgy_results")||"[]"); document.getElementById("myres").innerHTML=rs.length?rs.map(r=>`<div class="q"><b>${esc(r.test)}</b><br>सही: ${r.correct} | गलत: ${r.wrong} | ${r.percent}%</div>`).join(""):"अभी कोई Result नहीं।";
+   document.getElementById("authContent").innerHTML=`<h2>👤 My Account</h2><div class="card"><b>नाम:</b> ${esc(logged.name)}<br><b>Email:</b> ${esc(logged.email)}<br><b>Mobile:</b> ${esc(logged.mobile||"-")}</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px"><button class="btn danger" onclick="logout()">Logout</button></div>`;
  } else if(mode==="login"){
    document.getElementById("authContent").innerHTML=`<h2>🔐 Login</h2><label>Email</label><input id="aemail" type="email"><label>Password</label><div class="password-field-wrap"><input id="apass" type="password"><button type="button" class="btn password-toggle" onclick="togglePassword('apass',this)">👁️ दिखाएँ</button></div><button class="btn" onclick="doLogin()">Login</button> <button class="btn gray" onclick="closeAuth()">बंद करें</button><p>Account नहीं है? <a href="#" onclick="openAuth('register');return false">Register करें</a></p>`;
  } else {
@@ -502,7 +501,7 @@ function submitTest(){
  const neg=s.t.negativeMarking?Number(s.t.negativeMarks||0):0;
  const score=correct-(wrong*neg);
  let percent=(s.t.questions.length?((score/s.t.questions.length)*100):0).toFixed(2);
- results.unshift({test:s.t.name,total:s.t.questions.length,attempted,correct,wrong,skipped,percent,date:new Date().toLocaleString()});
+ results.unshift({test:s.t.name,exam:s.t.exam||window.activeTestExam||"",total:s.t.questions.length,attempted,correct,wrong,skipped,score:Number(score.toFixed(2)),percent,date:new Date().toLocaleString()});
  localStorage.setItem("tgy_results",JSON.stringify(results));
  let rows=s.t.questions.map((q,i)=>`<div class="q"><b>${i+1}. ${esc(q[0])}</b><p>आपका उत्तर: ${s.answers[i]===null?"नहीं दिया":esc(q[1][s.answers[i]])} ${s.answers[i]===q[2]?"✅":"❌"}</p><p><b>सही उत्तर:</b> ${esc(q[1][q[2]])}</p><p class="muted">${esc(q[3]||"")}</p></div>`).join("");
  const next=getNextSeriesTest(s.t);
@@ -526,7 +525,7 @@ function submitTest(){
  <div style="margin-top:12px"><button class="btn" onclick="closeM();renderResults()">बंद करें</button></div>`;
  renderResults();
 }
-function renderResults(){document.getElementById("resultList").innerHTML=results.length?results.slice(0,10).map(r=>`<div class="q"><b>${esc(r.test)}</b><br>Attempt: ${r.attempted} | सही: ${r.correct} | गलत: ${r.wrong} | छोड़े: ${r.skipped} | ${r.percent}%<br><span class="muted">${esc(r.date)}</span></div>`).join(""):"अभी कोई Result नहीं है।"}
+function renderResults(){const el=document.getElementById("resultList");if(el)el.innerHTML="";}
 renderResults();updateAuthUI();
 function sendHelp(){let a=JSON.parse(localStorage.getItem("tgy_help")||"[]");a.push({name:hname.value,email:hemail.value,type:htype.value,utr:hutr.value,msg:hmsg.value,date:new Date().toLocaleString(),status:"Pending"});localStorage.setItem("tgy_help",JSON.stringify(a));alert("शिकायत Submit हो गई है।");hname.value=hemail.value=hutr.value=hmsg.value=""}
 </script>
@@ -643,12 +642,12 @@ function openStudentPage(key){
  if(key==="home"){studentGoHome();return}
  let overlay=document.getElementById("studentPageOverlay");
  if(!overlay){overlay=document.createElement("div");overlay.id="studentPageOverlay";overlay.className="student-page";document.body.appendChild(overlay)}
- const titles={mock:"🎯 Mock Tests",series:"📚 Test Series",plans:"💳 Access Plans",results:"📊 My Results",info:"ℹ️ Exam Information",help:"📞 सहायता",purchased:"🎓 My Purchased Tests",notes:"📄 PDF Notes"};
+ const titles={mock:"🎯 Mock Tests",series:"📚 Test Series",plans:"💳 Access Plans",info:"ℹ️ Exam Information",help:"📞 सहायता",purchased:"🎓 My Purchased Tests",notes:"📄 PDF Notes"};
  let body="";
  if(key==="mock")body='<div class="card"><h2>🎯 Mock Tests</h2><p class="muted">Test देखने के लिए नीचे परीक्षा चुनें। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentMockPageList"></div></div>';
  if(key==="series")body='<div class="card"><h2>📚 Test Series</h2><p class="muted">हर परीक्षा की पूरी Test Series एक ही Folder में मिलेगी। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentSeriesPageList"></div></div>';
  if(key==="plans")body='<div class="card"><h2 style="display:none">💳 Access Plans</h2><p>पहले Test Series चुनें, फिर अपना Plan चुनें और Payment करें।</p><button class="btn orange" onclick="pay()">Plan चुनें / Payment</button></div>';
- if(key==="results")body='<div class="card"><h2>📊 My Results</h2><p>Login करने के बाद आपके दिए गए Tests के Results यहाँ दिखाई देंगे।</p></div>';
+
  if(key==="info")body='<div class="card"><h2>ℹ️ Exam Information</h2><p>परीक्षा की तारीख, आवेदन, Admit Card, Exam Pattern, Syllabus, Result और Latest Updates यहाँ दिखाई देंगे।</p></div>';
  if(key==="purchased")body='<div class="card"><h2>🎓 My Purchased Tests</h2><div id="myPurchasedTests"></div></div>';
  if(key==="notes")body='<div class="card"><h2>📄 PDF Notes</h2><p>Notes दिखाई देंगे। Open करने के लिए Login/Register जरूरी होगा। Paid Notes के लिए पहले खरीदना होगा।</p><div id="studentNotesList"></div></div>';
@@ -1451,4 +1450,60 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
   });
 })();
 </script>
+
+<script id="tgy-profile-cleanup-and-series-results">
+(function(){
+  const E=window.esc||function(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))};
+  // Profile/login/register modal: always show a prominent top-right Close button.
+  const originalOpenAuth=window.openAuth;
+  if(typeof originalOpenAuth==='function'){
+    window.openAuth=function(mode){
+      originalOpenAuth(mode);
+      setTimeout(function(){
+        const box=document.getElementById('authContent'); if(!box)return;
+        box.classList.add('tgy-profile-box');
+        let b=box.querySelector('.tgy-auth-top-close');
+        if(!b){
+          b=document.createElement('button'); b.className='tgy-auth-top-close'; b.type='button'; b.textContent='✕  बंद करें'; b.onclick=function(){window.closeAuth()};
+          box.insertBefore(b,box.firstChild);
+        }
+      },0);
+    };
+  }
+  // Result is shown only inside the relevant Test Series card after that test has been attempted.
+  function getResult(t){
+    try{
+      const rs=JSON.parse(localStorage.getItem('tgy_results')||'[]');
+      return rs.find(r=>(r.test||'')===(t.name||'') && (!r.exam || !t.exam || r.exam===t.exam))||null;
+    }catch(e){return null}
+  }
+  const oldList=window.tgyShowTestList;
+  if(typeof oldList==='function'){
+    window.tgyShowTestList=function(exam){
+      const box=document.getElementById('examContent'),modal=document.getElementById('examModal');if(!box||!modal)return;
+      const arr=(window.tests||[]).filter(t=>t&&t.exam===exam&&t.published!==false&&t.visible!==false&&(typeof window.tgyDateValid!=='function'||window.tgyDateValid(t.availableUntil)));
+      const ordered=arr.slice().sort((a,b)=>(typeof done==='function'?0:0));
+      let cards=arr.map((t)=>{
+        const i=window.tests.indexOf(t),free=t.demo===true,owned=typeof window.hasPurchasedTest==='function'&&window.hasPurchasedTest(t),locked=!free&&!owned;
+        const r=getResult(t);
+        const resultHtml=r?`<div class="tgy-card-result"><b>📊 आपका Result</b><div>सही: <strong>${Number(r.correct||0)}</strong> / ${Number(r.total||t.questions?.length||0)} &nbsp; • &nbsp; अंक: <strong>${Number(r.score??0).toFixed(2)}</strong> &nbsp; • &nbsp; ${E(r.percent||0)}%</div></div>`:'';
+        return `<div class="tgy-test-card"><div class="tgy-test-num">${arr.indexOf(t)+1}</div><div class="tgy-test-card-body"><h3>${E(t.name||'Test')}</h3><p>${(t.questions||[]).length} Questions • ${Number(t.time||60)} मिनट</p>${r?'<span class="tgy-status done">✅ Test दिया गया</span>':free?'<span class="tgy-status free">FREE DEMO</span>':owned?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>'}${resultHtml}</div><button class="btn ${locked?'orange':''}" onclick="${locked?`buySeriesAccess('${E(exam)}',0)`: `tgyOpenTestPreview(${i})`}">${locked?'🔒 Access लें':'▶️ Test खोलें'}</button></div>`;
+      }).join('');
+      box.innerHTML=`<div class="tgy-list-head"><div><h2>🎯 ${E(exam)} — Test Series</h2><p class="muted">कुल ${arr.length} Tests • Test देने के बाद उसी Test के अंदर आपका Result दिखाई देगा।</p></div><button class="btn gray" onclick="closeExam()">← पीछे</button></div>${arr.length?`<div id="tgyTestGrid" class="tgy-test-grid">${cards}</div>${arr.length>6?'<button id="tgyMoreTestsBtn" class="btn gray tgy-more-btn" onclick="tgyToggleMoreTests()">＋ और अधिक Tests देखें</button>':''}`:'<div class="card"><h3>📭 कोई Test उपलब्ध नहीं है</h3><p>इस Folder में अभी कोई Test नहीं जोड़ा गया है।</p></div>'}`;
+      modal.style.display='flex'; window.tgyNavExam=exam;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    const s=document.createElement('style');s.id='tgy-profile-result-final-css';s.textContent=`
+      .tgy-profile-box{position:relative;padding-top:64px!important}
+      .tgy-auth-top-close{position:absolute;right:18px;top:16px;border:0;background:#e74c3c;color:#fff;font-size:18px;font-weight:800;padding:12px 22px;border-radius:10px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+      .tgy-auth-top-close:hover{filter:brightness(.95)}
+      .tgy-card-result{margin-top:10px;padding:10px 12px;border-radius:10px;background:#eef8f0;border:1px solid #b9dfc1;color:#185c2b;font-size:13px;line-height:1.5}
+      .tgy-card-result>b{display:block;margin-bottom:3px;font-size:14px}
+      #results{display:none!important}
+    `;document.head.appendChild(s);
+  });
+})();
+</script>
+
 </body></html>
