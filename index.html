@@ -153,8 +153,8 @@ header{margin-left:0!important;padding-left:5%!important}
 /* Important Information ticker: keep the moving text strictly INSIDE the red information bar. */
 .tgy-red-band{overflow:hidden!important;align-items:center!important;}
 /* TV/news style ticker: the moving text uses the full red-band window and passes BEHIND the label, so it disappears under the label at the left edge. */
-.tgy-important{position:relative!important;display:block!important;flex:1 1 auto!important;min-width:0!important;height:100%!important;overflow:hidden!important;}
-.tgy-important-label{position:relative!important;z-index:5!important;display:inline-flex!important;align-items:center!important;height:100%!important;background:var(--tg-red)!important;white-space:nowrap!important;padding-right:18px!important;}
+.tgy-important{position:relative!important;display:block!important;flex:1 1 auto!important;min-width:0!important;height:100%!important;overflow:hidden!important;background:var(--hc-news-bg,#ed1c24)!important;}
+.tgy-important-label{position:relative!important;z-index:5!important;display:inline-flex!important;align-items:center!important;height:100%!important;background:var(--hc-news-bg,#ed1c24)!important;white-space:nowrap!important;padding:0 18px 0 0!important;}
 .tgy-important-text{position:absolute!important;z-index:1!important;left:0!important;top:0!important;width:max-content!important;max-width:none!important;height:100%!important;line-height:54px!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;padding-left:0!important;margin:0!important;animation:tgyHeaderTicker 22s linear infinite!important;will-change:transform!important;}
 @keyframes tgyHeaderTicker{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
 @media(max-width:700px){.tgy-important-label{padding-right:8px!important}.tgy-important-text{line-height:48px!important;animation-duration:24s!important;}}
@@ -1358,4 +1358,69 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
 })();
 </script>
 
+<script id="tgy-direct-test-flow">(function(){
+  const E=window.esc||function(v){return String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]))};
+  function visibleTests(exam){
+    return (window.tests||[]).filter(t=>t && t.exam===exam && t.published!==false && t.visible!==false && (typeof window.tgyDateValid!=='function'||window.tgyDateValid(t.availableUntil)));
+  }
+  function done(t){try{return localStorage.getItem('tgy_done_'+encodeURIComponent((t.exam||'')+'||'+(t.name||'')))==='1'}catch(e){return false}}
+  function openTestPreview(i){
+    const t=(window.tests||[])[i]; if(!t)return;
+    if(typeof window.requireStudentLogin==='function' && !window.requireStudentLogin({type:'test',index:i,exam:t.exam}))return;
+    const free=t.demo===true, owned=typeof window.hasPurchasedTest==='function'&&window.hasPurchasedTest(t);
+    const box=document.getElementById('examContent'), modal=document.getElementById('examModal');
+    if(!box||!modal)return;
+    const canStart=free||owned;
+    box.innerHTML=`<div class="tgy-test-preview">
+      <div class="tgy-test-preview-head"><div><div class="tgy-kicker">${E(t.exam||'Mock Test')}</div><h2>📝 ${E(t.name||'Test')}</h2></div><button class="btn gray" onclick="window.tgyShowTestList('${E(t.exam||'')}')">← Test List</button></div>
+      <div class="tgy-test-info-grid"><div><b>📋 Questions</b><span>${(t.questions||[]).length}</span></div><div><b>⏱️ समय</b><span>${Number(t.time||60)} मिनट</span></div><div><b>🔐 Access</b><span>${canStart?(free?'FREE Demo':'Access Active'):'Access Required'}</span></div></div>
+      <div class="tgy-start-card"><h3>🚀 Test शुरू करने के लिए तैयार?</h3><p class="muted">नीचे <b>शुरू करें</b> पर क्लिक करते ही टेस्ट स्क्रीन खुल जाएगी और टाइमर शुरू हो जाएगा।</p>${canStart?`<button class="btn orange tgy-start-btn" onclick="window.tgyStartSelectedTest(${i})">▶️ शुरू करें</button>`:`<button class="btn orange tgy-start-btn" onclick="buySeriesAccess('${E(t.exam||'')}',0)">🔒 Access लें</button>`}</div>
+    </div>`;
+    modal.style.display='flex';
+  }
+  window.tgyStartSelectedTest=function(i){
+    const m=document.getElementById('examModal'); if(m)m.style.display='none';
+    setTimeout(()=>{if(typeof window.startFinalMockTest==='function')window.startFinalMockTest(i);},30);
+  };
+  window.tgyShowTestList=function(exam){
+    const box=document.getElementById('examContent'),modal=document.getElementById('examModal');if(!box||!modal)return;
+    const arr=visibleTests(exam);
+    const ordered=arr.slice().sort((a,b)=>(done(a)?1:0)-(done(b)?1:0));
+    let cards=ordered.map(t=>{const i=window.tests.indexOf(t),free=t.demo===true,owned=typeof window.hasPurchasedTest==='function'&&window.hasPurchasedTest(t),locked=!free&&!owned;
+      return `<div class="tgy-test-card"><div class="tgy-test-num">${ordered.indexOf(t)+1}</div><div class="tgy-test-card-body"><h3>${E(t.name||'Test')}</h3><p>${(t.questions||[]).length} Questions • ${Number(t.time||60)} मिनट</p>${done(t)?'<span class="tgy-status done">✅ Complete</span>':free?'<span class="tgy-status free">FREE DEMO</span>':owned?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>'}</div><button class="btn ${locked?'orange':''}" onclick="${locked?`buySeriesAccess('${E(exam)}',0)`: `tgyOpenTestPreview(${i})`}">${locked?'🔒 Access लें':'▶️ Test खोलें'}</button></div>`;
+    }).join('');
+    box.innerHTML=`<div class="tgy-list-head"><div><h2>🎯 ${E(exam)} — Mock Tests</h2><p class="muted">कुल ${ordered.length} Tests • किसी Test पर क्लिक करके पहले विवरण देखें, फिर <b>शुरू करें</b> दबाएँ।</p></div><button class="btn gray" onclick="closeExam()">← पीछे</button></div>${ordered.length?`<div id="tgyTestGrid" class="tgy-test-grid">${cards}</div>${ordered.length>6?'<button id="tgyMoreTestsBtn" class="btn gray tgy-more-btn" onclick="tgyToggleMoreTests()">＋ और अधिक Tests देखें</button>':''}`:'<div class="card"><h3>📭 कोई Mock Test उपलब्ध नहीं है</h3><p>इस Folder में अभी कोई Test नहीं जोड़ा गया है।</p></div>'}`;
+    modal.style.display='flex'; window.tgyNavExam=exam;
+  };
+  window.tgyOpenTestPreview=openTestPreview;
+  window.tgyToggleMoreTests=function(){
+    const g=document.getElementById('tgyTestGrid'),b=document.getElementById('tgyMoreTestsBtn');if(!g||!b)return;
+    const open=g.classList.toggle('expanded');b.textContent=open?'↑ कम Tests दिखाएँ':'＋ और अधिक Tests देखें';
+  };
+  // Mock/Exam folder opens directly to the full Test list.
+  window.openExam=function(exam){
+    const visible=typeof window.getFolderVisibilityStudent==='function'?window.getFolderVisibilityStudent(exam):true;
+    if(!visible)return;
+    window.tgyShowTestList(exam);
+  };
+  window.closeExam=function(){const m=document.getElementById('examModal');if(m)m.style.display='none';};
+  document.addEventListener('DOMContentLoaded',function(){
+    if(!document.getElementById('tgy-direct-test-flow-css')){
+      const s=document.createElement('style');s.id='tgy-direct-test-flow-css';s.textContent=`
+        .tgy-list-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+        .tgy-list-head h2{margin:0 0 5px}
+        .tgy-test-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-height:600px;overflow:hidden;padding:2px}
+        .tgy-test-grid.expanded{max-height:65vh;overflow-y:auto;padding-right:6px}
+        .tgy-test-card{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:10px;background:#fff;border:1px solid #dbe5ef;border-radius:14px;padding:15px;min-height:185px;box-shadow:0 3px 10px rgba(20,60,100,.06)}
+        .tgy-test-num{position:absolute;right:12px;top:10px;width:30px;height:30px;border-radius:50%;background:#eaf3ff;color:#125fbd;display:flex;align-items:center;justify-content:center;font-weight:800}
+        .tgy-test-card h3{margin:0 40px 7px 0;font-size:17px}.tgy-test-card p{margin:0 0 9px;color:#607080}
+        .tgy-status{display:inline-block;font-size:12px;font-weight:800;padding:4px 8px;border-radius:999px;width:max-content}.tgy-status.done{background:#e8f7ee;color:#168347}.tgy-status.free,.tgy-status.active{background:#e9f7ef;color:#15834a}.tgy-status.locked{background:#fff0e5;color:#c45d00}
+        .tgy-more-btn{display:block;margin:14px auto 0}.tgy-test-preview{max-width:850px;margin:0 auto}.tgy-test-preview-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.tgy-test-preview-head h2{margin:4px 0 0}.tgy-kicker{font-size:13px;color:#1264bd;font-weight:800}.tgy-test-info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.tgy-test-info-grid>div{background:#f5f9ff;border:1px solid #dce9f7;border-radius:12px;padding:16px;text-align:center}.tgy-test-info-grid b,.tgy-test-info-grid span{display:block}.tgy-test-info-grid span{font-size:20px;font-weight:800;margin-top:5px}.tgy-start-card{text-align:center;background:#fff;border:2px solid #dce8f5;border-radius:16px;padding:25px}.tgy-start-card h3{margin-top:0}.tgy-start-btn{font-size:18px;padding:12px 30px}
+        @media(max-width:900px){.tgy-test-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:510px}.tgy-test-info-grid{grid-template-columns:1fr}}
+        @media(max-width:600px){.tgy-test-grid{grid-template-columns:1fr;max-height:520px}.tgy-test-card{min-height:160px}}
+      `;document.head.appendChild(s);
+    }
+  });
+})();
+</script>
 </body></html>
