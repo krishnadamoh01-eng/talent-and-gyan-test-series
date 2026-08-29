@@ -798,7 +798,7 @@ function hasPurchasedNote(n){
 }
 function renderStudentNotes(){
  const b=document.getElementById("studentNotesList");if(!b)return;
- const notes=getNotes();
+ const notes=getNotes().filter(n=>n.visible!==false);
  if(!notes.length){b.innerHTML='<p>अभी कोई PDF Notes उपलब्ध नहीं है।</p>';return}
  const groups={};
  notes.forEach((n,i)=>{const exam=(n.exam||"अन्य Notes").trim()||"अन्य Notes";(groups[exam]||(groups[exam]=[])).push({...n,_i:i})});
@@ -806,11 +806,12 @@ function renderStudentNotes(){
  Object.entries(groups).map(([exam,items])=>`<div class="card" style="border:2px solid #1d65a6;margin:12px 0">
  <h2>📁 ${esc(exam)} — PDF Notes</h2><p class="muted">इस Folder में <b>${items.length}</b> Notes हैं।</p>
  <div class="grid">${items.map(n=>{
-   const price=Number(n.offer)||Number(n.mrp)||0,owned=hasPurchasedNote(n);
-   const btn=owned||!price
+   const price=Number(n.offer)||Number(n.mrp)||0,owned=hasPurchasedNote(n),locked=n.locked===true;
+   const needsPurchase=locked || price>0;
+   const btn=owned||!needsPurchase
     ? `<button class="btn" onclick="viewPdfNote(${n._i})">📖 साइट पर पढ़ें</button>`
-    : `<button class="btn orange" onclick="buyPdfNote(${n._i})">💳 ₹${price} — खरीदें</button>`;
-   return `<div class="card" style="margin:0"><h3>📄 ${esc(n.title||("Notes "+(n._i+1)))}</h3><p class="muted">${n.pages?`${n.pages} Pages • `:""}${price?`MRP ₹${n.mrp||0}${n.offer?` • Offer ₹${n.offer}`:""}`:"FREE"}</p>${btn}</div>`;
+    : `<button class="btn orange" onclick="buyPdfNote(${n._i})">🔒 ${price>0?`₹${price} — खरीदें`:`Access लें`}</button>`;
+   return `<div class="card" style="margin:0"><h3>📄 ${esc(n.title||("Notes "+(n._i+1)))}</h3><p class="muted">${n.pages?`${n.pages} Pages • `:""}${price?`MRP ₹${n.mrp||0}${n.offer?` • Offer ₹${n.offer}`:""}`:(n.locked===true?"🔒 Access Required":"FREE")}</p>${n.locked===true?`<p class="muted">🔒 इस PDF के लिए Access जरूरी है।</p>`:""}${btn}</div>`;
  }).join("")}</div></div>`).join("");
 }
 function buyPdfNote(i){
@@ -818,13 +819,13 @@ function buyPdfNote(i){
  if(!requireStudentLogin({type:"note",index:i}))return;
  const price=Number(n.offer)||Number(n.mrp)||0;
  const u=getCurrentStudent()||{};
- document.getElementById("modalContent").innerHTML=`<h2>💳 PDF Notes खरीदें</h2><div class="pay"><p><b>Notes:</b> ${esc(n.title||"PDF Notes")}</p><p><b>Price:</b> ₹${price}</p><input id="pn" value="${esc(u.name||"")}" placeholder="नाम"><input id="pemail" value="${esc(u.email||"")}" placeholder="Email"><input id="utr" placeholder="Payment UTR / Transaction ID"><button class="btn orange" onclick="submitPayment('PDF: ${esc(n.title||"PDF Notes")}',0,${price})">Payment Details भेजें</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
+ document.getElementById("modalContent").innerHTML=`<h2>💳 PDF Notes खरीदें</h2><div class="pay"><p><b>Notes:</b> ${esc(n.title||"PDF Notes")}</p><p><b>Price:</b> ₹${price}</p><p><b>Validity:</b> ${n.availableUntil?'उपलब्धता '+esc(n.availableUntil)+' तक':'Admin के अनुसार'}</p><input id="pn" value="${esc(u.name||"")}" placeholder="नाम"><input id="pemail" value="${esc(u.email||"")}" placeholder="Email"><input id="utr" placeholder="Payment UTR / Transaction ID"><button class="btn orange" onclick="submitPayment('PDF: ${esc(n.title||"PDF Notes")}',0,${price})">Payment Details भेजें</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;
  document.getElementById("modal").style.display="flex";
 }
 function viewPdfNote(i){
  const n=getNotes()[i];if(!n)return;
  if(!requireStudentLogin({type:"note",index:i}))return;
- if((Number(n.offer)||Number(n.mrp)||0)>0 && !hasPurchasedNote(n)){buyPdfNote(i);return;}
+ if((n.locked===true || (Number(n.offer)||Number(n.mrp)||0)>0) && !hasPurchasedNote(n)){buyPdfNote(i);return;}
  const o=document.getElementById("studentPageOverlay");
  const viewer=`<div style="background:#fff;border-radius:12px;padding:10px"><div style="display:flex;justify-content:space-between;align-items:center"><h3>📄 ${esc(n.title||"PDF Notes")}</h3><button class="btn" onclick="closeNoteViewer()">✕ बंद करें</button></div><div id="pdfNoteViewer" style="height:75vh;overflow:auto;background:#555"></div></div>`;
  o.querySelector(".student-page-body").innerHTML=viewer;
@@ -1126,7 +1127,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   /* Folder-level PDF Notes display and purchase. */
   window.renderStudentNotes=function(){const b=document.getElementById('studentNotesList');if(!b)return;const notes=list('tgy_pdf_notes'),prices=list('tgy_pdf_folder_pricing'),groups={};notes.forEach((n,i)=>{const f=(n.folder||n.exam||'अन्य Notes').trim()||'अन्य Notes';(groups[f]||(groups[f]=[])).push({...n,_i:i})});let html='';Object.entries(groups).forEach(([folder,items])=>{const p=prices.find(x=>x.folder===folder)||{},price=Number(p.offer)||Number(p.mrp)||0,owned=items.some(n=>hasPurchasedNote(n));html+=`<div class="card" style="border:2px solid #1d65a6;margin:12px 0"><div style="text-align:center"><h2>📁 ${esc0(folder)}</h2><p>${items.length} Notes</p></div><div class="grid">${items.map(n=>`<div class="card"><h3>📄 ${esc0(n.title)}</h3><p class="muted">First Page Preview • ${owned?'Access Active':'🔒 Locked'}</p><button class="btn ${owned||!price?'':'orange'}" onclick="${owned||!price?`viewPdfNote(${n._i})`:`buyPdfFolder('${esc0(folder)}',${price},${p.days||0})`}">${owned||!price?'📖 देखें':`🔒 Folder खरीदें ₹${price}`}</button></div>`).join('')}</div></div>`});b.innerHTML=html||'<p>अभी कोई PDF Notes नहीं हैं।</p>';}
-  window.buyPdfFolder=function(folder,price,days){if(!requireStudentLogin({type:'pdfFolder',folder}))return;const u=getCurrentStudent();document.getElementById('modalContent').innerHTML=`<h2>💳 PDF Notes Folder खरीदें</h2><div class="pay"><p><b>Folder:</b> ${esc0(folder)}</p><p><b>Price:</b> ₹${price}</p><p><b>Validity:</b> ${days} दिन</p><img class="qr" src="upi_qr.jpeg" alt="UPI QR"><label>Transaction / UTR</label><input id="utr" placeholder="UTR Number"><button class="btn orange" onclick="submitPdfFolderPayment('${esc0(folder)}',${price},${days})">Payment Details भेजें</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;document.getElementById('modal').style.display='flex'};
+  window.buyPdfFolder=function(folder,price,days){if(!requireStudentLogin({type:'pdfFolder',folder}))return;const u=getCurrentStudent();document.getElementById('modalContent').innerHTML=`<h2>💳 PDF Notes Folder खरीदें</h2><div class="pay"><p><b>Folder:</b> ${esc0(folder)}</p><p><b>Price:</b> ₹${price}</p><p><b>Validity:</b> ${n.availableUntil?'उपलब्धता '+esc(n.availableUntil)+' तक':'Admin के अनुसार'}</p><p><b>Validity:</b> ${days} दिन</p><img class="qr" src="upi_qr.jpeg" alt="UPI QR"><label>Transaction / UTR</label><input id="utr" placeholder="UTR Number"><button class="btn orange" onclick="submitPdfFolderPayment('${esc0(folder)}',${price},${days})">Payment Details भेजें</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;document.getElementById('modal').style.display='flex'};
   window.submitPdfFolderPayment=function(folder,amount,days){const u=getCurrentStudent();let p=list('tgy_payments');p.push({name:u?.name||'',email:u?.email||'',course:'PDF Folder: '+folder,folder,amount,days,utr:document.getElementById('utr')?.value||'',date:new Date().toLocaleString(),status:'Pending',type:'pdfFolder'});save('tgy_payments',p);document.getElementById('modalContent').innerHTML='<h2>✅ Payment Details भेज दी गईं</h2><p>Admin verification के बाद Folder Access activate होगा।</p><button class="btn" onclick="closeM()">ठीक है</button>'};
 })();
 </script>
@@ -1625,4 +1626,60 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
   };
 })();
 </script>
-</body></html>
+</body></html><script id="tgy-final-purchase-flow-v2">
+(function(){
+  const escF=s=>{try{return esc0(s)}catch(e){return String(s??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]))}};
+  const JF=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(e){return d}};
+  const SF=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  function showExamPdf(folder){
+    const notes=JF('tgy_pdf_notes',[]), prices=JF('tgy_pdf_folder_pricing',[]), items=notes.filter(n=>n.visible!==false && ((n.folder||n.exam||'').trim()===folder));
+    const pr=prices.find(x=>x.folder===folder)||{};
+    let h=`<div class="exam-inner-head"><h2>📄 ${escF(folder)} PDF Notes</h2><p class="muted">इस परीक्षा के PDF Notes</p></div>`;
+    if(!items.length){h+=`<div class="card"><p>इस परीक्षा के लिए अभी कोई PDF उपलब्ध नहीं है।</p></div>`}
+    else {h+=`<div class="grid">${items.map((n)=>{const ni=notes.indexOf(n),owned=typeof hasPurchasedNote==='function'&&hasPurchasedNote(n),locked=n.locked===true;const notePrice=Number(n.offer)||Number(n.mrp)||0;const folderPrice=Number(pr.offer)||Number(pr.mrp)||0;const price=notePrice||folderPrice;const needs=locked||price>0;const action=owned||!needs?`viewPdfNote(${ni})`:`tgyOpenPdfNotePurchase(${ni})`;const label=owned?'📖 PDF खोलें':needs?`🔒 Access लें${price?' • ₹'+price:''}`:'📖 PDF खोलें';return `<div class="card"><h3>📄 ${escF(n.title||'PDF Notes')}</h3><p class="muted">${owned?'✅ Access Active':locked?'🔒 Locked — Access Required':price?'💳 Paid PDF':'🆓 Free PDF'}</p><button class="btn ${owned||!needs?'':'orange'}" onclick="${action}">${label}</button></div>`}).join('')}</div>`}
+    h+=`<div style="margin-top:14px"><button class="btn gray" onclick="openExam(${JSON.stringify(folder)})">← परीक्षा Folder</button></div>`;
+    const b=document.getElementById('examContent');if(b)b.innerHTML=h;
+  }
+  window.tgyOpenPdfNotePurchase=function(i){
+    const notes=JF('tgy_pdf_notes',[]),n=notes[i];if(!n)return;
+    if(!getCurrentStudent()){try{localStorage.setItem('tgy_pending_action',JSON.stringify({type:'note',index:i}))}catch(e){};openAuth('login');return;}
+    const u=getCurrentStudent()||{},folder=(n.folder||n.exam||'').trim(),prices=JF('tgy_pdf_folder_pricing',[]),pr=prices.find(x=>x.folder===folder)||{};
+    const amount=Number(n.offer)||Number(n.mrp)||Number(pr.offer)||Number(pr.mrp)||0,days=Number(n.durationValue||n.days||pr.days||30)||30;
+    document.getElementById('modalContent').innerHTML=`<h2>💳 PDF Access लें</h2><div class="pay"><p><b>PDF:</b> ${escF(n.title||'PDF Notes')}</p><p><b>Folder:</b> ${escF(folder||'Notes')}</p><p><b>Price:</b> ₹${amount}</p><p><b>Validity:</b> ${days} दिन</p><img class="qr" src="upi_qr.jpeg" alt="UPI QR Code"><div class="upi">paytm.s2uiv58@pty</div><p>QR Code से Payment करें और नीचे Transaction ID / UTR भरें।</p><label>नाम</label><input id="pn" value="${escF(u.name||'')}" placeholder="आपका नाम"><label>Email</label><input id="pemail" type="email" value="${escF(u.email||'')}" placeholder="आपकी Email ID"><label>Transaction / UTR Number</label><input id="utr" placeholder="Payment के बाद UTR Number"><button class="btn orange" onclick="submitPayment('PDF: ${escF(n.title||'PDF Notes')}',0,${amount})">Payment Submit करें</button><button class="btn gray" onclick="closeM()">✕ बंद करें</button></div>`;
+    document.getElementById('modal').style.display='flex';
+  };
+  window.tgyOpenPurchaseMenu=function(exam,focus){
+    if(!getCurrentStudent()){try{localStorage.setItem('tgy_pending_action',JSON.stringify({type:'purchaseMenu',exam,focus:focus||'test'}))}catch(e){};openAuth('login');return;}
+    const series=getSeriesPricing(exam), pdfPrices=JF('tgy_pdf_folder_pricing',[]), pdf=pdfPrices.find(x=>x.folder===exam)||{};
+    let h=`<h2>🛒 Access / Purchase</h2><div class="pay"><p><b>परीक्षा:</b> ${escF(exam)}</p><p class="muted">नीचे अपनी जरूरत का Access चुनें। Price और Validity Admin Panel से आएगी।</p></div>`;
+    if(series.length){h+=`<h3 style="margin-top:18px">📚 Test Series / Mock Test Access</h3><div class="grid">`;series.forEach((x,i)=>{const amount=Number(x.offer)||Number(x.mrp)||0;const title=x.type==='folder'?'📁 पूरा Test Series':`📝 ${x.count} Tests`;h+=`<div class="card"><h3>${title}</h3><p>⏳ ${accessDurationTextStudent(x)}</p><p>${seriesPriceText(x)}</p><button class="btn orange" onclick="tgyOpenPaymentForSeries(${JSON.stringify(exam)},${i})">🛒 यह Access लें</button></div>`});h+=`</div>`}
+    if(pdf.mrp||pdf.offer){const amount=Number(pdf.offer)||Number(pdf.mrp)||0;h+=`<h3 style="margin-top:18px">📄 PDF Folder</h3><div class="card"><h3>📄 ${escF(exam)} PDF Notes Folder</h3><p>⏳ ${pdf.days||0} दिन</p><p>${pdf.offer?`<span style="text-decoration:line-through;color:#777">₹${pdf.mrp}</span> <b style="font-size:22px">₹${pdf.offer}</b>`:`<b style="font-size:22px">₹${pdf.mrp}</b>`}</p><button class="btn orange" onclick="tgyOpenPdfPurchase(${JSON.stringify(exam)},${amount},${Number(pdf.days)||0})">🛒 PDF Folder Access लें</button></div>`}
+    if(!series.length&&!pdf.mrp&&!pdf.offer)h+=`<div class="card"><p>Admin Panel में अभी इस परीक्षा के लिए कोई Price/Access Plan सेट नहीं है।</p></div>`;
+    h+=`<div style="margin-top:16px"><button class="btn gray" onclick="closeM()">✕ बंद करें</button></div>`;
+    document.getElementById('modalContent').innerHTML=h;document.getElementById('modal').style.display='flex';
+  };
+  window.tgyOpenPaymentForSeries=function(exam,i){
+    const options=getSeriesPricing(exam),x=options[i];if(!x)return;const amount=Number(x.offer)||Number(x.mrp)||0;
+    const u=getCurrentStudent()||{};const count=x.type==='folder'?Math.max(1,tests.filter(t=>t.exam===exam&&t.published!==false).length):Number(x.count||0);const days=accessDaysStudent(x);
+    document.getElementById('modalContent').innerHTML=`<h2>💳 Payment — ${escF(exam)}</h2><div class="pay"><h3>${x.type==='folder'?'📁 पूरा Test Series':'📝 '+count+' Tests'}</h3><p><b>Validity:</b> ${accessDurationTextStudent(x)}</p><p><b>Payable:</b> ${seriesPriceText(x)}</p><img class="qr" src="upi_qr.jpeg" alt="UPI QR Code"><div class="upi">paytm.s2uiv58@pty</div><p>QR Code से Payment करें। फिर Transaction ID / UTR भरकर Submit करें।</p><label>नाम</label><input id="pn" value="${escF(u.name||'')}" placeholder="आपका नाम"><label>Email</label><input id="pemail" type="email" value="${escF(u.email||'')}" placeholder="आपकी Email ID"><label>Transaction / UTR Number</label><input id="utr" placeholder="Payment के बाद UTR Number"><button class="btn orange" onclick="submitSeriesPayment(${JSON.stringify(exam)},${count},${amount},${days},${JSON.stringify(x.name||'Test Series')},${JSON.stringify(x.type||'testseries')})">Payment Submit करें</button> <button class="btn gray" onclick="tgyOpenPurchaseMenu(${JSON.stringify(exam)})">← वापस</button></div>`;
+  };
+  window.tgyOpenPdfPurchase=function(folder,amount,days){
+    const u=getCurrentStudent()||{};document.getElementById('modalContent').innerHTML=`<h2>💳 PDF Folder Purchase</h2><div class="pay"><p><b>Folder:</b> ${escF(folder)}</p><p><b>Validity:</b> ${days} दिन</p><p><b>Amount:</b> ₹${amount}</p><img class="qr" src="upi_qr.jpeg" alt="UPI QR Code"><div class="upi">paytm.s2uiv58@pty</div><p>QR Code से Payment करें और Transaction ID / UTR डालें।</p><label>नाम</label><input id="pn" value="${escF(u.name||'')}" placeholder="आपका नाम"><label>Email</label><input id="pemail" type="email" value="${escF(u.email||'')}" placeholder="आपकी Email ID"><label>Transaction / UTR Number</label><input id="utr" placeholder="UTR Number"><button class="btn orange" onclick="submitPdfFolderPayment(${JSON.stringify(folder)},${amount},${days})">Payment Submit करें</button> <button class="btn gray" onclick="tgyOpenPurchaseMenu(${JSON.stringify(folder)},'pdf')">← वापस</button></div>`;
+  };
+  window.submitPdfFolderPayment=function(folder,amount,days){const u=getCurrentStudent()||{};let p=JF('tgy_payments',[]);p.push({name:document.getElementById('pn')?.value||u.name||'',email:document.getElementById('pemail')?.value||u.email||'',course:'PDF Folder: '+folder,folder,amount,days,utr:document.getElementById('utr')?.value||'',date:new Date().toLocaleString(),status:'Pending',type:'pdfFolder'});SF('tgy_payments',p);document.getElementById('modalContent').innerHTML=`<h2>✅ Access Request भेज दी गई</h2><div class="result"><b>PDF Folder:</b> ${escF(folder)}<br><b>Amount:</b> ₹${amount}<br><b>Validity:</b> ${days} दिन<br><b>Status:</b> 🟡 Pending</div><p>Admin Payment verify करके Access Activate करेगा।</p><button class="btn" onclick="closeM()">ठीक है</button>`};
+  window.buySeriesAccess=function(exam,pricingIndex){tgyOpenPurchaseMenu(exam,'test')};
+  window.openExam=function(exam){
+    const visible=getFolderVisibilityStudent(exam);if(visible===false)return;
+    const list=tests.filter(t=>t.exam===exam&&t.published!==false&&t.visible!==false&&tgyDateValid(t.availableUntil));
+    const pdfs=JF('tgy_pdf_notes',[]).filter(n=>(n.folder||n.exam||'').trim()===exam);
+    const b=document.getElementById('examContent');if(!b)return;
+    b.innerHTML=`<div class="exam-inner-head" style="text-align:center"><h2>📁 ${escF(exam)}</h2><p class="muted">इस परीक्षा का Content चुनें</p></div><div class="grid" style="margin-top:16px"><div class="card" style="border:2px solid #1d65a6;text-align:center"><div style="font-size:48px">📚</div><h2>Test Series</h2><p>${list.length} Tests उपलब्ध</p><button class="btn orange" onclick="tgyOpenSeriesInside(${JSON.stringify(exam)})">📂 Test Series खोलें</button></div><div class="card" style="border:2px solid #1d65a6;text-align:center"><div style="font-size:48px">📄</div><h2>PDF Notes</h2><p>${pdfs.length} PDF उपलब्ध</p><button class="btn orange" onclick="showExamPdf(${JSON.stringify(exam)})">📂 PDF Folder खोलें</button></div></div><div style="margin-top:14px"><button class="btn gray" onclick="closeExam()">✕ बंद करें</button></div>`;
+    const m=document.getElementById('examModal');if(m)m.style.display='flex';window.tgyNavLevel='folder';window.tgyNavExam=exam;
+  };
+  window.tgyOpenSeriesInside=function(exam){
+    const arr=tests.filter(t=>t.exam===exam&&t.published!==false&&t.visible!==false&&tgyDateValid(t.availableUntil));
+    const b=document.getElementById('examContent');if(!b)return;let h=`<div class="exam-inner-head"><h2>📚 ${escF(exam)} Test Series</h2><p class="muted">Test चुनें। Locked Test में Access लें।</p></div>`;
+    h+=`<div class="grid">${arr.map(t=>{const i=tests.indexOf(t),free=t.demo===true,owned=hasPurchasedTest(t),done=typeof tgyIsDone==='function'&&tgyIsDone(t);return `<div class="card"><h3>${escF(t.name)}</h3><p>${(t.questions||[]).length} Questions • ${t.time||60} मिनट</p>${done?'<p style="color:green;font-weight:700">✅ पहले दिया गया</p>':''}${free?'<p style="color:green;font-weight:700">FREE DEMO</p>':owned?'<p style="color:green;font-weight:700">🔓 Access Active</p>':'<p class="muted">🔒 Access Required</p>'}<button class="btn ${free||owned?'':'orange'}" onclick="${free||owned?`tgyOpenTestFromFolder(${i})`:`tgyOpenPurchaseMenu(${JSON.stringify(exam)},'test')`}">${free||owned?'▶️ Test खोलें':'🔒 Access लें'}</button></div>`}).join('')||'<div class="card"><p>अभी कोई Test उपलब्ध नहीं है।</p></div>'}</div><div style="margin-top:14px"><button class="btn gray" onclick="openExam(${JSON.stringify(exam)})">← परीक्षा Folder</button></div>`;b.innerHTML=h;window.tgyNavLevel='series';window.tgyNavExam=exam;
+  };
+})();
+</script>
