@@ -97,6 +97,7 @@ function checkAdmin(){
       <div><label>📋 परीक्षा</label><select id="mtExam" onchange="mtLoadTests()"></select></div>
       <div><label>📝 Test का नाम</label><input id="mtName" placeholder="जैसे Mock Test 01 / Demo Test"></div>
       <div><label>⏱️ समय (मिनट)</label><input id="mtTime" type="number" min="1" value="60"></div>
+      <div><label>🔓 Test प्रकार</label><select id="mtType"><option value="test">📝 Test (Paid/Access)</option><option value="demo">🎁 Demo (Free)</option></select></div>
       <div><label>❌ Negative Marking</label><select id="mtNegative" onchange="mtNegativeChanged()"><option value="no">नहीं</option><option value="yes">हाँ</option></select></div>
       <div id="mtNegativeValueWrap" style="display:none"><label>गलत उत्तर पर Marks</label><input id="mtNegativeValue" type="number" min="0" step="0.01" value="0.25"></div>
     </div>
@@ -706,7 +707,7 @@ function mtStore(){
 function mtSaveStore(x){
  const flat=[];
  Object.entries(x.exams||{}).forEach(([exam,v])=>Object.entries(v.tests||{}).forEach(([key,t])=>{
-   flat.push({...t,name:t.name||key,exam:t.exam||exam,questions:t.questions||[],time:t.time||60,published:t.published!==false});
+   flat.push({...t,name:t.name||key,exam:t.exam||exam,questions:t.questions||[],time:t.time||60,demo:t.demo===true,published:t.published!==false});
  }));
  localStorage.setItem("tgy_tests",JSON.stringify(flat));
 }
@@ -733,6 +734,7 @@ function mtLoadTests(){
  if(e){const d=mtStore();d.exams=d.exams||{};d.exams[e]=d.exams[e]||{tests:{}};mtSaveStore(d);}
  const n=document.getElementById("mtName");if(n)n.value="";
  const tm=document.getElementById("mtTime");if(tm)tm.value=60;
+ const typ=document.getElementById("mtType");if(typ)typ.value="test";
  const neg=document.getElementById("mtNegative");if(neg)neg.value="no";
  mtNegativeChanged();mtRenderQuestions();mtRenderAll();
 }
@@ -742,6 +744,7 @@ function mtLoadSelected(){
  const obj=mtStore().exams?.[e]?.tests?.[t];
  if(obj){
   const tm=document.getElementById("mtTime");if(tm)tm.value=obj.time||60;
+  const typ=document.getElementById("mtType");if(typ)typ.value=obj.demo===true?"demo":"test";
   const neg=document.getElementById("mtNegative"),nv=document.getElementById("mtNegativeValue");
   if(neg)neg.value=obj.negativeMarking?"yes":"no";if(nv)nv.value=obj.negativeMarks||0.25;mtNegativeChanged();
  }
@@ -760,13 +763,13 @@ function mtNegativeChanged(){
 }
 function mtFinalSave(){
  const e=document.getElementById("mtExam")?.value,n=(document.getElementById("mtName")?.value||"").trim();
- const time=Number(document.getElementById("mtTime")?.value)||60,negative=document.getElementById("mtNegative")?.value==="yes";
+ const time=Number(document.getElementById("mtTime")?.value)||60,demo=document.getElementById("mtType")?.value==="demo",negative=document.getElementById("mtNegative")?.value==="yes";
  const negativeMarks=negative?Number(document.getElementById("mtNegativeValue")?.value)||0:0;
  if(!e){alert("पहले परीक्षा चुनें।");return}if(!n){alert("Test का नाम लिखें।");return}
  if(negative&&negativeMarks<=0){alert("Negative Marks की value डालें।");return}
  const d=mtStore();d.exams=d.exams||{};d.exams[e]=d.exams[e]||{tests:{}};
  const obj=d.exams[e].tests[n]||{name:n,exam:e,questions:[],published:true,visible:true};
- obj.name=n;obj.exam=e;obj.time=time;obj.negativeMarking=negative;obj.negativeMarks=negativeMarks;obj.questions=obj.questions||[];
+ obj.name=n;obj.exam=e;obj.time=time;obj.demo=demo;obj.negativeMarking=negative;obj.negativeMarks=negativeMarks;obj.questions=obj.questions||[];
  const base=obj.questions.length;
  (mtPreview||[]).forEach((x,i)=>obj.questions.push({q:x.q,o:x.o,answer:x.answer,ex:x.ex,number:base+i+1}));
  mtPreview=[];d.exams[e].tests[n]=obj;mtSaveStore(d);mtRenderAll();mtRenderQuestions();mtRenderPreview();
@@ -1539,7 +1542,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   const originalMtSaveStore=window.mtSaveStore;
   if(typeof originalMtSaveStore==='function'){
     window.mtSaveStore=function(x){
-      try{Object.entries(x.exams||{}).forEach(([exam,v])=>Object.entries(v.tests||{}).forEach(([key,t])=>{t.exam=t.exam||exam;t.name=t.name||key;t.visible=t.visible!==false;t.published=t.published!==false;t.questions=Array.isArray(t.questions)?t.questions:[]}))}catch(e){}
+      try{Object.entries(x.exams||{}).forEach(([exam,v])=>Object.entries(v.tests||{}).forEach(([key,t])=>{t.exam=t.exam||exam;t.name=t.name||key;t.visible=t.visible!==false;t.published=t.published!==false;t.questions=Array.isArray(t.questions)?t.questions:[];t.demo=t.demo===true}))}catch(e){}
       return originalMtSaveStore(x);
     };
   }

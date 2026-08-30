@@ -175,6 +175,7 @@ header{margin-left:0!important;padding-left:5%!important}
   <a href="#" onclick="openStudentPage('mock');return false">🎯 Mock Test</a>
   <a href="#" onclick="openStudentPage('series');return false">📚 Test Series</a>
   <a href="#" onclick="openStudentPage('purchased');return false">🎓 My Purchased Tests</a>
+  <a href="#" onclick="openStudentPage('purchase');return false">🛒 खरीदें</a>
   <a href="#" onclick="openStudentPage('notes');return false">📄 PDF Notes</a>
   <a href="#" onclick="openStudentPage('help');return false">📞 सहायता</a>
   <span class="tgy-nav-spacer"></span>
@@ -205,7 +206,7 @@ header{margin-left:0!important;padding-left:5%!important}
   <section class="tgy-shortcuts">
     <div class="tgy-shortcut"><div class="tgy-shortcut-icon">✓</div><div><b>Mock Test</b><span>Demo &amp; All Mock Tests<br>Practice करें</span></div></div>
     <div class="tgy-shortcut"><div class="tgy-shortcut-icon">▤</div><div><b>PDF Notes</b><span>Best PDF Notes<br>Buy &amp; Access करें</span></div></div>
-    <div class="tgy-shortcut"><div class="tgy-shortcut-icon">🛒</div><div><b>Purchase Folder</b><span>आपके द्वारा खरीदी गई सभी<br>Test Series &amp; Notes</span></div></div>
+    <div class="tgy-shortcut" onclick="openStudentPage('purchase')" style="cursor:pointer"><div class="tgy-shortcut-icon">🛒</div><div><b>Purchase / खरीदें</b><span>सभी Plans, PDF &amp; Test Series<br>एक ही जगह से खरीदें</span></div></div>
     <div class="tgy-shortcut"><div class="tgy-shortcut-icon">🔔</div><div><b>Notifications</b><span>महत्वपूर्ण सूचना और<br>अपडेट देखें</span></div></div>
     <div class="tgy-shortcut"><div class="tgy-shortcut-icon">●</div><div><b>My Profile</b><span>अपनी जानकारी और<br>Access देखें</span></div></div>
   </section>
@@ -1719,6 +1720,48 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
    if(locked&&!owned){if(price>0&&typeof window.buyPdfFolder==='function')return window.buyPdfFolder(n.folder||n.exam||'',price,Number(meta.days||0));alert('यह PDF Locked है। Admin Panel से इसकी Price/Access सेट करें।');return;}
    return old(i);
  };
+})();
+</script>
+\n<script id="tgy-final-lock-folder-click-fix">\n(function(){\n  function showExamFolder(exam){\n    try {\n      if(typeof window.tgyOpenExamHub==='function'){ window.tgyOpenExamHub(exam); return false; }\n      if(typeof window.tgyShowTestList==='function'){ window.tgyShowTestList(exam); return false; }\n    } catch(e) { console.error(e); }\n    return false;\n  }\n  window.tgyOpenExamFolder=showExamFolder;\n\n  // Use the visible Exam modal for the purchase flow. Older code used modalContent,\n  // which could leave the payment dialog behind the exam modal.\n  window.tgyOpenLockedPurchase=function(exam,index){\n    try {\n      if(typeof window.buySeriesAccess==='function'){\n        var modal=document.getElementById('examModal'), box=document.getElementById('examContent');\n        if(modal && box){\n          var oldModal=document.getElementById('modal');\n          if(oldModal) oldModal.style.display='none';\n          // Reuse the existing payment builder, then move its content into the visible exam modal.\n          var oldBox=document.getElementById('modalContent');\n          if(oldBox) oldBox.innerHTML='';\n          window.buySeriesAccess(exam, Number(index)||0);\n          setTimeout(function(){\n            var c=document.getElementById('modalContent');\n            if(c && c.innerHTML){ box.innerHTML=c.innerHTML; modal.style.display='flex';\n              var btn=box.querySelector('[onclick^="closeM"]'); if(btn) btn.onclick=function(){modal.style.display='none';};\n            }\n          },30);\n          return false;\n        }\n        window.buySeriesAccess(exam, Number(index)||0);\n      }\n    } catch(e){ console.error(e); alert('Purchase page खोलने में समस्या हुई। कृपया फिर से प्रयास करें।'); }\n    return false;\n  };\n\n  // Final, safe folder renderer: every exam/folder button opens the hub.\n  window.tgyRenderExamFoldersFinal=function(){\n    var box=document.getElementById('tgyHomeExamGrid'); if(!box)return;\n    var raw=[]; try{raw=JSON.parse(localStorage.getItem('tgy_exams')||'[]')||[]}catch(e){}\n    raw=raw.filter(function(x){return x && (typeof x==='string'||x.name) && (typeof x==='string'||x.visible!==false);});\n    box.innerHTML=raw.length?raw.map(function(x){\n      var n=typeof x==='string'?x:x.name, logo=typeof x==='object'&&x.logo?x.logo:'talent-and-gyan-logo.png';\n      return '<div class="tgy-exam-card"><img class="tgy-exam-logo" src="'+E(logo)+'" alt=""><div class="tgy-exam-name">'+E(n)+'</div><div class="tgy-exam-sub">Demo + Online Mock Tests</div><button type="button" class="tgy-view-btn" onclick="return window.tgyOpenExamFolder('+JSON.stringify(n)+')">View Tests</button></div>';\n    }).join(''):'<div class="tgy-exam-card" style="grid-column:1/-1"><div class="tgy-exam-name">अभी कोई परीक्षा उपलब्ध नहीं है</div><div class="tgy-exam-sub">Admin Panel में पहले परीक्षा/Folder बनाइए।</div></div>';\n  };\n\n  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){\n    try{ window.tgyRenderExamFoldersFinal(); }catch(e){}\n    // Make the locked Test buttons use the same reliable purchase route.\n    var box=document.getElementById('examContent');\n    if(box && typeof MutationObserver!=='undefined'){\n      new MutationObserver(function(){\n        box.querySelectorAll('button').forEach(function(b){\n          if((b.textContent||'').indexOf('Access लें')<0 && (b.textContent||'').indexOf('खरीदें')<0)return;\n          if(b.dataset.tgyLockFixed)return;\n          var oc=b.getAttribute('onclick')||'';\n          var m=oc.match(/buySeriesAccess\\((.*?),\\s*(\\d+)\\)/);\n          if(m){ b.dataset.tgyLockFixed='1'; b.setAttribute('onclick','return window.tgyOpenLockedPurchase('+m[1]+','+m[2]+')'); }\n        });\n      }).observe(box,{childList:true,subtree:true});\n    }\n  },200);});\n})();\n</script>\n
+<script id="tgy-purchase-page-v1">
+(function(){
+  function P(k,d){try{var x=JSON.parse(localStorage.getItem(k)||'null');return x==null?d:x}catch(e){return d}}
+  function exams(){
+    var set={};
+    try{(P('tgy_exams',[])||[]).forEach(function(x){var n=typeof x==='string'?x:x&&x.name;if(n&&(!x||typeof x==='string'||x.visible!==false))set[n]=1;});}catch(e){}
+    (window.tests||[]).forEach(function(t){if(t&&t.exam&&t.visible!==false&&t.published!==false)set[t.exam]=1;});
+    P('tgy_pdf_notes',[]).forEach(function(n){var nme=(n&&((n.folder||n.exam)||'')).trim();if(nme&&n.visible!==false&&n.published!==false)set[nme]=1;});
+    P('tgy_access_pricing',[]).forEach(function(x){if(x&&x.exam)set[x.exam]=1;});
+    P('tgy_combo_pricing',[]).forEach(function(x){if(x&&x.exam)set[x.exam]=1;});
+    return Object.keys(set);
+  }
+  function price(x){var o=Number(x&&x.offer)||0,m=Number(x&&x.mrp)||0;return o&&m&&o<m?'<span style="text-decoration:line-through;color:#777">₹'+m+'</span> <b style="font-size:21px">₹'+o+'</b>':'<b style="font-size:21px">₹'+(o||m||0)+'</b>';}
+  function pdfMeta(ex){try{return typeof window.tgyFolderMeta==='function'?(window.tgyFolderMeta(ex)||{}):{}}catch(e){return {}}}
+  function render(){
+    var overlay=document.getElementById('studentPageOverlay'); if(!overlay){openStudentPage('series');return;}
+    var body=overlay.querySelector('.student-page-body');if(!body)return;
+    var es=exams(),h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><div class="tgy-kicker">SHOP / PURCHASE</div><h2 style="margin:4px 0">🛒 Plans &amp; Courses खरीदें</h2><p class="muted">PDF, Test Series और PDF + Test Series Combo के सभी उपलब्ध Plans यहाँ एक ही जगह से खरीदें।</p></div><button class="btn gray" onclick="openStudentPage(\'home\')">← Home</button></div></div>';
+    if(!es.length){body.innerHTML=h+'<div class="card"><h3>📭 अभी कोई खरीदने वाला Plan उपलब्ध नहीं है।</h3></div>';return;}
+    es.forEach(function(ex){
+      var sp=[];try{sp=typeof getSeriesPricing==='function'?getSeriesPricing(ex):[]}catch(e){}
+      var meta=pdfMeta(ex),pdfPrice=Number(meta.offer)||Number(meta.mrp)||0;
+      var combos=P('tgy_combo_pricing',[]).filter(function(x){return x&&x.exam===ex;}).sort(function(a,b){return Number(a.count)-Number(b.count)});
+      var notes=P('tgy_pdf_notes',[]).filter(function(n){return n&&((n.folder||n.exam||'').trim()===ex)&&n.visible!==false&&n.published!==false;});
+      h+='<div class="card" style="margin:14px 0;border:2px solid #1d65a6"><h2>📁 '+esc(ex)+'</h2><div class="grid">';
+      if(sp.length){h+='<div class="card" style="margin:0"><h3>📝 Test Series</h3><p class="muted">'+sp.length+' Access Plans</p>'+sp.map(function(x,i){var title=x.type==='folder'?'पूरा Test Series':(Number(x.count)||0)+' Tests';return '<div style="border-top:1px solid #eee;padding:10px 0"><b>'+esc(title)+'</b><br>'+price(x)+'<br><span class="muted">'+(typeof accessDurationTextStudent==='function'?esc(accessDurationTextStudent(x)):'Access')+'</span><br><button class="btn orange" style="margin-top:6px" onclick="buySeriesAccess('+JSON.stringify(ex)+','+i+')">💳 यह Plan खरीदें</button></div>';}).join('')+'</div>'}
+      if(notes.length||pdfPrice){h+='<div class="card" style="margin:0"><h3>📄 PDF Notes</h3><p class="muted">'+notes.length+' PDF उपलब्ध</p><div style="padding:10px 0"><b>पूरा PDF Folder</b><br>'+price(meta)+'<br><span class="muted">'+(Number(meta.days)?Number(meta.days)+' दिन':'Access')+'</span><br><button class="btn orange" style="margin-top:6px" onclick="buyPdfFolder('+JSON.stringify(ex)+','+pdfPrice+','+(Number(meta.days)||0)+')">💳 PDF खरीदें</button></div></div>'}
+      if(combos.length){h+='<div class="card" style="margin:0;border:2px solid #e28a00;background:#fffaf1"><h3>📦 PDF + Test Series Combo</h3><p class="muted">एक Payment में PDF + Tests</p>'+combos.map(function(x){var count=Number(x.count)||0,title=count>=999999?'पूरा Test Folder':count+' Tests';return '<div style="border-top:1px solid #eee;padding:10px 0"><b>PDF + '+esc(title)+'</b><br><b style="font-size:21px">₹'+(Number(x.offer)||Number(x.mrp)||0)+'</b><br><span class="muted">'+(x.unit==='months'?(x.durationValue||0)+' महीने':(x.durationValue||x.days||0)+' दिन')+'</span><br><button class="btn orange" style="margin-top:6px" onclick="tgyBuyCombo('+JSON.stringify(ex)+','+combos.indexOf(x)+')">💳 Combo खरीदें</button></div>';}).join('')+'</div>'}
+      h+='</div><div style="margin-top:10px"><button class="btn gray" onclick="openExam('+JSON.stringify(ex)+')">📂 Details / Tests देखें</button></div></div>';
+    });
+    body.innerHTML=h;
+  }
+  var oldOpen=window.openStudentPage;
+  window.openStudentPage=function(key){
+    if(key!=='purchase')return oldOpen(key);
+    var overlay=document.getElementById('studentPageOverlay');
+    if(!overlay){oldOpen('series');overlay=document.getElementById('studentPageOverlay');}
+    if(overlay){overlay.style.display='flex';render();}
+  };
 })();
 </script>
 </body></html>
