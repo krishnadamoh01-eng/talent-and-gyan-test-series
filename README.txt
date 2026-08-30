@@ -10,3 +10,5 @@ Fixes in this version:
 - Question data is normalized so both old array questions and new object questions open correctly.
 - Student PDF Notes use Folder -> Notes -> dedicated viewer flow with Close and Zoom controls.
 - Duplicate lower Home shortcut row is hidden; My Profile is placed in the top navigation beside Help.
+
+Update: PDF + Test Series Combo Pricing added. Admin can set a separate combo price, test count/full-folder access, and validity. Combo payment approval unlocks both PDF folder and the selected number of tests.

@@ -320,7 +320,7 @@ function openExam(exam){
    html+=`<div class="card" style="margin-top:14px"><h3>📝 उपलब्ध Tests</h3><p class="muted">कुल ${list.length} Tests</p><div class="grid">`;
    list.forEach(t=>{
       const idx=tests.indexOf(t),purchased=hasPurchasedTest(t),free=t.demo===true;
-      const action=(free||purchased)?`<button class="btn" onclick="openTestFromSeries(${idx})">▶️ Test खोलें</button>`:`<button class="btn orange" onclick="buySeriesAccess('${esc(exam)}',0)">🔒 Access लें</button>`;
+      const action=(free||purchased)?`<button class="btn" onclick="openTestFromSeries(${idx})">▶️ Test खोलें</button>`:`<button class="btn orange" onclick="openLockedTestPurchase('${esc(exam)}')">🔒 खरीदें / Access लें</button>`;
       html+=`<div class="card" style="margin:0"><h3>📝 ${esc(t.name)}</h3><p>${t.questions.length} Questions • ${t.time} मिनट</p>${purchased?'<p style="color:green;font-weight:700">✅ आपके Access में</p>':free?'<p style="color:green;font-weight:700">FREE</p>':'<p class="muted">🔒 Locked</p>'}${action}</div>`;
    });
    html+=`</div></div>`;
@@ -686,7 +686,8 @@ function renderStudentSeriesPage(){
  }
  b.innerHTML=names.map(ex=>{
    const count=groups[ex].length,pricing=getSeriesPricing(ex);
-   return `<div class="card" style="border:2px solid #1d65a6;margin:12px 0"><h3>📁 ${esc(ex)} Test Series</h3><p class="muted">${count} Tests</p><p class="muted">${pricing.length?`🔓 ${pricing.length} Access Options उपलब्ध हैं।`:"Pricing अभी उपलब्ध नहीं है।"}</p><button class="btn orange" onclick="openExam('${esc(ex)}')">📂 Series खोलें</button></div>`;
+   const priceSummary=pricing.length?pricing.map(x=>`${x.name||"Access"}: ${seriesPriceText(x)}`).join(" &nbsp; • &nbsp; "):"Pricing अभी उपलब्ध नहीं है।";
+   return `<div class="card" style="border:2px solid #1d65a6;margin:12px 0"><h3>📁 ${esc(ex)} Test Series</h3><p class="muted">${count} Tests</p><p class="muted">${pricing.length?`🔓 ${pricing.length} Access Options उपलब्ध हैं।`:"Pricing अभी उपलब्ध नहीं है।"}</p>${pricing.length?`<div style="margin:8px 0"><b>💰 Price:</b> ${priceSummary}</div>`:""}<button class="btn orange" onclick="openExam('${esc(ex)}')">📂 Series खोलें</button></div>`;
  }).join("");
 }
 
@@ -721,6 +722,16 @@ function hasSeriesAccess(exam,testIndex){
 function seriesPriceText(x){
  const final=Number(x.offer)||Number(x.mrp)||0;
  return x.offer?`<span style="text-decoration:line-through;color:#777">₹${x.mrp}</span> <b style="font-size:22px">₹${x.offer}</b>`:`<b style="font-size:22px">₹${x.mrp}</b>`;
+}
+function openLockedTestPurchase(exam){
+ const options=getSeriesPricing(exam);
+ if(!options.length){
+   alert("इस Test Series के लिए अभी कोई Purchase Pricing उपलब्ध नहीं है।");
+   openStudentPage("series");
+   return;
+ }
+ // Locked Test पर क्लिक करते ही सीधे खरीद/Payment flow खोलें।
+ buySeriesAccess(exam,0);
 }
 function buySeriesAccess(exam,pricingIndex){
  const options=getSeriesPricing(exam),x=options[pricingIndex];if(!x)return;
@@ -1584,7 +1595,7 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
       var i=tests.indexOf(t), free=t.demo===true, owned=typeof hasPurchasedTest==='function'&&hasPurchasedTest(t), locked=!free&&!owned;
       var r=resultFor(t), rhtml='';
       if(r){var pct=(r.percent!=null?r.percent:'');rhtml='<div style="margin-top:8px;padding:7px 9px;background:#eef8f1;border-radius:8px;font-weight:700;color:#18713c">📊 सही: '+E(r.correct??'-')+' • अंक: '+E(r.score??'-')+(pct!==''?' • '+E(pct)+'%':'')+'</div>';}
-      return '<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+E(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>'+(isDone(t)?'<span class="tgy-status done">✅ Complete</span>':free?'<span class="tgy-status free">FREE DEMO</span>':owned?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>')+rhtml+'</div><button class="btn '+(locked?'orange':'')+'" onclick="'+(locked?('buySeriesAccess('+JSON.stringify(exam)+',0)'):('tgyOpenTestPreview('+i+')'))+'">'+(locked?'🔒 Access लें':'▶️ Test खोलें')+'</button></div>';
+      return '<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+E(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>'+(isDone(t)?'<span class="tgy-status done">✅ Complete</span>':free?'<span class="tgy-status free">FREE DEMO</span>':owned?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>')+rhtml+'</div><button class="btn '+(locked?'orange':'')+'" onclick="'+(locked?('tgyBuyBestSeriesAccess('+JSON.stringify(exam)+',pos)'):('tgyOpenTestPreview('+i+')'))+'">'+(locked?'🔒 Access लें':'▶️ Test खोलें')+'</button></div>';
     }).join('');
     box.innerHTML='<div class="tgy-list-head"><div><h2>🎯 '+E(exam)+' — Tests</h2><p class="muted">किसी Test को खोलें, विवरण देखें और फिर शुरू करें दबाएँ।</p></div><button class="btn gray" onclick="closeExam()">← पीछे</button></div>'+(arr.length?'<div id="tgyTestGrid" class="tgy-test-grid">'+cards+'</div>'+(arr.length>6?'<button id="tgyMoreTestsBtn" class="btn gray tgy-more-btn" onclick="tgyToggleMoreTests()">＋ और अधिक Tests देखें</button>':''):'<div class="card"><h3>📭 कोई Test उपलब्ध नहीं है</h3></div>');
     modal.style.display='flex'; window.tgyNavExam=exam;
@@ -1639,6 +1650,16 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
     return false;
   }
   function notesFor(exam){return J('tgy_pdf_notes',[]).map(function(n,i){return Object.assign({},n,{_i:i})}).filter(function(n){return String(n.folder||n.exam||'').trim()===String(exam).trim() && n.visible!==false && n.published!==false})}
+  // Select the smallest paid Test Series plan that covers the clicked Test.
+  window.tgyBuyBestSeriesAccess=function(exam,pos){
+    var opts=[];try{opts=(typeof getSeriesPricing==='function'?getSeriesPricing(exam):[]).slice()}catch(e){opts=[]}
+    if(!opts.length){alert('इस Test Series की Pricing अभी Admin Panel में सेट नहीं है।');return;}
+    var need=Number(pos||0)+1;
+    opts.sort(function(a,b){var ac=a.type==='folder'?999999:Number(a.count)||0,bc=b.type==='folder'?999999:Number(b.count)||0;return ac-bc});
+    var idx=opts.findIndex(function(x){return (x.type==='folder'?999999:Number(x.count)||0)>=need});
+    if(idx<0)idx=opts.length-1;
+    return buySeriesAccess(exam,idx);
+  };
 
   window.tgyShowTestList=function(exam){
     if(!isVisibleExam(exam))return;
@@ -1647,7 +1668,7 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
     var h='<div class="tgy-list-head"><div><h2>🎯 '+esc(exam)+' — Test Series</h2><p class="muted">कुल '+arr.length+' Tests • Test खोलें → विवरण देखें → शुरू करें</p></div><button class="btn gray" onclick="closeExam()">✕ बंद करें</button></div>';
     if(!arr.length){h+='<div class="card"><h3>📭 कोई Test उपलब्ध नहीं है</h3></div>';}else{
       h+='<div id="tgyTestGrid" class="tgy-test-grid">';
-      arr.forEach(function(x,pos){var t=x.t,access=canAccess(t),r=J('tgy_results',[]).find(function(z){return (z.test||z.name)===t.name&&(!z.exam||z.exam===t.exam)});h+='<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+esc(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>'+(r?'<div class="tgy-card-result"><b>📊 आपका Result</b><div>सही: <strong>'+esc(r.correct||0)+'</strong> / '+esc(r.total||((t.questions||[]).length))+' • अंक: <strong>'+esc(r.score||0)+'</strong> • '+esc(r.percent||0)+'%</div></div>':(t.demo===true?'<span class="tgy-status free">FREE DEMO</span>':access?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>'))+'</div><button class="btn '+(access?'':'orange')+'" onclick="'+(access?'tgyOpenTestPreview('+x.i+')':'buySeriesAccess('+JSON.stringify(exam)+',0)')+'">'+(access?'▶️ Test खोलें':'🔒 Access लें')+'</button></div>';});
+      arr.forEach(function(x,pos){var t=x.t,access=canAccess(t),r=J('tgy_results',[]).find(function(z){return (z.test||z.name)===t.name&&(!z.exam||z.exam===t.exam)});h+='<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+esc(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>'+(r?'<div class="tgy-card-result"><b>📊 आपका Result</b><div>सही: <strong>'+esc(r.correct||0)+'</strong> / '+esc(r.total||((t.questions||[]).length))+' • अंक: <strong>'+esc(r.score||0)+'</strong> • '+esc(r.percent||0)+'%</div></div>':(t.demo===true?'<span class="tgy-status free">FREE DEMO</span>':access?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>'))+'</div><button class="btn '+(access?'':'orange')+'" onclick="'+(access?'tgyOpenTestPreview('+x.i+')':'tgyBuyBestSeriesAccess('+JSON.stringify(exam)+',pos)')+'">'+(access?'▶️ Test खोलें':'🔒 Access लें')+'</button></div>';});
       h+='</div>'+(arr.length>6?'<button id="tgyMoreTestsBtn" class="btn gray tgy-more-btn" onclick="tgyToggleMoreTests()">＋ और अधिक Tests देखें</button>':'');
     }
     box.innerHTML=h;modal.style.display='flex';
@@ -1701,3 +1722,29 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
 })();
 </script>
 </body></html>
+<!-- TG&Y PDF + TEST SERIES COMBO PLAN -->
+<script id="tgy-combo-student-v1">
+(function(){
+ const J=(k,d)=>{try{const x=JSON.parse(localStorage.getItem(k)||'null');return x==null?d:x}catch(e){return d}};
+ const S=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+ const E=(v)=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+ function combos(exam){return J('tgy_combo_pricing',[]).filter(x=>x.exam===exam).sort((a,b)=>Number(a.count)-Number(b.count));}
+ function finalPrice(x){return Number(x.offer)||Number(x.mrp)||0}
+ function duration(x){return x.unit==='months'?`${x.durationValue||0} महीने`:`${x.durationValue||x.days||0} दिन`}
+ window.tgyBuyCombo=function(exam,index){
+   const x=combos(exam)[index];if(!x)return;
+   if(typeof getCurrentStudent==='function'&&!getCurrentStudent()){try{localStorage.setItem('tgy_pending_action',JSON.stringify({type:'combo',exam,index}))}catch(e){} if(typeof openAuth==='function')openAuth('login');return;}
+   const u=typeof getCurrentStudent==='function'?getCurrentStudent():J('tgy_user',{}),amount=finalPrice(x),count=Number(x.count)||10;
+   const c=document.getElementById('modalContent'),m=document.getElementById('modal');if(!c||!m)return;
+   c.innerHTML=`<h2>📦 PDF + Test Series Combo</h2><div class="pay"><p><b>परीक्षा:</b> ${E(exam)}</p><p><b>आपको मिलेगा:</b> 📄 पूरा PDF Folder + 📝 ${count>=999999?'पूरा Test Folder':count+' Tests'}</p><p><b>Validity:</b> ${E(duration(x))}</p><p><b>Price:</b> ₹${amount}</p><img class="qr" src="upi_qr.jpeg" alt="UPI QR"><p>QR से Payment करें और UTR Number Submit करें।</p><label>नाम</label><input id="pn" value="${E(u?.name||'')}"><label>Email</label><input id="pemail" value="${E(u?.email||'')}"><label>Transaction / UTR Number</label><input id="utr" placeholder="UTR Number"><button class="btn orange" onclick="tgySubmitComboPayment(${JSON.stringify(exam)},${count},${amount},${Number(x.days)||0},${JSON.stringify(x.name||'PDF + Test Series')})">Payment Details Submit करें</button><button class="btn gray" onclick="closeM()">बंद करें</button></div>`;m.style.display='flex';
+ };
+ window.tgySubmitComboPayment=function(exam,count,amount,days,name){const u=typeof getCurrentStudent==='function'?getCurrentStudent():J('tgy_user',{}),p=J('tgy_payments',[]);p.push({name:document.getElementById('pn')?.value||u?.name||'',email:document.getElementById('pemail')?.value||u?.email||'',course:`${exam} • PDF + ${count>=999999?'Full Tests':count+' Tests'}`,exam,folder:exam,seriesCount:Number(count)||0,accessName:name||'PDF + Test Series',days:Number(days)||0,amount:Number(amount)||0,utr:document.getElementById('utr')?.value||'',date:new Date().toLocaleString(),status:'Pending',type:'combo',accessType:'combo'});S('tgy_payments',p);document.getElementById('modalContent').innerHTML=`<h2>✅ Combo Payment Details भेज दी गईं</h2><div class="result"><b>${E(exam)}</b><br>📄 PDF Folder + 📝 ${count>=999999?'पूरा Test Folder':count+' Tests'}<br><b>Amount:</b> ₹${Number(amount)||0}<br><b>Status:</b> 🟡 Pending</div><p>Admin verification के बाद PDF और Test Series दोनों एक साथ Unlock होंगे।</p><button class="btn" onclick="closeM()">ठीक है</button>`;};
+ function comboHtml(exam){const a=combos(exam);if(!a.length)return '';return `<div class="card" style="border:2px solid #e28a00;margin:12px 0;background:#fffaf1"><h3>📦 PDF + Test Series Combo</h3><p class="muted">एक Payment में PDF और Tests दोनों लें।</p>${a.map((x,i)=>`<div style="padding:9px 0;border-top:1px solid #eee"><b>📄 PDF + 📝 ${Number(x.count)>=999999?'पूरा Test Folder':Number(x.count)+' Tests'}</b> • <b>₹${finalPrice(x)}</b> • ${E(duration(x))} <button class="btn orange" onclick="tgyBuyCombo(${JSON.stringify(exam)},${i})">💳 Combo खरीदें</button></div>`).join('')}</div>`;}
+ const oldShow=window.tgyShowTestList;
+ if(typeof oldShow==='function')window.tgyShowTestList=function(exam){oldShow(exam);setTimeout(()=>{const box=document.getElementById('examContent');if(box&&!box.querySelector('.tgy-combo-injected')){const h=comboHtml(exam);if(h){const d=document.createElement('div');d.className='tgy-combo-injected';d.innerHTML=h;box.insertBefore(d,box.firstChild);}}},0)};
+ const oldRenderNotes=window.renderStudentNotes;
+ if(typeof oldRenderNotes==='function')window.renderStudentNotes=function(){oldRenderNotes();setTimeout(()=>{const b=document.getElementById('studentNotesList');if(!b)return;const names=[...new Set(J('tgy_pdf_notes',[]).map(n=>(n.folder||n.exam||'').trim()).filter(Boolean))];names.forEach(exam=>{const h=comboHtml(exam);if(h&&!b.querySelector(`[data-combo="${CSS.escape(exam)}"]`)){const d=document.createElement('div');d.dataset.combo=exam;d.innerHTML=h;b.insertBefore(d,b.firstChild)}})},0)};
+ // Restore pending combo after login if the site's pending-action flow did not already handle it.
+ document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{try{const p=JSON.parse(localStorage.getItem('tgy_pending_action')||'null');if(p?.type==='combo'&&(typeof getCurrentStudent!=='function'||getCurrentStudent())){localStorage.removeItem('tgy_pending_action');tgyBuyCombo(p.exam,Number(p.index)||0)}}catch(e){}},900));
+})();
+</script>

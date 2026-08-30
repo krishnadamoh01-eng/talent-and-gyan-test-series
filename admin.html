@@ -1549,3 +1549,60 @@ document.addEventListener("DOMContentLoaded",()=>{
 </script>
 
 </body></html>
+<!-- TG&Y PDF + TEST SERIES COMBO PLAN -->
+<script id="tgy-combo-admin-v1">
+(function(){
+ const J=(k,d)=>{try{const x=JSON.parse(localStorage.getItem(k)||'null');return x==null?d:x}catch(e){return d}};
+ const S=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+ const E=window.esc||((v)=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])));
+ const daysOf=(v,u)=>u==='months'?Number(v||0)*30:Number(v||0);
+ function exams(){
+   const a=[]; const add=x=>{x=String(x||'').trim();if(x&&!a.includes(x))a.push(x)};
+   J('tgy_exams',[]).forEach(x=>add(typeof x==='string'?x:x.name));
+   J('tgy_tests',[]).forEach(x=>add(x.exam)); J('tgy_pdf_notes',[]).forEach(x=>add(x.folder||x.exam));
+   return a;
+ }
+ function ensureUI(){
+   const sec=document.getElementById('accessPricing'); if(!sec||document.getElementById('tgyComboPricingCard'))return;
+   const card=document.createElement('div'); card.className='card'; card.id='tgyComboPricingCard';
+   card.innerHTML=`<h2>📦 PDF + Test Series Combo Pricing</h2>
+   <p class="muted">यहाँ PDF Folder और Test Series को एक साथ बेचने की अलग कीमत रखें। Student इसी Combo को खरीद सकेगा।</p>
+   <div class="row">
+    <div><label>📋 परीक्षा / Folder</label><select id="cpExam"></select></div>
+    <div><label>📝 कितने Tests Unlock हों?</label><select id="cpCount"><option>10</option><option>20</option><option>30</option><option>50</option><option>80</option><option>100</option><option value="999999">पूरा Test Folder</option></select></div>
+    <div><label>💰 MRP (₹)</label><input id="cpMrp" type="number" min="0" placeholder="जैसे 59"></div>
+    <div><label>🏷️ Offer Price (₹)</label><input id="cpOffer" type="number" min="0" placeholder="जैसे 49"></div>
+    <div><label>⏳ Validity</label><input id="cpDuration" type="number" min="1" value="15"></div>
+    <div><label>Unit</label><select id="cpUnit"><option value="days">दिन</option><option value="months">महीना</option></select></div>
+   </div>
+   <button class="btn orange" onclick="tgySaveComboPricing()">💾 Combo Pricing Save</button>
+   <div id="tgyComboPricingList" style="margin-top:12px"></div>`;
+   const listCard=document.getElementById('accessPricingList')?.closest('.card');
+   if(listCard)listCard.parentNode.insertBefore(card,listCard.nextSibling); else sec.appendChild(card);
+   fillExam(); render();
+ }
+ function fillExam(selected){const s=document.getElementById('cpExam');if(!s)return;s.innerHTML='<option value="">परीक्षा चुनें</option>'+exams().map(x=>`<option ${x===selected?'selected':''}>${E(x)}</option>`).join('')}
+ window.tgySaveComboPricing=function(){
+   const exam=document.getElementById('cpExam')?.value||'', count=Number(document.getElementById('cpCount')?.value||10), mrp=Number(document.getElementById('cpMrp')?.value)||0, offer=Number(document.getElementById('cpOffer')?.value)||0, durationValue=Number(document.getElementById('cpDuration')?.value)||0, unit=document.getElementById('cpUnit')?.value||'days';
+   if(!exam||mrp<=0||durationValue<1)return alert('परीक्षा, MRP और Validity भरें।');
+   let a=J('tgy_combo_pricing',[]);const obj={exam,folder:exam,count,mrp,offer,durationValue,unit,days:daysOf(durationValue,unit),name:`PDF + ${count>=999999?'पूरा Test Folder':count+' Tests'}`,updatedAt:new Date().toISOString()};
+   const i=a.findIndex(x=>x.exam===exam&&Number(x.count)===count);if(i>=0)a[i]=obj;else a.push(obj);S('tgy_combo_pricing',a);render();alert('✅ PDF + Test Series Combo Pricing Save हो गई।');
+ };
+ window.tgyEditComboPricing=function(i){const x=J('tgy_combo_pricing',[])[i];if(!x)return;fillExam(x.exam);document.getElementById('cpCount').value=String(x.count);document.getElementById('cpMrp').value=x.mrp||'';document.getElementById('cpOffer').value=x.offer||'';document.getElementById('cpDuration').value=x.durationValue||x.days||'';document.getElementById('cpUnit').value=x.unit||'days';};
+ window.tgyDeleteComboPricing=function(i){let a=J('tgy_combo_pricing',[]);a.splice(i,1);S('tgy_combo_pricing',a);render();};
+ function render(){const b=document.getElementById('tgyComboPricingList');if(!b)return;const a=J('tgy_combo_pricing',[]);b.innerHTML=a.map((x,i)=>`<div class="card" style="margin:8px 0"><b>${E(x.exam)}</b> — 📦 PDF + ${Number(x.count)>=999999?'पूरा Test Folder':Number(x.count)+' Tests'} — <b>₹${Number(x.offer)||Number(x.mrp)||0}</b> — ${x.unit==='months'?(x.durationValue||0)+' महीने':(x.durationValue||x.days||0)+' दिन'} <button class="btn" onclick="tgyEditComboPricing(${i})">✏️ Edit</button> <button class="btn danger" onclick="tgyDeleteComboPricing(${i})">🗑️ Delete</button></div>`).join('')||'<p>अभी कोई Combo Pricing नहीं है।</p>';}
+ const oldActivate=window.activate;
+ window.activate=function(i){
+   const p=J('tgy_payments',[])[i]; if(!p||p.type!=='combo')return typeof oldActivate==='function'?oldActivate(i):undefined;
+   const pays=J('tgy_payments',[]);pays[i]={...p,status:'Access Activated',activatedAt:new Date().toISOString()};S('tgy_payments',pays);
+   const users=J('tgy_users',[]),u=users.find(x=>x.email===p.email);if(!u){if(typeof renderPayments==='function')renderPayments();return alert('Student account नहीं मिला।');}
+   const days=Number(p.days)||0,expires=days?new Date(Date.now()+days*86400000).toISOString():null;
+   u.notesFolderAccess=u.notesFolderAccess||[];u.notesFolderAccess=u.notesFolderAccess.filter(x=>x.folder!==p.folder);u.notesFolderAccess.push({folder:p.folder,amount:Number(p.amount)||0,activatedAt:pays[i].activatedAt,expiresAt:expires,source:'combo'});
+   u.seriesAccess=u.seriesAccess||[];const item={exam:p.exam,accessName:p.accessName||'PDF + Test Series',accessType:Number(p.seriesCount)>=999999?'folder':'testseries',count:Number(p.seriesCount)||0,amount:Number(p.amount)||0,activatedAt:pays[i].activatedAt,expiresAt:expires,source:'combo'};u.seriesAccess=u.seriesAccess.filter(x=>!(x.exam===item.exam&&x.source==='combo'));u.seriesAccess.push(item);S('tgy_users',users);
+   const k='tgy_notifications_'+p.email,ns=J(k,[]);ns.unshift({text:`🎉 Combo Access Active: PDF + ${Number(p.seriesCount)>=999999?'पूरा Test Folder':p.seriesCount+' Tests'}`,date:new Date().toLocaleString(),read:false});S(k,ns);
+   if(typeof renderPayments==='function')renderPayments();if(typeof renderUsers==='function')renderUsers();alert('✅ Combo Approved: PDF + Test Series दोनों Access Activate हो गए।');
+ };
+ document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureUI,350));
+ window.addEventListener('storage',e=>{if(['tgy_exams','tgy_tests','tgy_pdf_notes','tgy_combo_pricing'].includes(e.key)){fillExam();render();}});
+})();
+</script>
