@@ -1764,6 +1764,89 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
   };
 })();
 </script>
+
+<style id="tgy-final-purchase-lock-fix">
+/* Purchase screen is always full-screen. */
+#studentPageOverlay.student-page{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;max-width:none!important;border-radius:0!important;}
+#studentPageOverlay .student-page-body{width:100%;max-width:1400px;margin:0 auto;padding:20px 4%;}
+/* Payment modal itself uses the whole viewport when payment is open. */
+body.tgy-payment-open #modal{display:flex!important;position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;padding:0!important;background:rgba(0,0,0,.65)!important;z-index:100000!important;}
+body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important;height:100vh!important;max-height:none!important;border-radius:0!important;padding:28px 5%!important;overflow:auto!important;}
+</style>
+<script id="tgy-final-lock-purchase-route">
+(function(){
+  function goPurchase(exam){
+    try{
+      if(!exam) return;
+      window.tgyPurchaseExam=exam;
+      if(typeof window.openStudentPage==='function') window.openStudentPage('purchase');
+      setTimeout(function(){
+        var root=document.getElementById('studentPageOverlay');
+        if(!root) return;
+        root.scrollTop=0;
+        var cards=root.querySelectorAll('.card');
+        cards.forEach(function(c){
+          var h=c.querySelector('h2');
+          if(h && h.textContent.indexOf(exam)>=0){
+            c.scrollIntoView({behavior:'smooth',block:'start'});
+            c.style.outline='3px solid #f07800';
+            setTimeout(function(){c.style.outline=''},2500);
+          }
+        });
+      },80);
+    }catch(e){console.error(e);}
+    return false;
+  }
+  window.tgyOpenLockedPurchase=goPurchase;
+  window.tgyBuyLockedTest=function(exam){return goPurchase(exam)};
+
+  /* Replace any generated locked/access buttons with the reliable purchase-page route. */
+  function patch(root){
+    if(!root) return;
+    root.querySelectorAll('button').forEach(function(b){
+      var txt=(b.textContent||'').trim();
+      if(!(/Locked|खरीदें|Access लें|Access required|🔒/.test(txt))) return;
+      var oc=b.getAttribute('onclick')||'';
+      var m=oc.match(/(?:buySeriesAccess|tgyOpenLockedPurchase)\(([^,\)]*)/);
+      if(!m) return;
+      var raw=m[1].trim(), exam=null;
+      try{exam=JSON.parse(raw)}catch(e){exam=raw.replace(/^['"]|['"]$/g,'')}
+      if(!exam)return;
+      b.dataset.tgyPurchaseRoute='1';
+      b.setAttribute('onclick','return window.tgyOpenLockedPurchase('+JSON.stringify(exam)+')');
+    });
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(function(){patch(document.getElementById('examContent'));patch(document.getElementById('studentPageOverlay'));},300);
+  });
+  if(window.MutationObserver){
+    document.addEventListener('DOMContentLoaded',function(){
+      ['examContent','studentPageOverlay'].forEach(function(id){
+        var el=document.getElementById(id); if(!el)return;
+        new MutationObserver(function(){patch(el)}).observe(el,{childList:true,subtree:true});
+      });
+    });
+  }
+  /* Track payment modal fullscreen state whenever the existing purchase functions open it. */
+  var oldBuy=window.buySeriesAccess;
+  if(typeof oldBuy==='function'){
+    window.buySeriesAccess=function(){document.body.classList.add('tgy-payment-open');return oldBuy.apply(this,arguments)};
+  }
+  var oldCombo=window.tgyBuyCombo;
+  if(typeof oldCombo==='function'){
+    window.tgyBuyCombo=function(){document.body.classList.add('tgy-payment-open');return oldCombo.apply(this,arguments)};
+  }
+  var oldPdf=window.buyPdfFolder;
+  if(typeof oldPdf==='function'){
+    window.buyPdfFolder=function(){document.body.classList.add('tgy-payment-open');return oldPdf.apply(this,arguments)};
+  }
+  var oldClose=window.closeM;
+  if(typeof oldClose==='function'){
+    window.closeM=function(){document.body.classList.remove('tgy-payment-open');return oldClose.apply(this,arguments)};
+  }
+})();
+</script>
+
 </body></html>
 <!-- TG&Y PDF + TEST SERIES COMBO PLAN -->
 <script id="tgy-combo-student-v1">
@@ -1789,5 +1872,99 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
  if(typeof oldRenderNotes==='function')window.renderStudentNotes=function(){oldRenderNotes();setTimeout(()=>{const b=document.getElementById('studentNotesList');if(!b)return;const names=[...new Set(J('tgy_pdf_notes',[]).map(n=>(n.folder||n.exam||'').trim()).filter(Boolean))];names.forEach(exam=>{const h=comboHtml(exam);if(h&&!b.querySelector(`[data-combo="${CSS.escape(exam)}"]`)){const d=document.createElement('div');d.dataset.combo=exam;d.innerHTML=h;b.insertBefore(d,b.firstChild)}})},0)};
  // Restore pending combo after login if the site's pending-action flow did not already handle it.
  document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{try{const p=JSON.parse(localStorage.getItem('tgy_pending_action')||'null');if(p?.type==='combo'&&(typeof getCurrentStudent!=='function'||getCurrentStudent())){localStorage.removeItem('tgy_pending_action');tgyBuyCombo(p.exam,Number(p.index)||0)}}catch(e){}},900));
+})();
+</script>
+
+
+<style id="tgy-payment-fullscreen-fix">
+/* Purchase / Payment windows should use the complete screen. */
+#modal.tgy-payment-fullscreen{padding:0!important;align-items:stretch!important;justify-content:stretch!important}
+#modal.tgy-payment-fullscreen .box{width:100%!important;max-width:none!important;height:100vh!important;max-height:none!important;border-radius:0!important;padding:28px!important;overflow:auto!important}
+#modal.tgy-payment-fullscreen .pay{max-width:760px;margin:18px auto;padding:24px}
+#modal.tgy-payment-fullscreen .qr{width:230px}
+#studentPageOverlay{width:100vw!important;height:100vh!important;inset:0!important}
+</style>
+<script id="tgy-payment-fullscreen-final-fix">
+(function(){
+  function fullPayment(){
+    var m=document.getElementById('modal'),b=document.getElementById('modalContent');
+    if(!m||!b)return;
+    m.classList.add('tgy-payment-fullscreen');
+    m.style.display='flex';
+    m.style.padding='0';
+    b.style.cssText='width:100%;max-width:none;height:100vh;max-height:none;border-radius:0;padding:28px;overflow:auto;background:#f5f7fb;box-sizing:border-box';
+  }
+  function resetPayment(){
+    var m=document.getElementById('modal'),b=document.getElementById('modalContent');
+    if(m)m.classList.remove('tgy-payment-fullscreen');
+    if(b)b.style.cssText='';
+  }
+  window.tgyOpenFullPayment=fullPayment;
+
+  /* Ensure every existing purchase entry opens the real payment form fullscreen. */
+  var oldSeries=window.buySeriesAccess;
+  if(typeof oldSeries==='function'){
+    window.buySeriesAccess=function(){
+      var r=oldSeries.apply(this,arguments);
+      setTimeout(fullPayment,30);
+      return r;
+    };
+  }
+  var oldPdf=window.buyPdfFolder;
+  if(typeof oldPdf==='function'){
+    window.buyPdfFolder=function(){
+      var r=oldPdf.apply(this,arguments);
+      setTimeout(fullPayment,30);
+      return r;
+    };
+  }
+  var oldCombo=window.tgyBuyCombo;
+  if(typeof oldCombo==='function'){
+    window.tgyBuyCombo=function(){
+      var r=oldCombo.apply(this,arguments);
+      setTimeout(fullPayment,30);
+      return r;
+    };
+  }
+
+  /* The payment confirmation screen must also remain fullscreen. */
+  ['submitPayment','submitSeriesPayment','submitPdfFolderPayment','tgySubmitComboPayment'].forEach(function(name){
+    var fn=window[name];
+    if(typeof fn==='function'){
+      window[name]=(function(original){return function(){
+        var r=original.apply(this,arguments);
+        setTimeout(fullPayment,20);
+        return r;
+      }})(fn);
+    }
+  });
+
+  /* closeM should clear the fullscreen state for the next normal dialog. */
+  var oldClose=window.closeM;
+  if(typeof oldClose==='function'){
+    window.closeM=function(){resetPayment();return oldClose.apply(this,arguments)};
+  }
+
+  /* Combo purchase must always have a working payment route, even if an older
+     script replaced the purchase-page renderer. */
+  window.tgyPurchaseComboDirect=function(exam,index){
+    if(typeof window.tgyBuyCombo==='function')return window.tgyBuyCombo(exam,index);
+    alert('Combo Payment option उपलब्ध नहीं है।');
+  };
+
+  /* Re-render the Purchase page after login and keep all Buy buttons functional. */
+  document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(function(){
+      var o=document.getElementById('studentPageOverlay');
+      if(o){
+        o.addEventListener('click',function(e){
+          var btn=e.target.closest && e.target.closest('button');
+          if(!btn)return;
+          var oc=btn.getAttribute('onclick')||'';
+          if(/buySeriesAccess\(/.test(oc)||/buyPdfFolder\(/.test(oc)||/tgyBuyCombo\(/.test(oc))setTimeout(fullPayment,80);
+        });
+      }
+    },500);
+  });
 })();
 </script>

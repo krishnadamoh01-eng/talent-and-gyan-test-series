@@ -936,6 +936,7 @@ function setFolderVisibility(exam,visible){
  localStorage.setItem("tgy_exams",JSON.stringify(a));
 }
 function mtToggleFolder(exam){
+ exam=decodeURIComponent(exam);
  const now=!getFolderVisibility(exam);
  setFolderVisibility(exam,now);
  mtRenderAll();
@@ -962,9 +963,14 @@ function mtRenderAll(){
        <button class="btn ${folderVisible?"gray":"orange"}" onclick="mtToggleFolder('${encodeURIComponent(e)}')">${folderVisible?"🙈 Folder Hide":"👁️ Folder Show"}</button>
      </div>
      ${tests.length?`<div style="overflow:auto;margin-top:10px">
-     <table><thead><tr><th>Test</th><th>Questions</th><th>Time</th><th>Negative</th><th>Status</th><th>Action</th></tr></thead><tbody>
+     <table><thead><tr><th>Test</th><th>प्रकार</th><th>Questions</th><th>Time</th><th>Negative</th><th>Status</th><th>Action</th></tr></thead><tbody>
      ${tests.map(([t,x])=>`<tr>
-       <td>${mtEsc(x.name||t)}</td><td>${x.questions?.length||0}</td><td>${x.time||60} min</td>
+       <td>${mtEsc(x.name||t)}</td>
+       <td><select onchange="mtSetType('${encodeURIComponent(e)}','${encodeURIComponent(t)}',this.value)" style="padding:7px;border-radius:7px">
+         <option value="test" ${x.demo===true?"":"selected"}>📝 Test</option>
+         <option value="demo" ${x.demo===true?"selected":""}>🎁 Demo</option>
+       </select></td>
+       <td>${x.questions?.length||0}</td><td>${x.time||60} min</td>
        <td>${x.published===false?"🙈 Hidden":"👁️ Show"}</td>
        <td>
         <button class="btn" onclick="mtOpenTestEditor('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">👁️ देखें</button>
@@ -979,6 +985,19 @@ function mtRenderAll(){
    </div>`;
  }).join("");
 }
+function mtSetType(e,t,type){
+ e=decodeURIComponent(e);t=decodeURIComponent(t);
+ const d=mtStore(),obj=d.exams?.[e]?.tests?.[t];
+ if(!obj)return;
+ obj.demo=(type==="demo");
+ d.exams[e].tests[t]=obj;
+ mtSaveStore(d);
+ const typ=document.getElementById("mtType");
+ const ex=document.getElementById("mtExam"),nm=document.getElementById("mtName");
+ if(ex&&nm&&ex.value===e&&nm.value===t&&typ)typ.value=obj.demo?"demo":"test";
+ mtRenderAll();
+}
+
 function mtSelectTest(e,t){
  e=decodeURIComponent(e);t=decodeURIComponent(t);
  const ex=document.getElementById("mtExam"),nm=document.getElementById("mtName"),tm=document.getElementById("mtTime");
