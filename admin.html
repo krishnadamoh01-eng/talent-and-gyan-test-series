@@ -95,9 +95,10 @@ function checkAdmin(){
   <div class="card">
     <div class="row">
       <div><label>📋 परीक्षा</label><select id="mtExam" onchange="mtLoadTests()"></select></div>
-      <div><label>📝 Test का नाम</label><input id="mtName" placeholder="जैसे Mock Test 01 / Demo Test"></div>
+      <div><label>🔓 Test प्रकार</label><select id="mtType" onchange="mtTypeChanged()"><option value="demo">🎁 Demo (Free)</option><option value="test">📝 Test (Paid/Access)</option></select></div>
+      <div id="mtNameWrap"><label>📝 Test का नाम</label><input id="mtName" placeholder="जैसे Mock Test 01"></div>
+      <div id="mtDemoInfo" style="display:none"><label>🎁 Demo Test</label><div class="muted" style="padding:10px 0">यह Demo है — Student के लिए Free रहेगा।</div></div>
       <div><label>⏱️ समय (मिनट)</label><input id="mtTime" type="number" min="1" value="60"></div>
-      <div><label>🔓 Test प्रकार</label><select id="mtType"><option value="test">📝 Test (Paid/Access)</option><option value="demo">🎁 Demo (Free)</option></select></div>
       <div><label>❌ Negative Marking</label><select id="mtNegative" onchange="mtNegativeChanged()"><option value="no">नहीं</option><option value="yes">हाँ</option></select></div>
       <div id="mtNegativeValueWrap" style="display:none"><label>गलत उत्तर पर Marks</label><input id="mtNegativeValue" type="number" min="0" step="0.01" value="0.25"></div>
     </div>
@@ -144,19 +145,13 @@ function checkAdmin(){
 <section id="notes" class="sec">
  <h1>📄 PDF Notes</h1>
  <div class="card">
-  <p>यहाँ से PDF सीधे अपलोड करें। विद्यार्थी इसे वेबसाइट पर पढ़ सकेगा; Download button नहीं दिया जाएगा।</p>
-  <label>Notes का नाम</label>
+  <p>यहाँ PDF Notes जोड़ें। पहले परीक्षा चुनें, फिर Notes का नाम डालें और PDF अपलोड करें।</p>
+  <label>📋 परीक्षा का नाम</label>
+  <select id="noteExam"></select>
+  <label>📄 Notes का नाम</label>
   <input id="noteTitle" placeholder="जैसे MP पटवारी Notes">
-  <label>Exam</label>
-  <select id="noteExam"></select><small id="noteExamHelp" class="muted">📋 सूची से परीक्षा चुनें या नीचे से नई परीक्षा जोड़ें।</small>
-  <div class="row">
-   <div><label>💰 MRP (₹)</label><input id="noteMrp" type="number" min="0" placeholder="जैसे 50"></div>
-   <div><label>🏷️ Offer Price (₹)</label><input id="noteOffer" type="number" min="0" placeholder="जैसे 30"></div>
-   <div><label>📅 Available Till</label><input id="noteUntil" type="date"></div>
-  </div>
   <label>📄 PDF Upload करें</label>
   <input id="notePdfFile" type="file" accept="application/pdf,.pdf" style="width:100%;padding:10px">
-  <div class="row"><div><label>👁️ Student Site पर दिखाएँ</label><select id="noteVisible"><option value="true">हाँ — दिखाएँ</option><option value="false">नहीं — Hide</option></select></div><div><label>🔒 Access Lock</label><select id="noteLocked"><option value="false">🔓 Unlocked — सीधे खोलें</option><option value="true">🔒 Locked — Access/Purchase जरूरी</option></select></div></div>
   <div id="noteUploadStatus" class="muted" style="margin:8px 0"></div>
   <button class="btn orange" onclick="uploadPdfNote()">⬆️ PDF Upload करके Save करें</button>
  </div>
@@ -168,26 +163,26 @@ function saveAdminNotes(a){localStorage.setItem("tgy_pdf_notes",JSON.stringify(a
 function uploadPdfNote(){
  const title=document.getElementById("noteTitle").value.trim(),exam=document.getElementById("noteExam").value.trim();
  const file=document.getElementById("notePdfFile").files[0],st=document.getElementById("noteUploadStatus");
- if(!title){alert("Notes का नाम लिखें।");return} if(!file){alert("पहले PDF चुनें।");return}
+ if(!exam){alert("पहले परीक्षा चुनें।");return} if(!title){alert("Notes का नाम लिखें।");return} if(!file){alert("पहले PDF चुनें।");return}
  const r=new FileReader();r.onload=function(){let a=getAdminNotes();
- a.push({title,exam,fileName:file.name,dataUrl:r.result,mrp:Number(document.getElementById("noteMrp").value)||0,offer:Number(document.getElementById("noteOffer").value)||0,availableUntil:"",visible:document.getElementById("noteVisible").value!=="false",locked:document.getElementById("noteLocked").value==="true"});
- saveAdminNotes(a);["noteTitle","noteExam","notePdfFile","noteMrp","noteOffer"].forEach(id=>document.getElementById(id).value="");
+ a.push({title,exam,fileName:file.name,dataUrl:r.result,mrp:0,offer:0,availableUntil:"",visible:true,locked:false});
+ saveAdminNotes(a);document.getElementById("noteTitle").value="";document.getElementById("notePdfFile").value="";
  st.textContent="✅ PDF Notes Save हो गई।";renderAdminNotes()};r.readAsDataURL(file);
 }
 function editPdfNote(i){
  const n=getAdminNotes()[i];if(!n)return;
  document.getElementById("noteTitle").value=n.title||"";document.getElementById("noteExam").value=n.exam||"";
- document.getElementById("noteMrp").value=n.mrp??"";document.getElementById("noteOffer").value=n.offer??"";document.getElementById("noteUntil").value=n.availableUntil||"";document.getElementById("noteVisible").value=n.visible===false?"false":"true";document.getElementById("noteLocked").value=n.locked===true?"true":"false";
  const b=document.getElementById("adminNotesList");b.dataset.editIndex=i;
  const btn=document.querySelector('#notes button[onclick*="uploadPdfNote"]');if(btn)btn.textContent="💾 Update Notes";
- btn.onclick=function(){let a=getAdminNotes(),x=a[i];x.title=document.getElementById("noteTitle").value.trim();x.exam=document.getElementById("noteExam").value.trim();x.mrp=Number(document.getElementById("noteMrp").value)||0;x.offer=Number(document.getElementById("noteOffer").value)||0;x.availableUntil=document.getElementById("noteUntil").value;x.visible=document.getElementById("noteVisible").value!=="false";x.locked=document.getElementById("noteLocked").value==="true";saveAdminNotes(a);renderAdminNotes();alert("✅ Notes की जानकारी Update हो गई।");btn.textContent="⬆️ PDF Upload करके Save करें";btn.onclick=uploadPdfNote};
+ btn.onclick=function(){let a=getAdminNotes(),x=a[i];x.title=document.getElementById("noteTitle").value.trim();x.exam=document.getElementById("noteExam").value.trim();if(!x.title||!x.exam){alert("परीक्षा और Notes का नाम भरें।");return}saveAdminNotes(a);renderAdminNotes();alert("✅ Notes की जानकारी Update हो गई।");btn.textContent="⬆️ PDF Upload करके Save करें";btn.onclick=uploadPdfNote};
 }
 function renderAdminNotes(){const b=document.getElementById("adminNotesList");if(!b)return;const a=getAdminNotes();
- b.innerHTML=a.map((n,i)=>`<div class="card" style="margin:10px 0"><b>📄 ${esc(n.title)}</b> — ${esc(n.exam||"")}<br><span class="muted">${esc(n.fileName||"PDF")}</span><br><b>MRP:</b> ₹${n.mrp||0} &nbsp; <b>Offer:</b> ₹${n.offer||0} &nbsp; <b>Student:</b> ${n.visible===false?"🙈 Hidden":"👁️ Visible"} &nbsp; <b>Access:</b> ${n.locked===true?"🔒 Locked":"🔓 Open"} ${n.availableUntil?`&nbsp; <b>Valid Till:</b> ${esc(n.availableUntil)}`:""}<br>
- <button class="btn" onclick="previewAdminPdfNote(${i})">👁️ Preview</button><button class="btn" onclick="editPdfNote(${i})">✏️ Edit</button><button class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी कोई PDF Notes नहीं हैं।</p>";
+ b.innerHTML=a.map((n,i)=>`<div class="card" style="margin:10px 0"><b>📄 ${esc(n.title)}</b> — ${esc(n.exam||"")}<br><span class="muted">${esc(n.fileName||"PDF")}</span><br>
+ <button class="btn" onclick="previewAdminPdfNote(${i})">👁️ Preview</button><button class="btn" onclick="editPdfNote(${i})">✏️ Edit</button><button class="btn ${n.visible===false?"orange":"gray"}" onclick="togglePdfNoteVisible(${i})">${n.visible===false?'🙈 Hidden — Show':'👁️ Show — Hide'}</button><button class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button></div>`).join("")||"<p>अभी कोई PDF Notes नहीं हैं।</p>";
 }
 function previewAdminPdfNote(i){const n=getAdminNotes()[i];if(!n?.dataUrl)return;const w=window.open("","_blank");if(!w)return;w.document.write(`<title>${esc(n.title)}</title><iframe src="${n.dataUrl}#toolbar=0&navpanes=0" style="width:100%;height:100vh;border:0"></iframe>`);w.document.close()}
 function deletePdfNote(i){let a=getAdminNotes();a.splice(i,1);saveAdminNotes(a);renderAdminNotes()}
+function togglePdfNoteVisible(i){let a=getAdminNotes(),n=a[i];if(!n)return;n.visible=n.visible===false;saveAdminNotes(a);renderAdminNotes();}
 document.addEventListener("DOMContentLoaded",renderAdminNotes);</script>
 <section id="headline-manager" class="sec">
 <h1>📢 Home Headline</h1>
@@ -273,6 +268,7 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
     <select id="apType" onchange="apTypeChanged()">
       <option value="folder">📁 पूरा Test Series / Folder</option>
       <option value="testseries">⚙️ Custom Test Series</option>
+      <option value="pdf">📄 PDF Folder</option>
     </select>
   </div>
 
@@ -729,12 +725,23 @@ function mtInit(){
  mtLoadTests();
  mtRenderAll();
 }
+function mtTypeChanged(){
+ const typ=document.getElementById("mtType")?.value||"demo";
+ const wrap=document.getElementById("mtNameWrap"),info=document.getElementById("mtDemoInfo"),nm=document.getElementById("mtName");
+ const isDemo=typ==="demo";
+ if(wrap)wrap.style.display=isDemo?"none":"block";
+ if(info)info.style.display=isDemo?"block":"none";
+ if(nm&&isDemo&&!String(nm.value||"").trim())nm.value="Demo Test";
+ if(nm&&isDemo)nm.placeholder="Demo Test";
+ if(nm&&!isDemo&&nm.value==="Demo Test")nm.value="";
+}
 function mtLoadTests(){
  const e=document.getElementById("mtExam")?.value;
  if(e){const d=mtStore();d.exams=d.exams||{};d.exams[e]=d.exams[e]||{tests:{}};mtSaveStore(d);}
  const n=document.getElementById("mtName");if(n)n.value="";
  const tm=document.getElementById("mtTime");if(tm)tm.value=60;
- const typ=document.getElementById("mtType");if(typ)typ.value="test";
+ const typ=document.getElementById("mtType");if(typ)typ.value="demo";
+ mtTypeChanged();
  const neg=document.getElementById("mtNegative");if(neg)neg.value="no";
  mtNegativeChanged();mtRenderQuestions();mtRenderAll();
 }
@@ -747,6 +754,7 @@ function mtLoadSelected(){
   const typ=document.getElementById("mtType");if(typ)typ.value=obj.demo===true?"demo":"test";
   const neg=document.getElementById("mtNegative"),nv=document.getElementById("mtNegativeValue");
   if(neg)neg.value=obj.negativeMarking?"yes":"no";if(nv)nv.value=obj.negativeMarks||0.25;mtNegativeChanged();
+  mtTypeChanged();
  }
  mtRenderQuestions();
 }
@@ -762,8 +770,8 @@ function mtNegativeChanged(){
  const w=document.getElementById("mtNegativeValueWrap");if(w)w.style.display=yes?"block":"none";
 }
 function mtFinalSave(){
- const e=document.getElementById("mtExam")?.value,n=(document.getElementById("mtName")?.value||"").trim();
- const time=Number(document.getElementById("mtTime")?.value)||60,demo=document.getElementById("mtType")?.value==="demo",negative=document.getElementById("mtNegative")?.value==="yes";
+ const e=document.getElementById("mtExam")?.value,demo=document.getElementById("mtType")?.value==="demo",n=((document.getElementById("mtName")?.value||"").trim()||(demo?"Demo Test":""));
+ const time=Number(document.getElementById("mtTime")?.value)||60,negative=document.getElementById("mtNegative")?.value==="yes";
  const negativeMarks=negative?Number(document.getElementById("mtNegativeValue")?.value)||0:0;
  if(!e){alert("पहले परीक्षा चुनें।");return}if(!n){alert("Test का नाम लिखें।");return}
  if(negative&&negativeMarks<=0){alert("Negative Marks की value डालें।");return}
@@ -1233,12 +1241,15 @@ function renderPricing(){const b=document.getElementById("pricingList");if(!b)re
 function apTypeChanged(){
  const type=document.getElementById("apType")?.value;
  const custom=type==="testseries";
+ const pdf=type==="pdf";
  const cw=document.getElementById("apCustomWrap"),nw=document.getElementById("apNameWrap");
  if(cw)cw.style.display=custom?"block":"none";
  if(nw)nw.style.display=custom?"block":"none";
  const name=document.getElementById("apName");
  if(name && custom && !name.value)name.placeholder="जैसे 20 Test Series";
+ if(name && !custom)name.value="";
 }
+
 function accessDurationText(x){
  const unit=x.unit||"days",v=Number(x.durationValue||x.days||0);
  return unit==="months"?`${v} ${v===1?"महीना":"महीने"}`:`${v} दिन`;
@@ -1250,10 +1261,11 @@ function accessDays(x){
 function saveAccessPricing(){
  const exam=document.getElementById("apExam")?.value;
  const type=document.getElementById("apType")?.value||"folder";
+ const isPdf=type==="pdf";
  const count=type==="testseries"?Number(document.getElementById("apCount")?.value||10):0;
  const name=type==="testseries"
    ?(document.getElementById("apName")?.value.trim()||`${count} Test Series`)
-   :`${exam} — पूरा Test Series`;
+   :isPdf?`${exam} — PDF Folder`:`${exam} — पूरा Test Series`;
  const durationValue=Number(document.getElementById("apDuration")?.value)||0;
  const unit=document.getElementById("apUnit")?.value||"days";
  const mrp=Number(document.getElementById("apMrp")?.value)||0;
@@ -1265,22 +1277,30 @@ function saveAccessPricing(){
  let a=getAdminList("tgy_access_pricing");
  const obj={
    exam,type,count,name,durationValue,unit,days:accessDays({durationValue,unit}),
-   mrp,offer,scope:type==="folder"?"full":"custom"
+   mrp,offer,scope:type==="folder"?"full":isPdf?"pdf":"custom"
  };
  const n=a.findIndex(x=>x.exam===exam&&x.type===type&&Number(x.count||0)===count);
  if(n>=0)a[n]=obj;else a.push(obj);
  setAdminList("tgy_access_pricing",a);
+ // Keep PDF pricing in the existing PDF-folder purchase system too.
+ if(isPdf){
+   let pm=getAdminList("tgy_pdf_folder_meta"),pi=pm.findIndex(x=>x.folder===exam);
+   const meta={...(pi>=0?pm[pi]:{}),folder:exam,mrp,offer,days:accessDays({durationValue,unit}),durationValue,unit};
+   if(pi>=0)pm[pi]=meta;else pm.push(meta);
+   setAdminList("tgy_pdf_folder_meta",pm);
+ }
  renderAccessPricing();
  alert("✅ Pricing Save हो गई। अब Student Site पर यही option दिखाई देगा।");
  clearAccessPricingForm();
 }
+
 function clearAccessPricingForm(){
  ["apName","apMrp","apOffer"].forEach(id=>{const x=document.getElementById(id);if(x)x.value=""});
 }
 function editAccessPricing(n){
  const a=getAdminList("tgy_access_pricing"),x=a[n];if(!x)return;
  populateExamSelect("apExam",x.exam);
- document.getElementById("apType").value=x.type==="folder"?"folder":"testseries";
+ document.getElementById("apType").value=x.type==="folder"?"folder":(x.type==="pdf"?"pdf":"testseries");
  apTypeChanged();
  if(document.getElementById("apCount"))document.getElementById("apCount").value=x.count||"10";
  if(document.getElementById("apName"))document.getElementById("apName").value=x.type==="folder"?"":(x.name||"");
@@ -1302,7 +1322,7 @@ function renderAccessPricing(){
    return Number(A.x.count||0)-Number(B.x.count||0);
  });
  b.innerHTML=indexed.map(({x,i})=>{
-   const typ=x.type==="folder"?"📁 पूरा Test Series":`⚙️ Custom — ${x.count||0} Tests`;
+   const typ=x.type==="folder"?"📁 पूरा Test Series / Folder":(x.type==="pdf"?"📄 PDF Folder":`⚙️ Custom — ${x.count||0} Tests`);
    const price=x.offer?`<span style="text-decoration:line-through;color:#777">₹${x.mrp}</span> <b>₹${x.offer}</b>`:`<b>₹${x.mrp}</b>`;
    return `<div class="card" style="margin:8px 0">
      <b>${esc(x.exam)}</b> — ${typ} — ${accessDurationText(x)} — ${price}
