@@ -35,7 +35,22 @@ body.admin-locked > .exam-manager{display:none!important}
 .password-field-wrap{display:flex;gap:8px;align-items:center}
 .password-field-wrap input{flex:1}
 .password-toggle{white-space:nowrap;background:#667789!important}
-</style></head><body><div id="adminLogin" style="position:fixed;inset:0;background:#f4f7fb;display:flex;align-items:center;justify-content:center;padding:20px;z-index:999999">
+</style>
+<style id="tgy-password-mobile-fix">
+/* Password fields: full-width input + reliable show/hide control on mobile and desktop */
+.password-field-wrap{display:flex!important;align-items:stretch!important;gap:8px!important;width:100%!important;min-width:0!important}
+.password-field-wrap input{display:block!important;flex:1 1 auto!important;width:auto!important;min-width:0!important;max-width:none!important;margin:6px 0 12px!important;padding:11px!important;font-size:16px!important;line-height:1.35!important;box-sizing:border-box!important}
+.password-field-wrap .password-toggle{flex:0 0 auto!important;width:auto!important;min-width:120px!important;margin:6px 0 12px!important;padding:11px 14px!important;font-size:15px!important;cursor:pointer!important}
+@media(max-width:700px){
+  .password-field-wrap{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:4px!important}
+  .password-field-wrap input{width:100%!important;margin:4px 0 4px!important;min-height:50px!important}
+  .password-field-wrap .password-toggle{width:100%!important;min-width:0!important;margin:0 0 12px!important;min-height:46px!important}
+  #authModal .box{width:calc(100vw - 24px)!important;max-width:none!important;padding:20px 16px!important;max-height:94vh!important}
+  #authContent input,#authContent select,#authContent textarea{font-size:16px!important;min-height:48px!important}
+  #authContent .btn{min-height:46px!important}
+}
+</style>
+</head><body><div id="adminLogin" style="position:fixed;inset:0;background:#f4f7fb;display:flex;align-items:center;justify-content:center;padding:20px;z-index:999999">
   <div class="login-box">
     <h2 style="color:#123b68;margin-top:0">🔐 Admin Login</h2>
     <p class="muted">केवल Administrator के लिए</p>
