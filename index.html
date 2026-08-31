@@ -1722,7 +1722,75 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
  };
 })();
 </script>
-\n<script id="tgy-final-lock-folder-click-fix">\n(function(){\n  function showExamFolder(exam){\n    try {\n      if(typeof window.tgyOpenExamHub==='function'){ window.tgyOpenExamHub(exam); return false; }\n      if(typeof window.tgyShowTestList==='function'){ window.tgyShowTestList(exam); return false; }\n    } catch(e) { console.error(e); }\n    return false;\n  }\n  window.tgyOpenExamFolder=showExamFolder;\n\n  // Use the visible Exam modal for the purchase flow. Older code used modalContent,\n  // which could leave the payment dialog behind the exam modal.\n  window.tgyOpenLockedPurchase=function(exam,index){\n    try {\n      if(typeof window.buySeriesAccess==='function'){\n        var modal=document.getElementById('examModal'), box=document.getElementById('examContent');\n        if(modal && box){\n          var oldModal=document.getElementById('modal');\n          if(oldModal) oldModal.style.display='none';\n          // Reuse the existing payment builder, then move its content into the visible exam modal.\n          var oldBox=document.getElementById('modalContent');\n          if(oldBox) oldBox.innerHTML='';\n          window.buySeriesAccess(exam, Number(index)||0);\n          setTimeout(function(){\n            var c=document.getElementById('modalContent');\n            if(c && c.innerHTML){ box.innerHTML=c.innerHTML; modal.style.display='flex';\n              var btn=box.querySelector('[onclick^="closeM"]'); if(btn) btn.onclick=function(){modal.style.display='none';};\n            }\n          },30);\n          return false;\n        }\n        window.buySeriesAccess(exam, Number(index)||0);\n      }\n    } catch(e){ console.error(e); alert('Purchase page खोलने में समस्या हुई। कृपया फिर से प्रयास करें।'); }\n    return false;\n  };\n\n  // Final, safe folder renderer: every exam/folder button opens the hub.\n  window.tgyRenderExamFoldersFinal=function(){\n    var box=document.getElementById('tgyHomeExamGrid'); if(!box)return;\n    var raw=[]; try{raw=JSON.parse(localStorage.getItem('tgy_exams')||'[]')||[]}catch(e){}\n    raw=raw.filter(function(x){return x && (typeof x==='string'||x.name) && (typeof x==='string'||x.visible!==false);});\n    box.innerHTML=raw.length?raw.map(function(x){\n      var n=typeof x==='string'?x:x.name, logo=typeof x==='object'&&x.logo?x.logo:'talent-and-gyan-logo.png';\n      return '<div class="tgy-exam-card"><img class="tgy-exam-logo" src="'+E(logo)+'" alt=""><div class="tgy-exam-name">'+E(n)+'</div><div class="tgy-exam-sub">Demo + Online Mock Tests</div><button type="button" class="tgy-view-btn" onclick="return window.tgyOpenExamFolder('+JSON.stringify(n)+')">View Tests</button></div>';\n    }).join(''):'<div class="tgy-exam-card" style="grid-column:1/-1"><div class="tgy-exam-name">अभी कोई परीक्षा उपलब्ध नहीं है</div><div class="tgy-exam-sub">Admin Panel में पहले परीक्षा/Folder बनाइए।</div></div>';\n  };\n\n  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){\n    try{ window.tgyRenderExamFoldersFinal(); }catch(e){}\n    // Make the locked Test buttons use the same reliable purchase route.\n    var box=document.getElementById('examContent');\n    if(box && typeof MutationObserver!=='undefined'){\n      new MutationObserver(function(){\n        box.querySelectorAll('button').forEach(function(b){\n          if((b.textContent||'').indexOf('Access लें')<0 && (b.textContent||'').indexOf('खरीदें')<0)return;\n          if(b.dataset.tgyLockFixed)return;\n          var oc=b.getAttribute('onclick')||'';\n          var m=oc.match(/buySeriesAccess\\((.*?),\\s*(\\d+)\\)/);\n          if(m){ b.dataset.tgyLockFixed='1'; b.setAttribute('onclick','return window.tgyOpenLockedPurchase('+m[1]+','+m[2]+')'); }\n        });\n      }).observe(box,{childList:true,subtree:true});\n    }\n  },200);});\n})();\n</script>\n
+
+<script id="tgy-final-lock-folder-click-fix">
+(function(){
+  function showExamFolder(exam){
+    try {
+      if(typeof window.tgyOpenExamHub==='function'){ window.tgyOpenExamHub(exam); return false; }
+      if(typeof window.tgyShowTestList==='function'){ window.tgyShowTestList(exam); return false; }
+    } catch(e) { console.error(e); }
+    return false;
+  }
+  window.tgyOpenExamFolder=showExamFolder;
+
+  // Use the visible Exam modal for the purchase flow. Older code used modalContent,
+  // which could leave the payment dialog behind the exam modal.
+  window.tgyOpenLockedPurchase=function(exam,index){
+    try {
+      if(typeof window.buySeriesAccess==='function'){
+        var modal=document.getElementById('examModal'), box=document.getElementById('examContent');
+        if(modal && box){
+          var oldModal=document.getElementById('modal');
+          if(oldModal) oldModal.style.display='none';
+          // Reuse the existing payment builder, then move its content into the visible exam modal.
+          var oldBox=document.getElementById('modalContent');
+          if(oldBox) oldBox.innerHTML='';
+          window.buySeriesAccess(exam, Number(index)||0);
+          setTimeout(function(){
+            var c=document.getElementById('modalContent');
+            if(c && c.innerHTML){ box.innerHTML=c.innerHTML; modal.style.display='flex';
+              var btn=box.querySelector('[onclick^="closeM"]'); if(btn) btn.onclick=function(){modal.style.display='none';};
+            }
+          },30);
+          return false;
+        }
+        window.buySeriesAccess(exam, Number(index)||0);
+      }
+    } catch(e){ console.error(e); alert('Purchase page खोलने में समस्या हुई। कृपया फिर से प्रयास करें।'); }
+    return false;
+  };
+
+  // Final, safe folder renderer: every exam/folder button opens the hub.
+  window.tgyRenderExamFoldersFinal=function(){
+    var box=document.getElementById('tgyHomeExamGrid'); if(!box)return;
+    var raw=[]; try{raw=JSON.parse(localStorage.getItem('tgy_exams')||'[]')||[]}catch(e){}
+    raw=raw.filter(function(x){return x && (typeof x==='string'||x.name) && (typeof x==='string'||x.visible!==false);});
+    box.innerHTML=raw.length?raw.map(function(x){
+      var n=typeof x==='string'?x:x.name, logo=typeof x==='object'&&x.logo?x.logo:'talent-and-gyan-logo.png';
+      return '<div class="tgy-exam-card"><img class="tgy-exam-logo" src="'+E(logo)+'" alt=""><div class="tgy-exam-name">'+E(n)+'</div><div class="tgy-exam-sub">Demo + Online Mock Tests</div><button type="button" class="tgy-view-btn" onclick="return window.tgyOpenExamFolder('+JSON.stringify(n)+')">View Tests</button></div>';
+    }).join(''):'<div class="tgy-exam-card" style="grid-column:1/-1"><div class="tgy-exam-name">अभी कोई परीक्षा उपलब्ध नहीं है</div><div class="tgy-exam-sub">Admin Panel में पहले परीक्षा/Folder बनाइए।</div></div>';
+  };
+
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+    try{ window.tgyRenderExamFoldersFinal(); }catch(e){}
+    // Make the locked Test buttons use the same reliable purchase route.
+    var box=document.getElementById('examContent');
+    if(box && typeof MutationObserver!=='undefined'){
+      new MutationObserver(function(){
+        box.querySelectorAll('button').forEach(function(b){
+          if((b.textContent||'').indexOf('Access लें')<0 && (b.textContent||'').indexOf('खरीदें')<0)return;
+          if(b.dataset.tgyLockFixed)return;
+          var oc=b.getAttribute('onclick')||'';
+          var m=oc.match(/buySeriesAccess\\((.*?),\\s*(\\d+)\\)/);
+          if(m){ b.dataset.tgyLockFixed='1'; b.setAttribute('onclick','return window.tgyOpenLockedPurchase('+m[1]+','+m[2]+')'); }
+        });
+      }).observe(box,{childList:true,subtree:true});
+    }
+  },200);});
+})();
+</script>
+
 <script id="tgy-purchase-page-v1">
 (function(){
   function P(k,d){try{var x=JSON.parse(localStorage.getItem(k)||'null');return x==null?d:x}catch(e){return d}}
@@ -1966,5 +2034,78 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
       }
     },500);
   });
+})();
+</script>
+
+<style id="tgy-final-mobile-payment-v2">
+/* Final mobile-safe purchase/payment UI */
+html,body{max-width:100%;overflow-x:hidden}
+#modal{padding:0!important}
+#modal .box{width:100%;max-width:1100px;max-height:96vh;box-sizing:border-box}
+.tgy-payment-fullscreen{display:flex!important;position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:100000!important;padding:0!important;align-items:stretch!important;justify-content:stretch!important}
+.tgy-payment-fullscreen .box{width:100vw!important;max-width:none!important;height:100vh!important;max-height:none!important;border-radius:0!important;padding:18px max(16px,4vw)!important;overflow:auto!important}
+.tgy-payment-fullscreen .pay{width:100%;max-width:760px;margin:0 auto;padding:18px;box-sizing:border-box}
+.tgy-payment-fullscreen .qr{width:min(300px,80vw)!important;height:auto!important;max-height:48vh;object-fit:contain}
+.tgy-upi-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.tgy-upi-actions .btn{flex:1 1 220px;min-height:46px}
+@media(max-width:700px){
+  header{padding:10px 4%;position:sticky}
+  nav{width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:3px;-webkit-overflow-scrolling:touch}
+  nav a{white-space:nowrap;flex:0 0 auto}
+  .container{width:94%;margin:20px auto}
+  .grid{grid-template-columns:1fr}
+  .card{padding:14px}
+  .btn{width:100%;min-height:44px}
+  .tgy-upi-actions{display:grid;grid-template-columns:1fr}
+  .tgy-payment-fullscreen .box{padding:12px!important}
+  .tgy-payment-fullscreen .pay{padding:14px!important;border-radius:10px}
+  input,textarea,select{font-size:16px!important}
+  .qr{width:min(260px,82vw)!important}
+}
+</style>
+<script id="tgy-final-payment-mobile-v2">
+(function(){
+  const UPI='paytm.s2uiv58@pty', UPI_NAME='Talent And Gyan';
+  function E(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function full(){const m=document.getElementById('modal');if(m){m.classList.add('tgy-payment-fullscreen');document.body.classList.add('tgy-payment-open');m.style.display='flex';}}
+  function payLink(amount,note){return 'upi://pay?pa='+encodeURIComponent(UPI)+'&pn='+encodeURIComponent(UPI_NAME)+'&am='+encodeURIComponent(Number(amount)||0)+'&cu=INR&tn='+encodeURIComponent(note||'Course Payment');}
+  function addPayTools(){
+    const c=document.getElementById('modalContent'); if(!c)return;
+    const pay=c.querySelector('.pay'); if(!pay)return;
+    if(pay.querySelector('.tgy-upi-actions'))return;
+    const amountText=(pay.textContent.match(/(?:Payable|Amount|₹)\s*:?\s*₹?\s*([0-9]+(?:\.[0-9]+)?)/i)||[])[1]||((pay.textContent.match(/₹\s*([0-9]+(?:\.[0-9]+)?)/)||[])[1]||'0');
+    const amount=Number(amountText)||0;
+    const note='Talent And Gyan Payment';
+    const actions=document.createElement('div'); actions.className='tgy-upi-actions';
+    actions.innerHTML='<a class="btn orange" href="'+payLink(amount,note)+'" style="text-align:center;text-decoration:none">📲 UPI App से Pay ₹'+amount+'</a><button type="button" class="btn gray" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+UPI+'\').then(()=>alert(\'UPI ID Copy हो गई\')).catch(()=>alert(\'UPI ID: '+UPI+'\'))">📋 UPI ID Copy करें</button>';
+    const firstButton=pay.querySelector('button');
+    pay.insertBefore(actions,firstButton||null);
+    const p=document.createElement('p'); p.className='upi'; p.textContent='UPI ID: '+UPI; pay.insertBefore(p,actions);
+  }
+  function observe(){
+    const c=document.getElementById('modalContent'); if(!c||!window.MutationObserver)return;
+    new MutationObserver(function(){
+      const m=document.getElementById('modal'); if(m&&m.style.display!=='none'){
+        const txt=c.textContent||'';
+        if(/Payment|Payment Details|Combo|PDF खरीदें|Access लें|Payable|Amount/i.test(txt)){
+          full(); addPayTools();
+        }
+      }
+    }).observe(c,{childList:true,subtree:true,characterData:true});
+  }
+  function wrap(name){
+    const f=window[name]; if(typeof f!=='function'||f.__tgyPaymentWrapped)return;
+    function w(){const r=f.apply(this,arguments);setTimeout(function(){full();addPayTools()},30);return r}
+    w.__tgyPaymentWrapped=true; window[name]=w;
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    observe();
+    setTimeout(function(){['buyTest','buySeriesAccess','buyPdfFolder','tgyBuyCombo','showPayment'].forEach(wrap);},50);
+  });
+  const oldClose=window.closeM;
+  if(typeof oldClose==='function'&&!oldClose.__tgyPaymentWrapped){
+    function c(){document.body.classList.remove('tgy-payment-open');const m=document.getElementById('modal');if(m)m.classList.remove('tgy-payment-fullscreen');return oldClose.apply(this,arguments)}
+    c.__tgyPaymentWrapped=true;window.closeM=c;
+  }
 })();
 </script>
