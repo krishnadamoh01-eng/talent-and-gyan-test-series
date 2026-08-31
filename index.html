@@ -1915,6 +1915,49 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
 })();
 </script>
 
+
+<style id="tgy-purchase-ultimate-fix">
+#tgyPurchaseOverlay{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;background:#f5f7fb;overflow:auto;display:none}
+#tgyPurchaseOverlay .tgy-po-head{position:sticky;top:0;z-index:2;background:#123b68;color:#fff;padding:14px 4%;display:flex;align-items:center;justify-content:space-between;gap:12px}
+#tgyPurchaseOverlay .tgy-po-body{width:100%;max-width:1100px;margin:0 auto;padding:22px 4% 40px;box-sizing:border-box}
+#tgyPurchaseOverlay .tgy-po-card{background:#fff;border:1px solid #dfe7ef;border-radius:14px;padding:20px;margin:14px 0;box-shadow:0 4px 15px rgba(0,0,0,.06)}
+#tgyPurchaseOverlay .tgy-po-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+#tgyPurchaseOverlay .tgy-po-pay{max-width:720px;margin:20px auto;background:#fff;border-radius:16px;padding:24px;box-shadow:0 8px 28px rgba(0,0,0,.1)}
+#tgyPurchaseOverlay .tgy-po-qr{width:min(320px,78vw);height:auto;display:block;margin:15px auto;border:1px solid #ddd}
+#tgyPurchaseOverlay .tgy-po-upi{font-weight:800;text-align:center;font-size:19px;color:#123b68;word-break:break-all;margin:10px 0}
+#tgyPurchaseOverlay .tgy-po-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+#tgyPurchaseOverlay .tgy-po-actions .btn{flex:1 1 220px;min-height:46px}
+@media(max-width:700px){#tgyPurchaseOverlay .tgy-po-head{padding:12px 4%;align-items:flex-start}#tgyPurchaseOverlay .tgy-po-head h2{font-size:20px;margin:0}.tgy-po-grid{grid-template-columns:1fr!important}#tgyPurchaseOverlay .tgy-po-body{padding:14px 3% 30px}#tgyPurchaseOverlay .tgy-po-card,#tgyPurchaseOverlay .tgy-po-pay{padding:15px}.tgy-po-actions{display:grid!important;grid-template-columns:1fr}.tgy-po-actions .btn{width:100%}}
+</style>
+<script id="tgy-purchase-ultimate-fix-js">
+(function(){
+  function J(k,d){try{var x=JSON.parse(localStorage.getItem(k)||'null');return x==null?d:x}catch(e){return d}}
+  function S(k,v){localStorage.setItem(k,JSON.stringify(v))}
+  function E(v){return String(v??'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+  function escAttr(v){return E(v).replace(/`/g,'&#96;')}
+  function student(){return J('tgy_user',null)}
+  function prices(exam){return J('tgy_access_pricing',[]).filter(function(x){return x&&x.exam===exam&&(x.type==='folder'||(x.type==='testseries'&&Number(x.count)>0))})}
+  function finalPrice(x){return Number(x&&x.offer)||Number(x&&x.mrp)||0}
+  function duration(x){var v=Number(x&&x.durationValue||x&&x.days||0),u=x&&x.unit||'days';return u==='months'?v+' महीने':v+' दिन'}
+  function ensure(){var o=document.getElementById('tgyPurchaseOverlay');if(!o){o=document.createElement('div');o.id='tgyPurchaseOverlay';document.body.appendChild(o)}return o}
+  function close(){var o=document.getElementById('tgyPurchaseOverlay');if(o)o.style.display='none';document.body.style.overflow=''}
+  window.tgyClosePurchaseUltimate=close;
+  function payment(title,exam,amount,count,type,extra){
+    var o=ensure(),u=student()||{},c=extra&&extra.course||title;
+    o.innerHTML='<div class="tgy-po-head"><h2>💳 Payment / भुगतान</h2><button class="btn gray" type="button" onclick="tgyClosePurchaseUltimate()">✕ बंद करें</button></div><div class="tgy-po-body"><div class="tgy-po-pay"><h2 style="margin-top:0">'+E(title)+'</h2><p><b>परीक्षा:</b> '+E(exam||'-')+'</p><p><b>आपको मिलेगा:</b> '+E(count>=999999?'पूरा Test Folder':count+' Tests')+'</p><p><b>Amount:</b> ₹'+amount+'</p><img class="tgy-po-qr" src="upi_qr.jpeg" alt="UPI QR Code"><div class="tgy-po-upi">UPI ID: paytm.s2uiv58@pty</div><div class="tgy-po-actions"><button class="btn orange" type="button" onclick="window.tgyPayUPI('+JSON.stringify(String(amount))+')">📲 UPI से Pay करें</button><button class="btn" type="button" onclick="window.tgyCopyUPI()">📋 UPI ID Copy करें</button></div><p class="muted">QR Code या UPI से Payment करने के बाद Transaction/UTR Number नीचे भरें।</p><label>नाम</label><input id="tgyPOName" value="'+E(u.name||'')+'" placeholder="आपका नाम"><label>Email</label><input id="tgyPOEmail" type="email" value="'+E(u.email||'')+'" placeholder="आपकी Email ID"><label>Transaction / UTR Number</label><input id="tgyPOUTR" placeholder="Payment के बाद UTR Number"><button class="btn orange" style="width:100%;margin-top:8px;min-height:48px" type="button" onclick="window.tgySubmitPurchaseUltimate('+JSON.stringify({title,exam,amount,count,type,accessName:extra&&extra.accessName||title,days:extra&&extra.days||0,course:c})+')">✅ Payment Details Submit करें</button></div></div>';
+    o.style.display='block';document.body.style.overflow='hidden';
+  }
+  window.tgyPayUPI=function(amount){var upi='paytm.s2uiv58@pty',url='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent('Talent And Gyan')+'&am='+encodeURIComponent(amount)+'&cu=INR';window.location.href=url};
+  window.tgyCopyUPI=function(){navigator.clipboard&&navigator.clipboard.writeText('paytm.s2uiv58@pty').then(function(){alert('UPI ID Copy हो गई: paytm.s2uiv58@pty')}).catch(function(){alert('UPI ID: paytm.s2uiv58@pty')})};
+  window.tgySubmitPurchaseUltimate=function(d){var name=document.getElementById('tgyPOName')?.value?.trim()||'',email=document.getElementById('tgyPOEmail')?.value?.trim().toLowerCase()||'',utr=document.getElementById('tgyPOUTR')?.value?.trim()||'';if(!name||!email||!utr){alert('नाम, Email और UTR Number भरना जरूरी है।');return}var p=J('tgy_payments',[]);p.push({name,email,course:d.course||d.title,exam:d.exam,seriesCount:Number(d.count)||0,accessName:d.accessName||d.title,days:Number(d.days)||0,amount:Number(d.amount)||0,utr,date:new Date().toLocaleString(),status:'Pending',type:d.type||'testseries',accessType:d.type||'testseries'});S('tgy_payments',p);var o=ensure();o.innerHTML='<div class="tgy-po-head"><h2>✅ Payment Details प्राप्त</h2><button class="btn gray" type="button" onclick="tgyClosePurchaseUltimate()">✕ बंद करें</button></div><div class="tgy-po-body"><div class="tgy-po-pay"><h2>Payment Request भेज दी गई</h2><p><b>Plan:</b> '+E(d.accessName||d.title)+'</p><p><b>Amount:</b> ₹'+Number(d.amount||0)+'</p><p><b>UTR:</b> '+E(utr)+'</p><p class="result"><b>Status: 🟡 Pending</b><br>Admin payment verify करके आपका Access Activate करेगा।</p><button class="btn orange" style="width:100%" onclick="tgyClosePurchaseUltimate()">ठीक है</button></div></div>';};
+  window.tgyOpenPurchasePayment=function(exam,index){var a=prices(exam),x=a[Number(index)||0];if(!x){alert('इस परीक्षा के लिए कोई Pricing उपलब्ध नहीं है।');return false}var count=x.type==='folder'?999999:Number(x.count)||1,amount=finalPrice(x);payment((x.type==='folder'?'पूरा Test Series':count+' Tests'),exam,amount,count,x.type||'testseries',{accessName:x.name|| (x.type==='folder'?'पूरा Test Series':count+' Tests'),days:Number(x.days||x.durationValue)||0,course:exam+' • '+(x.type==='folder'?'Full Test Series':count+' Tests')});return false};
+  window.tgyOpenLockedPurchase=function(exam){var a=prices(exam);if(!a.length){alert('इस Test Series के लिए Purchase Pricing उपलब्ध नहीं है।');return false}return window.tgyOpenPurchasePayment(exam,0)};
+  window.tgyBuyPdfUltimate=function(exam,price,days){payment('PDF Notes Folder',exam,Number(price)||0,0,'pdfFolder',{accessName:'PDF Folder',days:Number(days)||0,course:'PDF Folder: '+exam});return false};
+  window.tgyBuyComboUltimate=function(exam,index){var a=J('tgy_combo_pricing',[]).filter(function(x){return x&&x.exam===exam}),x=a[Number(index)||0];if(!x){alert('इस Combo के लिए Pricing उपलब्ध नहीं है।');return false}var count=Number(x.count)||10,amount=finalPrice(x);payment('PDF + Test Series Combo',exam,amount,count,'combo',{accessName:x.name||('PDF + '+count+' Tests'),days:Number(x.days||x.durationValue)||0,course:exam+' • PDF + '+count+' Tests'});return false};
+  function patch(){document.querySelectorAll('#studentPageOverlay button').forEach(function(b){var t=(b.textContent||'').trim(),oc=b.getAttribute('onclick')||'';if(!/यह Plan खरीदें|Combo खरीदें|PDF खरीदें|Access लें/.test(t))return;var m=oc.match(/buySeriesAccess\(([^,]+),\s*(\d+)\)/);if(m){b.setAttribute('onclick','return window.tgyOpenPurchasePayment('+m[1]+','+m[2]+')');return}var p=oc.match(/buyPdfFolder\(([^,]+),\s*([0-9.]+),\s*([0-9.]+)\)/);if(p){b.setAttribute('onclick','return window.tgyBuyPdfUltimate('+p[1]+','+p[2]+','+p[3]+')');return}var c=oc.match(/tgyBuyCombo\(([^,]+),\s*(\d+)\)/);if(c){b.setAttribute('onclick','return window.tgyBuyComboUltimate('+c[1]+','+c[2]+')');}})}
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(patch,500);var o=document.getElementById('studentPageOverlay');if(o&&window.MutationObserver)new MutationObserver(patch).observe(o,{childList:true,subtree:true})});
+})();
+</script>
 </body></html>
 <!-- TG&Y PDF + TEST SERIES COMBO PLAN -->
 <script id="tgy-combo-student-v1">
