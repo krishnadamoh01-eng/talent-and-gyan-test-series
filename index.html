@@ -671,6 +671,7 @@ function openStudentPage(key){
  if(key==="help")body='<div class="card"><h2>📞 सहायता</h2><p>Payment, Login या Test से संबंधित सहायता के लिए यहाँ जानकारी दी जाएगी।</p></div>';
  overlay.innerHTML='<div class="student-page-head"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="student-close" onclick="studentGoBack()">← पीछे</button><h2>'+titles[key]+'</h2></div><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body">'+body+'</div>';
  overlay.style.display="block"; window.scrollTo(0,0);
+ if(key==="purchase"){ body='<div id="tgyPurchasePageMount"></div>'; overlay.querySelector(".student-page-body").innerHTML=body; if(typeof window.tgyRenderPurchasePage==='function')window.tgyRenderPurchasePage(); return; }
  if(key==="mock")renderStudentMockPage();
  if(key==="series")renderStudentSeriesPage();
  if(key==="purchased")renderMyPurchasedTests();
@@ -1250,7 +1251,7 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
    h+=`</div><div style="margin-top:14px"><button class="btn gray" onclick="openExam(${JSON.stringify(exam)})">← Folder पर वापस</button></div>`;
    b.innerHTML=h;window.tgyNavLevel='series';window.tgyNavExam=exam;
  };
- window.tgyLockedTest=function(i){const t=tests[i];if(!t)return;if(!requireStudentLogin({type:'series',exam:t.exam,index:i}))return;const p=getSeriesPricing(t.exam||'');if(p.length)buySeriesAccess(t.exam,0);else alert('इस Test Series की Pricing अभी Admin Panel में सेट नहीं है।');};
+ window.tgyLockedTest=function(i){const t=tests[i];if(!t)return;if(!requireStudentLogin({type:'series',exam:t.exam,index:i}))return;const p=getSeriesPricing(t.exam||'');if(!p.length){alert('इस Test Series की Pricing अभी Admin Panel में सेट नहीं है।');return false;}return window.tgyOpenLockedPurchase(t.exam);};
  window.tgyOpenTestFromFolder=function(i){const t=tests[i];if(!t)return;if(!requireStudentLogin({type:'test',index:i,exam:t.exam}))return;if(t.demo!==true&&!window.tgyHasSeriesAccess(t.exam)&&!hasPurchasedTest(t)){tgyLockedTest(i);return;}window.activeTestExam=t.exam||null;window.openedTestFromSeries=true;closeExam();setTimeout(()=>{if(typeof window.startFinalMockTest==='function')window.startFinalMockTest(i);else openTest(i)},30)};
  window.tgyBackToFolder=function(){clearInterval(window.timer);const m=document.getElementById('modal');if(m)m.style.display='none';const ex=window.activeTestExam||state?.t?.exam;if(ex){const em=document.getElementById('examModal');if(em){em.style.display='flex';tgyOpenSeriesInside(ex)}}};
  window.closeTestModal=window.tgyBackToFolder;
@@ -1844,7 +1845,7 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
     if(key!=='purchase')return oldOpen(key);
     var overlay=document.getElementById('studentPageOverlay');
     if(!overlay){oldOpen('series');overlay=document.getElementById('studentPageOverlay');}
-    if(overlay){overlay.style.display='flex';render();}
+    if(overlay){overlay.style.display='block';overlay.style.position='fixed';overlay.style.inset='0';window.tgyRenderPurchasePage();}
   };
 })();
 </script>
@@ -1857,6 +1858,35 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
 body.tgy-payment-open #modal{display:flex!important;position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;padding:0!important;background:rgba(0,0,0,.65)!important;z-index:100000!important;}
 body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important;height:100vh!important;max-height:none!important;border-radius:0!important;padding:28px 5%!important;overflow:auto!important;}
 </style>
+<script id="tgy-robust-purchase-page">
+(function(){
+ function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||"null");return v==null?d:v}catch(e){return d}}
+ function E(v){return typeof esc0==='function'?esc0(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]})}
+ window.tgyRenderPurchasePage=function(){
+   var o=document.getElementById('studentPageOverlay');if(!o)return;
+   var b=o.querySelector('.student-page-body');if(!b)return;
+   var exams={}, exArr=J('tgy_exams',[]);
+   (Array.isArray(exArr)?exArr:[]).forEach(function(x){var n=typeof x==='string'?x:x&&x.name;if(n&&(!x||typeof x==='string'||x.visible!==false))exams[n]=1;});
+   (Array.isArray(window.tests)?window.tests:[]).forEach(function(t){if(t&&t.exam&&t.visible!==false&&t.published!==false)exams[t.exam]=1;});
+   J('tgy_pdf_notes',[]).forEach(function(n){var nme=((n&&((n.folder||n.exam)||''))+'').trim();if(nme&&n.visible!==false&&n.published!==false)exams[nme]=1;});
+   J('tgy_access_pricing',[]).forEach(function(x){if(x&&x.exam)exams[x.exam]=1;});
+   J('tgy_combo_pricing',[]).forEach(function(x){if(x&&x.exam)exams[x.exam]=1;});
+   var names=Object.keys(exams),html='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><div class="tgy-kicker">SHOP / PURCHASE</div><h2>🛒 Plans &amp; Courses खरीदें</h2><p class="muted">PDF, Test Series और Combo सभी Plans यहाँ से खरीदें।</p></div><button class="btn gray" onclick="closeStudentPage()">← Home</button></div></div>';
+   if(!names.length){b.innerHTML=html+'<div class="card"><h3>📭 अभी कोई Plan उपलब्ध नहीं है।</h3></div>';return;}
+   names.forEach(function(ex){
+     var sp=typeof getSeriesPricing==='function'?getSeriesPricing(ex):[];
+     var notes=J('tgy_pdf_notes',[]).filter(function(n){return n&&((n.folder||n.exam||'').trim()===ex)&&n.visible!==false&&n.published!==false;});
+     var combos=J('tgy_combo_pricing',[]).filter(function(x){return x&&x.exam===ex;});
+     html+='<div class="card" style="margin:14px 0;border:2px solid #1d65a6"><h2>📁 '+E(ex)+'</h2><div class="grid">';
+     if(sp.length){html+='<div class="card"><h3>📝 Test Series</h3>'+sp.map(function(x,i){var title=x.type==='folder'?'पूरा Test Series':((Number(x.count)||0)+' Tests');var pr=typeof seriesPriceText==='function'?seriesPriceText(x):'₹'+(Number(x.offer)||Number(x.mrp)||0);return '<div style="padding:10px 0;border-top:1px solid #eee"><b>'+E(title)+'</b><br>'+pr+'<br><span class="muted">'+E(typeof accessDurationTextStudent==='function'?accessDurationTextStudent(x):'Access')+'</span><br><button class="btn orange" onclick="buySeriesAccess('+JSON.stringify(ex)+','+i+')">💳 यह Plan खरीदें</button></div>';}).join('')+'</div>';}
+     if(notes.length){var n0=notes[0],meta=typeof window.tgyFolderMeta==='function'?window.tgyFolderMeta(ex)||{}:{},pp=Number(meta.offer)||Number(meta.mrp)||0;html+='<div class="card"><h3>📄 PDF Notes</h3><p>'+notes.length+' PDF उपलब्ध</p><b>'+ (pp?'₹'+pp:'FREE') +'</b><br><button class="btn orange" onclick="'+(pp?'buyPdfFolder('+JSON.stringify(ex)+','+pp+','+(Number(meta.days)||0)+')':'openStudentPage(\"notes\")')+'">'+(pp?'💳 PDF खरीदें':'📖 PDF देखें')+'</button></div>';}
+     if(combos.length){html+='<div class="card"><h3>📦 PDF + Test Series</h3>'+combos.map(function(x,i){return '<div style="padding:10px 0;border-top:1px solid #eee"><b>'+E(x.name||'Combo')+'</b><br><b>₹'+(Number(x.offer)||Number(x.mrp)||0)+'</b><br><button class="btn orange" onclick="tgyBuyCombo('+JSON.stringify(ex)+','+i+')">💳 Combo खरीदें</button></div>';}).join('')+'</div>';}
+     html+='</div><button class="btn" onclick="openExam('+JSON.stringify(ex)+')">📂 Details / Tests देखें</button></div>';
+   });
+   b.innerHTML=html;
+ };
+})();
+</script>
 <script id="tgy-final-lock-purchase-route">
 (function(){
   function goPurchase(exam){
@@ -2168,3 +2198,7 @@ html,body{max-width:100%;overflow-x:hidden}
   }
 })();
 </script>
+
+<style id="tgy-final-mobile-navigation-fix">
+@media (max-width:700px){#studentPageOverlay .student-page-head{padding:12px 14px;gap:8px}#studentPageOverlay .student-page-head h2{font-size:22px}.student-page-body{padding:12px!important}.student-page-body .grid{grid-template-columns:1fr!important}.student-page-body .card{min-width:0!important;width:100%!important;box-sizing:border-box}.student-page-body button{max-width:100%;white-space:normal}.student-page-body input,.student-page-body select,.student-page-body textarea{width:100%!important;box-sizing:border-box}.exam-modal .box,#examModal .box{width:calc(100vw - 20px)!important;max-width:none!important;margin:10px!important;padding:14px!important}.exam-modal .grid,#examModal .grid{grid-template-columns:1fr!important}}
+</style>
