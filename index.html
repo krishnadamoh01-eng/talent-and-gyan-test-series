@@ -2071,56 +2071,194 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
 </script>
 
 
-
-<script id="tgy-login-mobile-email-direct-access-fix">
+<script id="tgy-all-user-request-fixes-final">
 (function(){
-  /* Login: Email OR Mobile Number, same password. */
-  var oldOpenAuth = window.openAuth;
-  window.openAuth = function(mode){
-    if(mode === "login"){
-      var c=document.getElementById("authContent");
-      if(!c)return typeof oldOpenAuth==="function" ? oldOpenAuth(mode) : undefined;
-      c.innerHTML =
-        '<h2>🔐 Login</h2>'+
-        '<label>Email / Mobile Number</label>'+
-        '<input id="aidentity" type="text" inputmode="email" autocomplete="username" placeholder="Email या Mobile Number">'+
-        '<label>Password</label>'+
-        '<div class="password-field-wrap"><input id="apass" type="password" autocomplete="current-password">'+
-        '<button type="button" class="btn password-toggle" onclick="togglePassword(\'apass\',this)">👁️ दिखाएँ</button></div>'+
-        '<button class="btn" onclick="doLogin()">Login</button> '+
-        '<button class="btn gray" onclick="closeAuth()">बंद करें</button>'+
-        '<p>Account नहीं है? <a href="#" onclick="openAuth(\'register\');return false">Register करें</a></p>'+
-        '<p class="muted">आप Email या Registered Mobile Number — दोनों में से किसी से Login कर सकते हैं।</p>';
-      var m=document.getElementById("authModal"); if(m)m.style.display="flex";
-      setTimeout(function(){var x=document.getElementById("aidentity");if(x)x.focus()},50);
-      return;
-    }
-    return typeof oldOpenAuth==="function" ? oldOpenAuth(mode) : undefined;
+  "use strict";
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||"null");return v==null?d:v}catch(e){return d}}
+  function S(k,v){localStorage.setItem(k,JSON.stringify(v))}
+  function E(v){return String(v??"").replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]})}
+  function exams(){
+    var a={};
+    J("tgy_exams",[]).forEach(function(x){var n=typeof x==="string"?x:x&&x.name;if(n&& (typeof x==="string"||x.visible!==false))a[n]=1});
+    (window.tests||[]).forEach(function(t){if(t&&t.exam&&t.published!==false&&t.visible!==false)a[t.exam]=1});
+    J("tgy_access_pricing",[]).forEach(function(x){if(x&&x.exam)a[x.exam]=1});
+    J("tgy_pdf_notes",[]).forEach(function(n){var x=(n&&((n.folder||n.exam)||"")).trim();if(x&&n.visible!==false&&n.published!==false)a[x]=1});
+    return Object.keys(a);
+  }
+  function prices(ex){return J("tgy_access_pricing",[]).filter(function(x){return x&&x.exam===ex&&(x.type==="folder"||(x.type==="testseries"&&Number(x.count)>0))})}
+  function price(x){var o=Number(x.offer)||0,m=Number(x.mrp)||0;return o&&m&&o<m?'<span style="text-decoration:line-through;color:#777">₹'+m+'</span> <b style="font-size:20px">₹'+o+'</b>':'<b style="font-size:20px">₹'+(o||m||0)+'</b>'}
+  function duration(x){var v=Number(x.durationValue||x.days||0),u=x.unit||"days";return u==="months"?v+" महीने":v+" दिन"}
+  function notes(ex){return J("tgy_pdf_notes",[]).map(function(n,i){return {...n,_i:i}}).filter(function(n){return n&&((n.folder||n.exam||"").trim()===ex)&&n.visible!==false&&n.published!==false})}
+
+  // Password Show/Hide — also fixes older pages where the function was missing.
+  window.togglePassword=function(id,btn){
+    var el=document.getElementById(id); if(!el)return;
+    if(el.type==="password"){el.type="text"; if(btn)btn.textContent="🙈 छिपाएँ";}
+    else{el.type="password"; if(btn)btn.textContent="👁️ दिखाएँ";}
   };
 
-  window.doLogin = function(){
-    var identity=(document.getElementById("aidentity")?.value||"").trim();
-    var pass=(document.getElementById("apass")?.value||"");
-    if(!identity || !pass){alert("Email/Mobile Number और Password भरें।");return;}
-    var users=[];
-    try{users=JSON.parse(localStorage.getItem("tgy_users")||"[]")}catch(e){}
-    var id=identity.toLowerCase();
-    var matches=users.filter(function(u){
-      return (String(u.email||"").toLowerCase()===id || String(u.mobile||"").replace(/\D/g,"")===identity.replace(/\D/g,""));
+  // Login by Email OR Mobile Number.
+  var oldOpenAuth=window.openAuth;
+  window.openAuth=function(mode){
+    if(mode!=="login" || typeof oldOpenAuth!=="function"){ if(oldOpenAuth)return oldOpenAuth.apply(this,arguments); return; }
+    var logged=J("tgy_user",null);
+    if(logged){return oldOpenAuth(mode)}
+    var box=document.getElementById("authContent"); if(!box)return oldOpenAuth(mode);
+    box.innerHTML='<h2>🔐 Login</h2><label>Email / Mobile Number</label><input id="aemail" type="text" inputmode="email" autocomplete="username" placeholder="Email या Mobile Number"><label>Password</label><div class="password-field-wrap"><input id="apass" type="password" autocomplete="current-password"><button type="button" class="btn password-toggle" onclick="togglePassword(\'apass\',this)">👁️ दिखाएँ</button></div><button class="btn" onclick="doLogin()">Login</button> <button class="btn gray" onclick="closeAuth()">बंद करें</button><p>Account नहीं है? <a href="#" onclick="openAuth(\'register\');return false">Register करें</a></p>';
+    document.getElementById("authModal").style.display="flex";
+  };
+  window.doLogin=function(){
+    var ident=(document.getElementById("aemail")?.value||"").trim().toLowerCase(),pass=document.getElementById("apass")?.value||"";
+    var users=J("tgy_users",[]);
+    var norm=function(v){return String(v||"").replace(/\D/g,"")};
+    var u=users.find(function(x){return String(x.email||"").trim().toLowerCase()===ident && x.password===pass});
+    if(!u)u=users.find(function(x){return norm(x.mobile)===norm(ident)&&norm(ident).length>=8&&x.password===pass});
+    if(!u){alert("Email/Mobile Number या Password गलत है।");return}
+    S("tgy_user",u); closeAuth(); if(typeof updateAuthUI==="function")updateAuthUI(); if(typeof renderMyPurchasedTests==="function")renderMyPurchasedTests(); if(typeof resumePendingStudentAction==="function")resumePendingStudentAction();
+  };
+
+  // Reliable payment submission to both local storage and Supabase.
+  async function cloudUpsert(key,value){
+    try{
+      var url="https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store";
+      var keyv="sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U";
+      await fetch(url,{method:"POST",headers:{apikey:keyv,Authorization:"Bearer "+keyv,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({key:key,value:value,updated_at:new Date().toISOString()})});
+    }catch(e){console.warn("Cloud payment sync failed",e)}
+  }
+  window.tgySubmitPaymentCloudSafe=async function(payment){
+    var a=J("tgy_payments",[]);
+    // Keep local copy exactly once; only mirror the current list to cloud here.
+    await cloudUpsert("tgy_payments",a);
+  };
+
+  // Home: exams are clickable, and each exam contains Test Series + PDF Notes.
+  window.tgyRenderHomeExamCardsFinal=function(){
+    var box=document.getElementById("tgyHomeExamGrid");if(!box)return;
+    var exs=exams();
+    if(!exs.length){box.innerHTML='<div class="tgy-exam-card" style="grid-column:1/-1"><img class="tgy-exam-logo" src="talent-and-gyan-logo.png"><div class="tgy-exam-name">अभी कोई परीक्षा उपलब्ध नहीं है।</div></div>';return}
+    box.innerHTML=exs.map(function(ex){
+      var ps=prices(ex),ns=notes(ex),testCount=(window.tests||[]).filter(function(t){return t.exam===ex&&t.published!==false&&t.visible!==false}).length;
+      return '<div class="tgy-exam-card" style="cursor:pointer"><img class="tgy-exam-logo" src="talent-and-gyan-logo.png" alt=""><div class="tgy-exam-name">'+E(ex)+'</div><div class="muted">📝 '+testCount+' Tests • 📄 '+ns.length+' Notes</div><button class="btn orange" style="margin-top:9px" onclick="tgyOpenExamHubFinal('+JSON.stringify(ex)+');return false">📂 खोलें</button></div>';
+    }).join("");
+    var wrap=document.getElementById("tgyHomeExamGrid");
+    wrap.querySelectorAll(".tgy-exam-card").forEach(function(card,i){card.onclick=function(e){if(e.target.closest("button"))return;tgyOpenExamHubFinal(exs[i])}});
+    // Plans directly below Exams, not a separate Home button.
+    var old=document.getElementById("tgyHomeAccessPlansFinal");if(old)old.remove();
+    var sec=document.createElement("section");sec.className="tgy-section";sec.id="tgyHomeAccessPlansFinal";
+    var html='<div class="tgy-section-head"><div class="tgy-section-title">💳 Access Plans</div></div>';
+    exs.forEach(function(ex){
+      var ps=prices(ex); if(!ps.length)return;
+      html+='<div class="card" style="margin:10px 0;border:2px solid #dce7f3"><h3>📁 '+E(ex)+'</h3><div class="grid">'+ps.map(function(x,i){
+        var title=x.type==="folder"?"पूरा Test Series":((Number(x.count)||1)+" Tests");
+        return '<div class="card" style="margin:0"><b>'+E(x.name||title)+'</b><p>'+price(x)+' • '+E(duration(x))+'</p><button class="btn orange" onclick="return tgyOpenPurchasePayment('+JSON.stringify(ex)+','+i+')">PURCHASE</button><button class="btn gray" style="margin-left:6px" onclick="return tgyShowPlanDetails('+JSON.stringify(ex)+','+i+')">Details</button></div>';
+      }).join("")+'</div></div>';
     });
-    if(matches.length>1 && identity.replace(/\D/g,"").length>=8){
-      alert("इस Mobile Number से एक से अधिक Account मिले। Login के लिए Email इस्तेमाल करें।");return;
+    sec.innerHTML=html;
+    var examsSection=document.getElementById("exams");
+    if(examsSection&&examsSection.parentNode)examsSection.parentNode.insertBefore(sec,examsSection.nextSibling);
+  };
+
+  window.tgyShowPlanDetails=function(ex,index){
+    var a=prices(ex),x=a[Number(index)||0];if(!x)return false;
+    var c=document.getElementById("modalContent"),m=document.getElementById("modal");if(!c||!m)return false;
+    c.innerHTML='<h2>ℹ️ Plan Details</h2><div class="card"><h3>'+E(x.name||(x.type==="folder"?"पूरा Test Series":(x.count||1)+" Tests"))+'</h3><p><b>परीक्षा:</b> '+E(ex)+'</p><p><b>Access:</b> '+E(x.type==="folder"?"पूरा Test Series":(x.count||1)+" Tests")+'</p><p><b>Validity:</b> '+E(duration(x))+'</p><p><b>Price:</b> '+price(x)+'</p><button class="btn orange" onclick="tgyOpenPurchasePayment('+JSON.stringify(ex)+','+Number(index||0)+')">PURCHASE</button> <button class="btn gray" onclick="closeM()">बंद करें</button></div>';
+    m.style.display="flex";return false;
+  };
+
+  // Exam hub: Test Series folder + Notes folder, both openable.
+  window.tgyOpenExamHubFinal=function(ex){
+    var box=document.getElementById("examContent"),m=document.getElementById("examModal");if(!box||!m)return;
+    var ps=prices(ex),ns=notes(ex),count=(window.tests||[]).filter(function(t){return t.exam===ex&&t.published!==false&&t.visible!==false}).length;
+    box.innerHTML='<div class="tgy-list-head"><div><h2>📁 '+E(ex)+'</h2><p class="muted">इस परीक्षा की सभी सामग्री नीचे उपलब्ध है।</p></div><button class="btn gray" onclick="closeExam()">✕ बंद करें</button></div>'+
+      '<div class="tgy-hub-grid"><div class="tgy-hub-card"><div class="tgy-hub-icon">📝</div><h3>Test Series</h3><p>'+count+' Tests उपलब्ध</p><button class="btn orange" onclick="tgyOpenTestSeriesFinal('+JSON.stringify(ex)+')">📂 Test Series खोलें</button></div>'+
+      '<div class="tgy-hub-card"><div class="tgy-hub-icon">📄</div><h3>Notes / Study Material</h3><p>'+ns.length+' Notes उपलब्ध</p><button class="btn orange" onclick="tgyOpenNotesFolderFinal('+JSON.stringify(ex)+')">📂 Notes खोलें</button></div></div>'+
+      (ps.length?'<div class="card" style="margin-top:15px"><h3>💳 Access Plans</h3>'+ps.map(function(x,i){var title=x.type==="folder"?"पूरा Test Series":(x.count||1)+" Tests";return '<div style="padding:10px 0;border-top:1px solid #eee"><b>'+E(x.name||title)+'</b> • '+price(x)+' • '+E(duration(x))+' <button class="btn orange" onclick="tgyOpenPurchasePayment('+JSON.stringify(ex)+','+i+')">PURCHASE</button></div>'}).join("")+'</div>':'');
+    m.style.display="flex";
+  };
+  window.tgyOpenTestSeriesFinal=function(ex){if(typeof window.tgyShowTestList==="function")window.tgyShowTestList(ex);else if(typeof window.tgyOpenSeriesInside==="function")window.tgyOpenSeriesInside(ex);};
+  window.tgyOpenNotesFolderFinal=function(ex){
+    var box=document.getElementById("examContent"),m=document.getElementById("examModal");if(!box||!m)return;
+    var ns=notes(ex);
+    var h='<div class="tgy-list-head"><div><h2>📄 '+E(ex)+' — Notes / Study Material</h2><p class="muted">इस परीक्षा के सभी Notes यहाँ हैं।</p></div><button class="btn gray" onclick="tgyOpenExamHubFinal('+JSON.stringify(ex)+')">← परीक्षा</button></div>';
+    if(!ns.length){h+='<div class="card"><h3>📭 अभी कोई Notes उपलब्ध नहीं हैं।</h3></div>'}
+    else{
+      h+='<div class="grid">';
+      ns.forEach(function(n){
+        var meta=typeof window.tgyFolderMeta==="function"?(window.tgyFolderMeta(ex)||{}):{};
+        var price=Number(meta.offer)||Number(meta.mrp)||Number(n.offer)||Number(n.mrp)||0;
+        var owned=typeof window.hasPurchasedNote==="function"&&window.hasPurchasedNote(n);
+        h+='<div class="card"><h3>📄 '+E(n.title||"Notes")+'</h3>'+(n.pages?'<p class="muted">'+E(n.pages)+' Pages</p>':'')+
+          (price&&!owned?'<button class="btn orange" onclick="buyPdfFolder('+JSON.stringify(ex)+','+price+','+(Number(meta.days)||0)+')">💳 Purchase</button>':'<button class="btn orange" onclick="viewPdfNote('+Number(n._i)+')">📖 Open Notes</button>')+
+          '</div>';
+      });
+      h+='</div>';
     }
-    var u=matches[0];
-    if(!u || String(u.password||"")!==pass){alert("Email/Mobile Number या Password गलत है।");return;}
-    localStorage.setItem("tgy_user",JSON.stringify(u));
-    closeAuth(); updateAuthUI();
-    if(typeof renderMyPurchasedTests==="function")renderMyPurchasedTests();
-    if(typeof resumePendingStudentAction==="function")resumePendingStudentAction();
+    box.innerHTML=h;m.style.display="flex";
+  };
+
+  // Force every Test List preview's top-right "Test List" button to the reliable list function.
+  var fixBack=function(){
+    document.querySelectorAll("button").forEach(function(b){
+      var t=(b.textContent||"").trim();
+      if(t.indexOf("Test List")>=0 && b.getAttribute("onclick")){
+        var m=b.getAttribute("onclick").match(/tgyShow(?:SeriesSafe|TestList)\(([\s\S]*)\)/);
+        if(m){b.setAttribute("onclick","window.tgyShowTestList("+m[1]+");return false");}
+      }
+    });
+  };
+  document.addEventListener("DOMContentLoaded",function(){
+    setTimeout(function(){tgyRenderHomeExamCardsFinal();fixBack()},500);
+    setTimeout(fixBack,1200);
+  });
+  window.addEventListener("storage",function(e){if(["tgy_exams","tgy_tests","tgy_access_pricing","tgy_pdf_notes"].indexOf(e.key)>=0)setTimeout(tgyRenderHomeExamCardsFinal,100)});
+})();
+</script>
+
+<script id="tgy-payment-submit-cloud-override-final">
+(function(){
+  var oldUltimate=window.tgySubmitPurchaseUltimate;
+  window.tgySubmitPurchaseUltimate=async function(d){
+    var name=document.getElementById("tgyPOName")?.value?.trim()||"",email=document.getElementById("tgyPOEmail")?.value?.trim().toLowerCase()||"",utr=document.getElementById("tgyPOUTR")?.value?.trim()||"";
+    if(!name||!email||!utr){alert("नाम, Email और UTR Number भरना जरूरी है।");return}
+    var p={name,email,course:d.course||d.title,exam:d.exam,seriesCount:Number(d.count)||0,accessName:d.accessName||d.title,days:Number(d.days)||0,amount:Number(d.amount)||0,utr,date:new Date().toLocaleString(),status:"Pending",type:d.type||"testseries",accessType:d.type||"testseries"};
+    var a=[];try{a=JSON.parse(localStorage.getItem("tgy_payments")||"[]")}catch(e){}
+    a.push(p);localStorage.setItem("tgy_payments",JSON.stringify(a));
+    try{await window.tgySubmitPaymentCloudSafe(p)}catch(e){}
+    var o=document.getElementById("tgyPurchaseOverlay");
+    if(o)o.innerHTML='<div class="tgy-po-head"><h2>✅ Payment Details प्राप्त</h2><button class="btn gray" onclick="tgyClosePurchaseUltimate()">✕ बंद करें</button></div><div class="tgy-po-body"><div class="tgy-po-pay"><h2>Payment Request भेज दी गई</h2><p><b>Plan:</b> '+String(d.accessName||d.title)+'</p><p><b>Amount:</b> ₹'+Number(d.amount||0)+'</p><p><b>UTR:</b> '+utr.replace(/[<>&"]/g,"")+'</p><p class="result"><b>Status: 🟡 Pending</b><br>Admin Panel में Payment Request पहुँच गई है। Verification के बाद Access Activate होगा।</p><button class="btn orange" onclick="tgyClosePurchaseUltimate()">ठीक है</button></div></div>';
   };
 })();
 </script>
 
+<script id="tgy-purchased-folder-click-fix-final">
+(function(){
+  var old=window.renderMyPurchasedTests;
+  if(typeof old!=="function")return;
+  window.renderMyPurchasedTests=function(){
+    var b=document.getElementById("myPurchasedTests");if(!b)return;
+    var u=null;try{u=JSON.parse(localStorage.getItem("tgy_user")||"null")}catch(e){}
+    if(!u){b.innerHTML='<div class="card"><h3>🔐 Login करें</h3><button class="btn" onclick="openAuth(\'login\')">Login</button></div>';return}
+    var now=Date.now(),sa=(u.seriesAccess||[]).filter(function(x){return !x.expiresAt||new Date(x.expiresAt).getTime()>now});
+    var ns=[];try{ns=JSON.parse(localStorage.getItem("tgy_pdf_notes")||"[]")}catch(e){}
+    var h="";
+    if(sa.length){
+      h+='<h3>📚 Purchased Test Series</h3>';
+      sa.forEach(function(x){
+        var rem=x.expiresAt?Math.max(0,Math.ceil((new Date(x.expiresAt).getTime()-now)/86400000)):"∞";
+        h+='<div class="card" style="margin:10px 0"><h3>📁 '+E(x.accessName||x.exam||"Test Series")+'</h3><p>✅ Access Active • ⏳ '+(rem==="∞"?"Unlimited":rem+" दिन बाकी")+'</p><button class="btn orange" onclick="tgyOpenTestSeriesFinal('+JSON.stringify(x.exam||"")+')">📂 Folder खोलें</button></div>';
+      });
+    }
+    var allowed=u.purchasedNotes||[];
+    var mine=ns.filter(function(n){return allowed.includes(n.id)||allowed.includes(n.title)||allowed.includes(n.fileName)||(u.notesFolderAccess||[]).some(function(x){return x.folder===(n.folder||n.exam)&&(!x.expiresAt||new Date(x.expiresAt).getTime()>now)})});
+    if(mine.length){
+      h+='<h3 style="margin-top:20px">📄 Purchased PDF Notes</h3>';
+      mine.forEach(function(n){h+='<div class="card" style="margin:10px 0"><h3>📄 '+E(n.title||"Notes")+'</h3><button class="btn orange" onclick="viewPdfNote('+ns.indexOf(n)+')">📖 Notes खोलें</button></div>'});
+    }
+    if(!h)h='<div class="card"><h3>📭 अभी कोई Purchased Access नहीं है।</h3></div>';
+    b.innerHTML=h;
+  };
+})();
+</script>
 </body></html>
 <!-- TG&Y PDF + TEST SERIES COMBO PLAN -->
 <script id="tgy-combo-student-v1">
