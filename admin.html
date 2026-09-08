@@ -1727,4 +1727,139 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
+
+
+<script id="tgy-direct-access-and-login-management-fix">
+(function(){
+  /* Easy Admin Direct Access: user + exam + tests + validity. */
+  function J(k,d){try{var x=JSON.parse(localStorage.getItem(k)||"null");return x==null?d:x}catch(e){return d}}
+  function S(k,v){localStorage.setItem(k,JSON.stringify(v))}
+  function escA(s){return String(s??"").replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})}
+  function examsA(){
+    var a=J("tgy_exams",[]);
+    if(!Array.isArray(a))a=[];
+    var out=a.map(function(x){return typeof x==="string"?x:(x&&x.name)||""}).filter(Boolean);
+    var tests=J("tgy_tests",[]);
+    if(Array.isArray(tests))tests.forEach(function(t){if(t&&t.exam&&!out.includes(t.exam))out.push(t.exam)});
+    return out;
+  }
+  function openDirect(i){
+    var users=J("tgy_users",[]);
+    var u=users[i]; if(!u)return;
+    directForm(u,i);
+  }
+  function openDirectSearch(){
+    var users=J("tgy_users",[]);
+    var q=prompt("Student का Email, Mobile Number या Name डालें:");
+    if(q===null)return;
+    q=String(q).trim().toLowerCase();
+    var ix=users.findIndex(function(u){
+      return String(u.email||"").toLowerCase()===q ||
+             String(u.mobile||"").replace(/\D/g,"")===q.replace(/\D/g,"") ||
+             String(u.name||"").toLowerCase()===q;
+    });
+    if(ix<0){alert("Student नहीं मिला। पहले Student को Register करना होगा।");return;}
+    directForm(users[ix],ix);
+  }
+  function directForm(u,i){
+    var ex=examsA();
+    if(!ex.length){alert("पहले Exam Management में परीक्षा जोड़ें।");return;}
+    var old=document.getElementById("tgyDirectAccessModal");
+    if(old)old.remove();
+    var modal=document.createElement("div");
+    modal.id="tgyDirectAccessModal";
+    modal.className="modal";
+    modal.style.display="flex";
+    modal.innerHTML=
+      '<div class="box" style="max-width:520px;width:94%">'+
+      '<h2>🎓 Direct Access दें</h2>'+
+      '<div class="card" style="margin-bottom:12px"><b>Student:</b> '+escA(u.name||"-")+
+      '<br><b>Email:</b> '+escA(u.email||"-")+
+      '<br><b>Mobile:</b> '+escA(u.mobile||"-")+'</div>'+
+      '<label>परीक्षा</label><select id="tgyDAExam">'+ex.map(function(x){return '<option>'+escA(x)+'</option>'}).join("")+'</select>'+
+      '<label>Access</label><select id="tgyDACount">'+
+      '<option value="1">1 Test</option><option value="5">5 Tests</option><option value="10">10 Tests</option>'+
+      '<option value="25">25 Tests</option><option value="50">50 Tests</option><option value="999999">पूरा Test Series</option>'+
+      '</select>'+
+      '<label>Validity (दिन)</label><input id="tgyDADays" type="number" min="1" value="30">'+
+      '<label>Access Name (optional)</label><input id="tgyDAName" placeholder="जैसे MP Patwari Full Series">'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'+
+      '<button class="btn" onclick="window.tgySaveDirectAccess('+i+')">✅ Access चालू करें</button>'+
+      '<button class="btn gray" onclick="document.getElementById(\'tgyDirectAccessModal\')?.remove()">बंद करें</button></div>'+
+      '</div>';
+    document.body.appendChild(modal);
+  }
+  window.tgySaveDirectAccess=function(i){
+    var users=J("tgy_users",[]),u=users[i]; if(!u)return;
+    var exam=(document.getElementById("tgyDAExam")?.value||"").trim();
+    var count=Number(document.getElementById("tgyDACount")?.value)||1;
+    var days=Number(document.getElementById("tgyDADays")?.value)||30;
+    var name=(document.getElementById("tgyDAName")?.value||"").trim() ||
+      (count>=999999 ? exam+" Full Test Series" : exam+" • "+count+" Tests");
+    if(!exam || days<1){alert("Exam और Validity सही भरें।");return;}
+    var now=new Date(), exp=new Date(now.getTime()+days*86400000);
+    u.seriesAccess=Array.isArray(u.seriesAccess)?u.seriesAccess:[];
+    var item={exam:exam,accessName:name,accessType:count>=999999?"folder":"testseries",
+      count:count,amount:0,activatedAt:now.toISOString(),expiresAt:exp.toISOString(),source:"admin-direct"};
+    u.seriesAccess=u.seriesAccess.filter(function(x){
+      return !(x && x.exam===exam && x.source==="admin-direct");
+    });
+    u.seriesAccess.push(item);
+    u.access="Active • "+exam+" • "+(count>=999999?"Full Series":count+" Tests")+" • "+days+" दिन • "+exp.toLocaleDateString();
+    u.accessExam=exam;
+    u.accessExpiresAt=exp.toISOString();
+    /* Notification shown to the student after next login/refresh. */
+    var nk="tgy_notifications_"+u.email, ns=J(nk,[]);
+    if(!Array.isArray(ns))ns=[];
+    ns.unshift({text:"🎉 "+exam+" का Direct Access चालू हो गया • "+(count>=999999?"पूरा Series":count+" Tests")+" • "+days+" दिन",date:now.toLocaleString(),read:false});
+    S(nk,ns.slice(0,50));
+    S("tgy_users",users);
+    var pay=J("tgy_payments",[]);
+    if(!Array.isArray(pay))pay=[];
+    pay.push({name:u.name||"",email:u.email||"",mobile:u.mobile||"",course:exam+" • Direct Access",
+      exam:exam,seriesCount:count,accessName:name,days:days,amount:0,utr:"DIRECT-ADMIN",
+      date:now.toLocaleString(),status:"Access Activated",type:"testseries",accessType:count>=999999?"folder":"testseries",source:"admin-direct"});
+    S("tgy_payments",pay);
+    var m=document.getElementById("tgyDirectAccessModal");if(m)m.remove();
+    if(typeof renderUsers==="function")renderUsers();
+    if(typeof renderPayments==="function")renderPayments();
+    if(window.tgyCloud&&typeof window.tgyCloud.push==="function"){
+      window.tgyCloud.push("tgy_users").catch(function(){});
+      window.tgyCloud.push("tgy_payments").catch(function(){});
+      window.tgyCloud.push(nk).catch(function(){});
+    }
+    alert("✅ Direct Access चालू हो गया।\n"+exam+"\n"+(count>=999999?"पूरा Test Series":count+" Tests")+" • "+days+" दिन");
+  };
+
+  /* Replace the old one-click generic access with the useful direct-access dialog. */
+  var oldRenderUsers=window.renderUsers;
+  window.renderUsers=function(){
+    if(typeof oldRenderUsers==="function")oldRenderUsers();
+    var tbody=document.getElementById("ut"); if(!tbody)return;
+    var users=J("tgy_users",[]);
+    if(!Array.isArray(users))return;
+    var rows=tbody.querySelectorAll("tr");
+    rows.forEach(function(row,idx){
+      if(!users[idx])return;
+      var cells=row.querySelectorAll("td"); if(cells.length<6)return;
+      var b=cells[5];
+      if(b && b.innerHTML.indexOf("tgyDirectAccess")<0){
+        b.insertAdjacentHTML("afterbegin",' <button class="btn" onclick="tgyDirectAccess('+idx+')">🎓 Direct Access</button>');
+      }
+    });
+  };
+  window.tgyDirectAccess=openDirect;
+  window.tgyDirectAccessSearch=openDirectSearch;
+
+  /* Add a top-level quick button near the Users section heading if possible. */
+  function addQuick(){
+    var sec=document.getElementById("users"); if(!sec)return;
+    var h=sec.querySelector("h1"); if(!h || document.getElementById("tgyQuickDirectAccess"))return;
+    var b=document.createElement("button");b.id="tgyQuickDirectAccess";b.className="btn";b.style.marginLeft="10px";
+    b.textContent="🎓 Direct Access दें";b.onclick=openDirectSearch;h.appendChild(b);
+  }
+  document.addEventListener("DOMContentLoaded",function(){setTimeout(addQuick,500);setTimeout(function(){if(typeof renderUsers==="function")renderUsers();addQuick()},900)});
+})();
+</script>
+
 </body></html>
