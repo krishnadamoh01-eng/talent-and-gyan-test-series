@@ -1802,6 +1802,68 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.addEventListener("DOMContentLoaded",function(){setTimeout(function(){enhanceUsers();addQuick()},500)});
 })();
 </script>
+<script id="tgy-admin-mobile-users-payments-refresh-final-20260909">
+(function(){
+  'use strict';
+  var SUPA='https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store';
+  var KEY='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U';
+  var H={apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json','Content-Type':'application/json'};
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function S(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+  function norm(v){return String(v||'').trim().toLowerCase()}
+  function mergeByIdentity(a,b){
+    var out=Array.isArray(a)?a.slice():[];
+    (Array.isArray(b)?b:[]).forEach(function(item){if(!item)return;var ix=out.findIndex(function(x){return (norm(x.email)&&norm(x.email)===norm(item.email))||(norm(x.mobile)&&norm(x.mobile)===norm(item.mobile)&&norm(item.mobile).replace(/\D/g,'').length>=8)});if(ix<0)out.push(item);else out[ix]=Object.assign({},out[ix],item)});
+    return out;
+  }
+  async function getRow(k){var r=await fetch(SUPA+'?select=key,value,updated_at&key=eq.'+encodeURIComponent(k),{headers:H});if(!r.ok)throw new Error('Supabase '+r.status);var a=await r.json();return a&&a[0]?a[0]:null}
+  async function putRow(k,v){var r=await fetch(SUPA+'?on_conflict=key',{method:'POST',headers:Object.assign({},H,{Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:k,value:v,updated_at:new Date().toISOString()})});if(!r.ok)throw new Error('Supabase '+r.status+' '+(await r.text()))}
+  async function refreshKey(k){
+    try{
+      var row=await getRow(k),cloud=Array.isArray(row&&row.value)?row.value:[],local=Array.isArray(J(k,[]))?J(k,[]):[];
+      var merged=mergeByIdentity(local,cloud);
+      // For payments, identity is UTR+email; preserve every distinct request.
+      if(k==='tgy_payments'){
+        var map={},all=[];local.concat(cloud).forEach(function(x){if(!x)return;var id=norm(x.utr)+'|'+norm(x.email)+'|'+norm(x.course)+'|'+norm(x.date);if(!map[id]){map[id]=1;all.push(x)}});merged=all;
+      }
+      S(k,merged);return merged;
+    }catch(e){console.warn('[TGY Admin refresh '+k+']',e);return null}
+  }
+  async function refreshUsersPayments(){
+    var u=await refreshKey('tgy_users'),p=await refreshKey('tgy_payments');
+    try{if(typeof window.renderUsers==='function')window.renderUsers()}catch(e){}
+    try{if(typeof window.renderPayments==='function')window.renderPayments()}catch(e){}
+    try{var sp=document.getElementById('sp');if(sp)sp.textContent=J('tgy_payments',[]).length}catch(e){}
+    return {users:u,payments:p};
+  }
+  // Before the original cloud boot can push local data, merge the latest cloud Users/Payments into local.
+  var oldSync=window.tgyCloud&&window.tgyCloud.sync;
+  if(window.tgyCloud&&typeof oldSync==='function'){
+    window.tgyCloud.sync=async function(){await refreshUsersPayments();return oldSync.apply(this,arguments)};
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(refreshUsersPayments,700);
+    setTimeout(refreshUsersPayments,2200);
+    setInterval(refreshUsersPayments,15000);
+  },{once:true});
+  window.addEventListener('focus',function(){setTimeout(refreshUsersPayments,150)});
+
+  function iconFor(u){return String(u&&u.deviceType||'').toLowerCase()==='mobile'?'📱':'💻'}
+  var oldRU=window.renderUsers;
+  if(typeof oldRU==='function')window.renderUsers=function(){
+    oldRU.apply(this,arguments);
+    var tb=document.getElementById('ut');if(!tb)return;
+    var users=J('tgy_users',[]);
+    tb.querySelectorAll('tr').forEach(function(tr,i){
+      if(!users[i])return;
+      var first=tr.querySelector('td');if(!first)return;
+      var icon=iconFor(users[i]);
+      if(!first.querySelector('.tgy-device-icon')){var s=document.createElement('span');s.className='tgy-device-icon';s.textContent=icon;s.title=users[i].deviceType==='mobile'?'Mobile User':'PC User';s.style.cssText='font-size:20px;margin-right:7px;vertical-align:middle';first.insertBefore(s,first.firstChild)}
+    });
+  };
+})();
+</script>
+
 </body></html>
 
 <script id="tgy-admin-final-visible-naming-and-users-refresh">
@@ -1819,6 +1881,19 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,250)});else setTimeout(run,250);
   window.addEventListener('focus',function(){setTimeout(function(){try{if(typeof window.renderUsers==='function')window.renderUsers()}catch(e){}},100)});
   if(window.MutationObserver){new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes&&m.addedNodes.forEach(function(n){if(n.nodeType===1)renameVisible(n)})})}).observe(document.body,{childList:true,subtree:true})}
+})();
+</script>
+
+
+
+<script id="tgy-admin-final-device-history-display-20260909">
+(function(){
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function iconText(u){var h=Array.isArray(u&&u.deviceHistory)?u.deviceHistory:[];var d=String(u&&u.deviceType||'').toLowerCase();if(d&&!h.includes(d))h.push(d);return h.map(function(x){return String(x).toLowerCase()==='mobile'?'📱':'💻'}).filter(function(x,i,a){return a.indexOf(x)===i}).join(' / ')||'💻';}
+  function run(){var tb=document.getElementById('ut'),users=J('tgy_users',[]);if(!tb)return;tb.querySelectorAll('tr').forEach(function(tr,i){var u=users[i];if(!u)return;var td=tr.querySelector('td');if(!td)return;var old=td.querySelector('.tgy-device-history');if(old)old.remove();var s=document.createElement('span');s.className='tgy-device-history';s.textContent=iconText(u);s.title='Device: '+iconText(u);s.style.cssText='font-size:19px;margin-right:7px;vertical-align:middle';td.insertBefore(s,td.firstChild);});}
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(run,500);setTimeout(run,1800)});
+  window.addEventListener('focus',function(){setTimeout(run,150)});
+  if(window.MutationObserver){new MutationObserver(function(){setTimeout(run,0)}).observe(document.body,{childList:true,subtree:true});}
 })();
 </script>
 

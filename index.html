@@ -1832,10 +1832,10 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
       var combos=P('tgy_combo_pricing',[]).filter(function(x){return x&&x.exam===ex;}).sort(function(a,b){return Number(a.count)-Number(b.count)});
       var notes=P('tgy_pdf_notes',[]).filter(function(n){return n&&((n.folder||n.exam||'').trim()===ex)&&n.visible!==false&&n.published!==false;});
       h+='<div class="card" style="margin:14px 0;border:2px solid #1d65a6"><h2>📁 '+esc(ex)+'</h2><div class="grid">';
-      if(sp.length){h+='<div class="card" style="margin:0"><h3>📝 Test Series</h3><p class="muted">'+sp.length+' Access Plans</p>'+sp.map(function(x,i){var title=x.type==='folder'?'पूरा Test Series':(Number(x.count)||0)+' Tests';return '<div style="border-top:1px solid #eee;padding:10px 0"><b>'+esc(title)+'</b><br>'+price(x)+'<br><span class="muted">'+(typeof accessDurationTextStudent==='function'?esc(accessDurationTextStudent(x)):'Access')+'</span><br><button class="btn orange" style="margin-top:6px" onclick="buySeriesAccess('+JSON.stringify(ex)+','+i+')">💳 यह Plan खरीदें</button></div>';}).join('')+'</div>'}
+      if(sp.length){h+='<div class="card" style="margin:0"><h3>📝 Test Series</h3><p class="muted">'+sp.length+' Access Plans</p>'+sp.map(function(x,i){var title=x.type==='folder'?'पूरा Test Series':(Number(x.count)||0)+' Tests';return '<div style="border-top:1px solid #eee;padding:10px 0"><b>'+esc(title)+'</b><br>'+price(x)+'<br><span class="muted">'+(typeof accessDurationTextStudent==='function'?esc(accessDurationTextStudent(x)):'Access')+'</span><br><button class="btn orange" style="margin-top:6px" onclick="tgyOpenPurchasePlan('+E(JSON.stringify(ex))+','+i+')">💳 यह Plan खरीदें</button></div>';}).join('')+'</div>'}
       if(notes.length||pdfPrice){h+='<div class="card" style="margin:0"><h3>📄 PDF Notes</h3><p class="muted">'+notes.length+' PDF उपलब्ध</p><div style="padding:10px 0"><b>पूरा PDF Folder</b><br>'+price(meta)+'<br><span class="muted">'+(Number(meta.days)?Number(meta.days)+' दिन':'Access')+'</span><br><button class="btn orange" style="margin-top:6px" onclick="buyPdfFolder('+JSON.stringify(ex)+','+pdfPrice+','+(Number(meta.days)||0)+')">💳 PDF खरीदें</button></div></div>'}
       if(combos.length){h+='<div class="card" style="margin:0;border:2px solid #e28a00;background:#fffaf1"><h3>📦 PDF + Test Series Combo</h3><p class="muted">एक Payment में PDF + Tests</p>'+combos.map(function(x){var count=Number(x.count)||0,title=count>=999999?'पूरा Test Folder':count+' Tests';return '<div style="border-top:1px solid #eee;padding:10px 0"><b>PDF + '+esc(title)+'</b><br><b style="font-size:21px">₹'+(Number(x.offer)||Number(x.mrp)||0)+'</b><br><span class="muted">'+(x.unit==='months'?(x.durationValue||0)+' महीने':(x.durationValue||x.days||0)+' दिन')+'</span><br><button class="btn orange" style="margin-top:6px" onclick="tgyBuyCombo('+JSON.stringify(ex)+','+combos.indexOf(x)+')">💳 Combo खरीदें</button></div>';}).join('')+'</div>'}
-      h+='</div><div style="margin-top:10px"><button class="btn gray" onclick="openExam('+JSON.stringify(ex)+')">📂 Details / Tests देखें</button></div></div>';
+      h+='</div><div style="margin-top:10px"><button class="btn gray" onclick="openExam('+E(JSON.stringify(ex))+')">📂 Details / Tests देखें</button></div></div>';
     });
     body.innerHTML=h;
   }
@@ -1877,10 +1877,10 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
      var notes=J('tgy_pdf_notes',[]).filter(function(n){return n&&((n.folder||n.exam||'').trim()===ex)&&n.visible!==false&&n.published!==false;});
      var combos=J('tgy_combo_pricing',[]).filter(function(x){return x&&x.exam===ex;});
      html+='<div class="card" style="margin:14px 0;border:2px solid #1d65a6"><h2>📁 '+E(ex)+'</h2><div class="grid">';
-     if(sp.length){html+='<div class="card"><h3>📝 Test Series</h3>'+sp.map(function(x,i){var title=x.type==='folder'?'पूरा Test Series':((Number(x.count)||0)+' Tests');var pr=typeof seriesPriceText==='function'?seriesPriceText(x):'₹'+(Number(x.offer)||Number(x.mrp)||0);return '<div style="padding:10px 0;border-top:1px solid #eee"><b>'+E(title)+'</b><br>'+pr+'<br><span class="muted">'+E(typeof accessDurationTextStudent==='function'?accessDurationTextStudent(x):'Access')+'</span><br><button class="btn orange" onclick="buySeriesAccess('+JSON.stringify(ex)+','+i+')">💳 यह Plan खरीदें</button></div>';}).join('')+'</div>';}
-     if(notes.length){var n0=notes[0],meta=typeof window.tgyFolderMeta==='function'?window.tgyFolderMeta(ex)||{}:{},pp=Number(meta.offer)||Number(meta.mrp)||0;html+='<div class="card"><h3>📄 PDF Notes</h3><p>'+notes.length+' PDF उपलब्ध</p><b>'+ (pp?'₹'+pp:'FREE') +'</b><br><button class="btn orange" onclick="'+(pp?'buyPdfFolder('+JSON.stringify(ex)+','+pp+','+(Number(meta.days)||0)+')':'openStudentPage(\"notes\")')+'">'+(pp?'💳 PDF खरीदें':'📖 PDF देखें')+'</button></div>';}
-     if(combos.length){html+='<div class="card"><h3>📦 PDF + Test Series</h3>'+combos.map(function(x,i){return '<div style="padding:10px 0;border-top:1px solid #eee"><b>'+E(x.name||'Combo')+'</b><br><b>₹'+(Number(x.offer)||Number(x.mrp)||0)+'</b><br><button class="btn orange" onclick="tgyBuyCombo('+JSON.stringify(ex)+','+i+')">💳 Combo खरीदें</button></div>';}).join('')+'</div>';}
-     html+='</div><button class="btn" onclick="openExam('+JSON.stringify(ex)+')">📂 Details / Tests देखें</button></div>';
+     if(sp.length){html+='<div class="card"><h3>📝 Test Series</h3>'+sp.map(function(x,i){var title=x.type==='folder'?'पूरा Test Series':((Number(x.count)||0)+' Tests');var pr=typeof seriesPriceText==='function'?seriesPriceText(x):'₹'+(Number(x.offer)||Number(x.mrp)||0);return '<div style="padding:10px 0;border-top:1px solid #eee"><b>'+E(title)+'</b><br>'+pr+'<br><span class="muted">'+E(typeof accessDurationTextStudent==='function'?accessDurationTextStudent(x):'Access')+'</span><br><button class="btn orange" onclick="tgyOpenPurchasePlan('+E(JSON.stringify(ex))+','+i+')">💳 यह Plan खरीदें</button></div>';}).join('')+'</div>';}
+     if(notes.length){var n0=notes[0],meta=typeof window.tgyFolderMeta==='function'?window.tgyFolderMeta(ex)||{}:{},pp=Number(meta.offer)||Number(meta.mrp)||0;html+='<div class="card"><h3>📄 PDF Notes</h3><p>'+notes.length+' PDF उपलब्ध</p><b>'+ (pp?'₹'+pp:'FREE') +'</b><br><button class="btn orange" onclick="'+(pp?'tgyOpenPdfPurchase('+E(JSON.stringify(ex))+','+pp+','+(Number(meta.days)||0)+')':'openStudentPage(\"notes\")')+'">'+(pp?'💳 PDF खरीदें':'📖 PDF देखें')+'</button></div>';}
+     if(combos.length){html+='<div class="card"><h3>📦 PDF + Test Series</h3>'+combos.map(function(x,i){return '<div style="padding:10px 0;border-top:1px solid #eee"><b>'+E(x.name||'Combo')+'</b><br><b>₹'+(Number(x.offer)||Number(x.mrp)||0)+'</b><br><button class="btn orange" onclick="tgyOpenComboPurchase('+E(JSON.stringify(ex))+','+i+')">💳 Combo खरीदें</button></div>';}).join('')+'</div>';}
+     html+='</div><button class="btn" onclick="openExam('+E(JSON.stringify(ex))+')">📂 Details / Tests देखें</button></div>';
    });
    b.innerHTML=html;
  };
@@ -2367,6 +2367,74 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
 })();
 </script>
 
+<script id="tgy-mobile-user-payment-sync-final-20260909">
+(function(){
+  'use strict';
+  var SUPA='https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store';
+  var KEY='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U';
+  var H={apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json', 'Content-Type':'application/json'};
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function S(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+  function norm(v){return String(v||'').trim().toLowerCase()}
+  function deviceType(){return /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent||'')?'mobile':'pc'}
+  function deviceIcon(v){return String(v||'').toLowerCase()==='mobile'?'📱':'💻'}
+  async function getRow(k){
+    var r=await fetch(SUPA+'?select=key,value,updated_at&key=eq.'+encodeURIComponent(k),{headers:H});
+    if(!r.ok)throw new Error('Supabase '+r.status);
+    var a=await r.json();return a&&a[0]?a[0]:null;
+  }
+  async function putRow(k,v){
+    var r=await fetch(SUPA+'?on_conflict=key',{method:'POST',headers:Object.assign({},H,{Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:k,value:v,updated_at:new Date().toISOString()})});
+    if(!r.ok)throw new Error('Supabase '+r.status+' '+(await r.text()));
+  }
+  async function syncUser(user){
+    if(!user)return;
+    try{
+      var row=await getRow('tgy_users'),cloud=Array.isArray(row&&row.value)?row.value:[],local=Array.isArray(J('tgy_users',[]))?J('tgy_users',[]):[];
+      var merged=cloud.slice();
+      local.forEach(function(u){
+        if(!u)return;
+        var ix=merged.findIndex(function(x){return norm(x.email)&&norm(x.email)===norm(u.email)||(norm(x.mobile)&&norm(x.mobile)===norm(u.mobile)&&norm(u.mobile).replace(/\D/g,'').length>=8)});
+        if(ix<0)merged.push(u); else merged[ix]=Object.assign({},merged[ix],u);
+      });
+      var ix=merged.findIndex(function(x){return norm(x.email)===norm(user.email)||(norm(x.mobile)===norm(user.mobile)&&norm(user.mobile).replace(/\D/g,'').length>=8)});
+      if(ix<0)merged.push(user); else merged[ix]=Object.assign({},merged[ix],user);
+      S('tgy_users',merged);
+      await putRow('tgy_users',merged);
+    }catch(e){console.warn('[TGY mobile user sync]',e)}
+  }
+  window.tgySyncCurrentStudentDevice=async function(){
+    var u=J('tgy_user',null);if(!u)return;
+    u.deviceType=deviceType();u.deviceIcon=deviceIcon(u.deviceType);u.lastLoginAt=new Date().toISOString();
+    S('tgy_user',u);await syncUser(u);
+  };
+  // Wrap registration/login without removing the existing authentication logic.
+  var oldReg=window.doRegister;
+  if(typeof oldReg==='function')window.doRegister=function(){var r=oldReg.apply(this,arguments);setTimeout(function(){window.tgySyncCurrentStudentDevice&&window.tgySyncCurrentStudentDevice()},80);return r};
+  var oldLogin=window.doLogin;
+  if(typeof oldLogin==='function')window.doLogin=function(){var r=oldLogin.apply(this,arguments);setTimeout(function(){window.tgySyncCurrentStudentDevice&&window.tgySyncCurrentStudentDevice()},80);return r};
+
+  // Robust payment mirror: merge against the latest cloud list before writing, so a mobile request cannot be lost by a stale Admin list.
+  window.tgySubmitPaymentCloudSafe=async function(payment){
+    try{
+      var row=await getRow('tgy_payments'),cloud=Array.isArray(row&&row.value)?row.value:[],local=Array.isArray(J('tgy_payments',[]))?J('tgy_payments',[]):[];
+      var merged=cloud.slice();
+      local.forEach(function(p){
+        var key=(norm(p.utr)+'|'+norm(p.email)+'|'+norm(p.course)+'|'+norm(p.date));
+        var ix=merged.findIndex(function(x){return (norm(x.utr)+'|'+norm(x.email)+'|'+norm(x.course)+'|'+norm(x.date))===key});
+        if(ix<0)merged.push(p);else merged[ix]=Object.assign({},merged[ix],p);
+      });
+      var pk=(norm(payment&&payment.utr)+'|'+norm(payment&&payment.email)+'|'+norm(payment&&payment.course)+'|'+norm(payment&&payment.date));
+      if(payment&&!merged.some(function(x){return (norm(x.utr)+'|'+norm(x.email)+'|'+norm(x.course)+'|'+norm(x.date))===pk}))merged.push(payment);
+      S('tgy_payments',merged);await putRow('tgy_payments',merged);
+      return true;
+    }catch(e){console.warn('[TGY mobile payment sync]',e);return false}
+  };
+  // Mark the currently logged-in device on first load too.
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){if(J('tgy_user',null)&&window.tgySyncCurrentStudentDevice)window.tgySyncCurrentStudentDevice()},1200)},{once:true});
+})();
+</script>
+
 </body></html>
 <!-- TG&Y PDF + TEST SERIES COMBO PLAN -->
 <script id="tgy-combo-student-v1">
@@ -2737,3 +2805,206 @@ html,body{max-width:100%;overflow-x:hidden}
 })();
 </script>
 
+
+
+<script id="tgy-final-mobile-registration-purchase-fix-20260909">
+(function(){
+  'use strict';
+  var SUPA='https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store';
+  var KEY='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U';
+  var H={apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json','Content-Type':'application/json'};
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function S(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+  function email(v){return String(v||'').trim().toLowerCase()}
+  function mobile(v){return String(v||'').replace(/\D/g,'')}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function device(){return /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent||'')?'mobile':'pc'}
+  function icon(d){return d==='mobile'?'📱':'💻'}
+  async function cloudUsers(){
+    try{var r=await fetch(SUPA+'?select=key,value&key=eq.tgy_users',{headers:H});if(!r.ok)return[];var a=await r.json();return a&&a[0]&&Array.isArray(a[0].value)?a[0].value:[];}catch(e){return[]}
+  }
+  async function saveCloudUsers(users){
+    try{await fetch(SUPA+'?on_conflict=key',{method:'POST',headers:Object.assign({},H,{Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:'tgy_users',value:users,updated_at:new Date().toISOString()})});}catch(e){}
+  }
+  function mergeUsers(a,b){
+    var out=Array.isArray(a)?a.slice():[];
+    (Array.isArray(b)?b:[]).forEach(function(u){if(!u)return;var em=email(u.email),mo=mobile(u.mobile),ix=out.findIndex(function(x){return (em&&email(x.email)===em)||(mo.length>=8&&mobile(x.mobile)===mo)});if(ix<0)out.push(u);else out[ix]=Object.assign({},out[ix],u)});
+    return out;
+  }
+  // Registration: same Email + Mobile means the same account, regardless of PC/mobile device.
+  window.doRegister=async function(){
+    var name=(document.getElementById('rname')?.value||'').trim();
+    var em=email(document.getElementById('remail')?.value);
+    var mo=mobile(document.getElementById('rmobile')?.value);
+    var pass=document.getElementById('rpass')?.value||'';
+    var cp=document.getElementById('rcpass')?.value||'';
+    if(!name||!em||!mo||mo.length<8||!pass||pass!==cp){alert('नाम, सही Email, सही Mobile Number और Password/Confirm Password सही भरें।');return false;}
+    var local=J('tgy_users',[]),cloud=await cloudUsers(),users=mergeUsers(cloud,local);
+    var byEmail=users.find(function(u){return email(u.email)===em}),byMobile=users.find(function(u){return mobile(u.mobile)===mo});
+    if(byEmail||byMobile){
+      if(byEmail&&byMobile&&byEmail===byMobile){
+        // Existing account on the same credentials: do not create a duplicate. Log it in on this device.
+        var u=Object.assign({},byEmail,{deviceType:device(),deviceIcon:icon(device()),lastLoginAt:new Date().toISOString(),deviceHistory:Array.from(new Set((byEmail.deviceHistory||[]).concat([device()]))) });
+        S('tgy_users',mergeUsers(users,[u]));S('tgy_user',u);await saveCloudUsers(mergeUsers(users,[u]));
+        alert('यह Account पहले से मौजूद है। उसी Account से Login कर दिया गया है।');
+        try{closeAuth();}catch(e){} try{updateAuthUI();}catch(e){} try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests();}catch(e){}
+        return false;
+      }
+      if(byEmail){alert('यह Email पहले से Registered है। इसी Email से Login करें।');return false;}
+      alert('यह Mobile Number पहले से Registered है। उसी Account से Login करें।');return false;
+    }
+    var u={name:name,email:em,mobile:mo,password:pass,created:new Date().toLocaleString(),access:null,deviceType:device(),deviceIcon:icon(device()),lastLoginAt:new Date().toISOString(),deviceHistory:[device()]};
+    users.push(u);S('tgy_users',users);S('tgy_user',u);await saveCloudUsers(users);
+    alert('Registration सफल हुआ।');try{closeAuth();}catch(e){}try{updateAuthUI();}catch(e){}try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests();}catch(e){}
+    return false;
+  };
+  // Login: Email OR Mobile, same account on PC and Mobile, with device history retained.
+  window.doLogin=async function(){
+    var ident=(document.getElementById('aemail')?.value||'').trim(),pass=document.getElementById('apass')?.value||'';
+    var em=email(ident),mo=mobile(ident),users=mergeUsers(J('tgy_users',[]),await cloudUsers());
+    var u=users.find(function(x){return email(x.email)===em&&x.password===pass});
+    if(!u&&mo.length>=8)u=users.find(function(x){return mobile(x.mobile)===mo&&x.password===pass});
+    if(!u){alert('Email/Mobile Number या Password गलत है।');return false;}
+    var d=device();u=Object.assign({},u,{deviceType:d,deviceIcon:icon(d),lastLoginAt:new Date().toISOString(),deviceHistory:Array.from(new Set((u.deviceHistory||[]).concat([d]))) });
+    S('tgy_users',mergeUsers(users,[u]));S('tgy_user',u);await saveCloudUsers(mergeUsers(users,[u]));
+    try{closeAuth();}catch(e){}try{updateAuthUI();}catch(e){}try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests();}catch(e){}try{if(typeof resumePendingStudentAction==='function')resumePendingStudentAction();}catch(e){}
+    return false;
+  };
+
+  // Repair the Purchase/Plans buttons. Older HTML used JSON inside a double-quoted
+  // onclick attribute; this final handler assigns a real DOM click handler instead.
+  window.tgyOpenLockedPurchase=function(exam){return openPayment(exam,0);};
+  window.openLockedTestPurchase=function(exam){return openPayment(exam,0);};
+  window.tgyBuyLockedTest=function(exam){return openPayment(exam,0);};
+  window.tgyOpenPurchasePlan=function(exam,index){return openPayment(exam,index);};
+  window.tgyOpenPdfPurchase=function(exam,amount,days){
+    var overlay=document.getElementById('studentPageOverlay');
+    if(overlay){overlay.style.display='none';overlay.classList.remove('tgy-buy-folder-open');}
+    document.body.style.overflow='';
+    if(typeof window.buyPdfFolder==='function')return window.buyPdfFolder(exam,Number(amount)||0,Number(days)||0);
+    return false;
+  };
+  window.tgyOpenComboPurchase=function(exam,index){
+    var overlay=document.getElementById('studentPageOverlay');
+    if(overlay){overlay.style.display='none';overlay.classList.remove('tgy-buy-folder-open');}
+    document.body.style.overflow='';
+    if(typeof window.tgyBuyCombo==='function')return window.tgyBuyCombo(exam,index);
+    return false;
+  };
+  function openPayment(exam,index){
+    var overlay=document.getElementById('studentPageOverlay');
+    if(overlay){overlay.style.display='none';overlay.classList.remove('tgy-buy-folder-open');}
+    document.body.style.overflow='';
+    // Use the final QR/UPI payment builder directly. Older buySeriesAccess routes
+    // can be intercepted by legacy navigation code and leave the QR behind.
+    if(typeof window.tgyOpenPurchasePayment==='function')return window.tgyOpenPurchasePayment(exam,Number(index)||0);
+    if(typeof window.buySeriesAccess==='function')return window.buySeriesAccess(exam,Number(index)||0);
+    return false;
+  }
+  function repairPurchaseButtons(){
+    var root=document.getElementById('studentPageOverlay');if(!root)return;
+    var cards=root.querySelectorAll('.card');
+    cards.forEach(function(card){
+      var h=card.querySelector('h2');if(!h)return;
+      var exam=(h.textContent||'').replace(/^📁\s*/,'').trim();if(!exam)return;
+      var buttons=card.querySelectorAll('button');
+      var planIndex=0;
+      buttons.forEach(function(btn){
+        var text=(btn.textContent||'').trim();
+        if(/यह Plan खरीदें/i.test(text)){
+          btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation();}return openPayment(exam,planIndex++);};
+        }
+      });
+    });
+  }
+  var oldRender=window.tgyRenderPurchasePage;
+  if(typeof oldRender==='function'){
+    window.tgyRenderPurchasePage=function(){var r=oldRender.apply(this,arguments);setTimeout(repairPurchaseButtons,20);setTimeout(repairPurchaseButtons,150);return r;};
+  }
+  document.addEventListener('click',function(ev){
+    var b=ev.target&&ev.target.closest?ev.target.closest('#studentPageOverlay button'):null;if(!b)return;
+    if(!/यह Plan खरीदें/i.test((b.textContent||'').trim()))return;
+    var card=b.closest('.card'),h=card&&card.querySelector('h2');if(!h)return;
+    var exam=(h.textContent||'').replace(/^📁\s*/,'').trim(),buttons=card.querySelectorAll('button'),idx=Array.prototype.indexOf.call(Array.prototype.filter.call(buttons,function(x){return /यह Plan खरीदें/i.test((x.textContent||'').trim())}),b);
+    if(exam&&idx>=0){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();openPayment(exam,idx);}
+  },true);
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(repairPurchaseButtons,300);setTimeout(repairPurchaseButtons,1000);});
+})();
+</script>
+
+
+
+<style id="tgy-ultimate-purchase-bridge-20260909">
+#tgyPurchaseOverlay{z-index:2147483647!important}
+</style>
+<script id="tgy-ultimate-purchase-bridge-20260909-js">
+(function(){
+  'use strict';
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function findExam(btn){
+    try{
+      var oc=btn.getAttribute('onclick')||'';
+      var m=oc.match(/(?:tgyOpenPurchasePlan|tgyOpenLockedPurchase|openLockedTestPurchase|tgyBuyLockedTest)\(\s*['\"]([^'\"]+)['\"]/);
+      if(m&&m[1])return m[1];
+      var root=btn.closest('#studentPageOverlay');
+      var hs=root?root.querySelectorAll('.card h2'):[];
+      for(var i=0;i<hs.length;i++){
+        var tx=(hs[i].textContent||'').replace(/^📁\s*/,'').trim();
+        if(!tx)continue;
+        var c=hs[i].closest('.card');
+        if(c&&c.contains(btn))return tx;
+      }
+      if(window.tgyPurchaseExam)return String(window.tgyPurchaseExam);
+      if(window.tgyNavExam)return String(window.tgyNavExam);
+      if(window.activeTestExam)return String(window.activeTestExam);
+    }catch(e){}
+    return '';
+  }
+  function planIndex(btn){
+    var card=btn.closest('.card'); if(!card)return 0;
+    var bs=Array.prototype.filter.call(card.querySelectorAll('button'),function(x){return /यह Plan खरीदें/i.test((x.textContent||'').trim())});
+    var n=bs.indexOf(btn); return n<0?0:n;
+  }
+  function closeBuy(){
+    var o=document.getElementById('studentPageOverlay');
+    if(o){o.style.display='none';o.classList.remove('tgy-buy-folder-open');}
+    document.body.style.overflow='';
+  }
+  function openPlan(exam,index){
+    exam=String(exam||'').trim(); index=Number(index)||0;
+    if(!exam){alert('परीक्षा नहीं मिली।');return false;}
+    closeBuy();
+    try{
+      if(typeof window.tgyOpenPurchasePayment==='function')return window.tgyOpenPurchasePayment(exam,index);
+      if(typeof window.buySeriesAccess==='function')return window.buySeriesAccess(exam,index);
+    }catch(e){console.error('[TGY purchase bridge]',e)}
+    alert('Payment Page उपलब्ध नहीं है।'); return false;
+  }
+  window.tgyOpenPurchasePlan=function(exam,index){return openPlan(exam,index)};
+  function wire(root){
+    if(!root)return;
+    root.querySelectorAll('button').forEach(function(btn){
+      var text=(btn.textContent||'').trim();
+      if(/यह Plan खरीदें/i.test(text)){
+        var ex=findExam(btn),idx=planIndex(btn);
+        if(ex){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation();}return openPlan(ex,idx);};btn.dataset.tgyUltimatePurchase='1';}
+      }
+      if(/Access लें|Access Required|Locked|🔒/.test(text) && !/यह Plan खरीदें/i.test(text)){
+        var oc=btn.getAttribute('onclick')||'', ex2='';
+        var mm=oc.match(/(?:tgyOpenLockedPurchase|openLockedTestPurchase|tgyBuyLockedTest)\(\s*['\"]([^'\"]+)['\"]/);
+        if(mm)ex2=mm[1];
+        if(!ex2)ex2=window.tgyNavExam||window.activeTestExam||'';
+        if(ex2){btn.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation();}return window.tgyOpenLockedPurchase(ex2);};}
+      }
+    });
+  }
+  window.addEventListener('tgy-cloud-ready',function(){setTimeout(function(){wire(document.getElementById('studentPageOverlay'));wire(document.getElementById('examContent'));},150)});
+  document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(function(){wire(document.getElementById('studentPageOverlay'));wire(document.getElementById('examContent'));},250);
+    var o=document.getElementById('studentPageOverlay');
+    if(o&&window.MutationObserver)new MutationObserver(function(){wire(o)}).observe(o,{childList:true,subtree:true});
+    var e=document.getElementById('examContent');
+    if(e&&window.MutationObserver)new MutationObserver(function(){wire(e)}).observe(e,{childList:true,subtree:true});
+  });
+})();
+</script>
