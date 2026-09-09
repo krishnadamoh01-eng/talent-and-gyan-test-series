@@ -188,10 +188,8 @@ header{margin-left:0!important;padding-left:5%!important}
 </div>
 <nav class="tgy-new-nav" id="studentNavigation">
   <a href="#" onclick="studentGoHome();return false">🏠 Home</a>
-  <a href="#" onclick="openStudentPage('mock');return false">🎯 Mock Test</a>
   <a href="#" onclick="openStudentPage('series');return false">📚 Test Series</a>
   <a href="#" onclick="openStudentPage('purchased');return false">🎓 My Purchased Tests</a>
-  <a href="#" onclick="openStudentPage('purchase');return false">🛒 खरीदें</a>
   <a href="#" onclick="openStudentPage('notes');return false">📄 PDF Notes</a>
   <a href="#" onclick="openStudentPage('help');return false">📞 सहायता</a>
   <span class="tgy-nav-spacer"></span>
@@ -220,9 +218,8 @@ header{margin-left:0!important;padding-left:5%!important}
   </section>
 
   <section class="tgy-shortcuts">
-    <div class="tgy-shortcut"><div class="tgy-shortcut-icon">✓</div><div><b>Mock Test</b><span>Demo &amp; All Mock Tests<br>Practice करें</span></div></div>
+    <div class="tgy-shortcut" onclick="openStudentPage('series');return false" style="cursor:pointer"><div class="tgy-shortcut-icon">✓</div><div><b>Test Series</b><span>Demo &amp; All Tests<br>Practice करें</span></div></div>
     <div class="tgy-shortcut"><div class="tgy-shortcut-icon">▤</div><div><b>PDF Notes</b><span>Best PDF Notes<br>Buy &amp; Access करें</span></div></div>
-    <div class="tgy-shortcut" onclick="openStudentPage('purchase')" style="cursor:pointer"><div class="tgy-shortcut-icon">🛒</div><div><b>Purchase / खरीदें</b><span>सभी Plans, PDF &amp; Test Series<br>एक ही जगह से खरीदें</span></div></div>
     <div class="tgy-shortcut"><div class="tgy-shortcut-icon">🔔</div><div><b>Notifications</b><span>महत्वपूर्ण सूचना और<br>अपडेट देखें</span></div></div>
     <div class="tgy-shortcut"><div class="tgy-shortcut-icon">●</div><div><b>My Profile</b><span>अपनी जानकारी और<br>Access देखें</span></div></div>
   </section>
@@ -2648,3 +2645,95 @@ html,body{max-width:100%;overflow-x:hidden}
   });
 })();
 </script>\n
+
+<script id="tgy-final-user-request-navigation-and-naming-fix">
+(function(){
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function examNames(){
+    var out=[], seen={};
+    function add(x){var n=typeof x==='string'?x:(x&&x.name);n=String(n||'').trim();if(n&&seen[n]!==1){seen[n]=1;out.push(n)}}
+    J('tgy_exams',[]).forEach(function(x){if(!x||typeof x==='string'||x.visible!==false)add(x)});
+    (Array.isArray(window.tests)?window.tests:[]).forEach(function(t){if(t&&t.exam&&t.visible!==false&&t.published!==false)add(t.exam)});
+    J('tgy_pdf_notes',[]).forEach(function(n){if(n&&n.visible!==false&&n.published!==false)add(n.folder||n.exam)});
+    return out;
+  }
+  function ec(){return document.getElementById('examContent')}
+  function em(){return document.getElementById('examModal')}
+  function showExamModal(){var m=em();if(m)m.style.display='flex'}
+  function escExam(n){return E(n)}
+  function testRows(ex){
+    var a=Array.isArray(window.tests)?window.tests:[];
+    return a.map(function(t,i){return {t:t,i:i}}).filter(function(x){return x.t&&x.t.exam===ex&&x.t.visible!==false&&x.t.published!==false})
+  }
+  window.__tgyNav=window.__tgyNav||{};
+
+  function renderSeriesExamList(){
+    var box=ec(),m=em();if(!box||!m)return false;
+    window.__tgyNav={exam:null,level:'series-exams',testIndex:null,returnTo:'series'};
+    var names=examNames();
+    var h='<div class="tgy-list-head"><div><div class="tgy-kicker">TEST SERIES</div><h2>📚 Test Series</h2><p class="muted">नीचे अपनी परीक्षा चुनें। यहाँ केवल Test Series की परीक्षाएँ दिखाई देंगी।</p></div><button type="button" class="btn gray" onclick="closeExam();return false;">✕ बंद करें</button></div>';
+    if(!names.length) h+='<div class="card"><h3>📭 अभी कोई परीक्षा उपलब्ध नहीं है।</h3></div>';
+    else h+='<div class="tgy-exam-grid">'+names.map(function(ex){var c=testRows(ex).length;return '<div class="tgy-exam-card" style="cursor:pointer" onclick="return window.tgyShowTestList('+E(JSON.stringify(ex))+',\'series\')"><div class="tgy-exam-name">'+E(ex)+'</div><div class="tgy-exam-sub">'+c+' Tests उपलब्ध</div><button type="button" class="tgy-view-btn" onclick="event.stopPropagation();return window.tgyShowTestList('+E(JSON.stringify(ex))+',\'series\')">📚 Test Series खोलें</button></div>'}).join('')+'</div>';
+    box.innerHTML=h;showExamModal();return false;
+  }
+
+  window.tgyShowTestList=function(exam,returnTo){
+    window.__tgyNav=window.__tgyNav||{};
+    window.__tgyNav.exam=exam;window.__tgyNav.level='tests';window.__tgyNav.testIndex=null;window.__tgyNav.returnTo=returnTo||'series';
+    var box=ec(),m=em();if(!box||!m)return false;
+    var arr=testRows(exam);
+    var backAction=(window.__tgyNav.returnTo==='hub')?'tgyOpenExamHubFinal('+E(JSON.stringify(exam))+')':'tgyRenderSeriesExamListFinal()';
+    var h='<div class="tgy-list-head"><div><div class="tgy-kicker">Test Series</div><h2>🎯 '+escExam(exam)+'</h2><p class="muted">कुल '+arr.length+' Tests</p></div><button class="btn gray" type="button" onclick="'+backAction+';return false;">← '+(window.__tgyNav.returnTo==='hub'?'परीक्षा':'Test Series')+' पर वापस</button></div>';
+    if(!arr.length)h+='<div class="card"><h3>📭 इस परीक्षा में कोई Test उपलब्ध नहीं है।</h3></div>';
+    else{
+      h+='<div id="tgyTestGrid" class="tgy-test-grid">';
+      arr.forEach(function(x,pos){var t=x.t,free=t.demo===true,owned=false;try{owned=typeof hasPurchasedTest==='function'&&hasPurchasedTest(t)}catch(e){}var can=free||owned;var action=can?'tgyOpenTestPreview('+x.i+',\''+(window.__tgyNav.returnTo||'series')+'\')':'tgyOpenLockedPurchase('+E(JSON.stringify(exam))+')';h+='<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+E(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>'+(free?'<span class="tgy-status free">FREE DEMO</span>':owned?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>')+'</div><button type="button" class="btn '+(can?'':'orange')+'" onclick="return '+action+'">'+(can?'▶️ Test खोलें':'🔒 Access लें')+'</button></div>'});
+      h+='</div>';
+    }
+    box.innerHTML=h;showExamModal();return false;
+  };
+  window.tgyRenderSeriesExamListFinal=renderSeriesExamList;
+
+  window.tgyOpenTestPreview=function(i,returnTo){
+    var a=Array.isArray(window.tests)?window.tests:[],t=a[i];if(!t)return false;
+    var box=ec(),m=em();if(!box||!m)return false;
+    window.__tgyNav=window.__tgyNav||{};window.__tgyNav.exam=t.exam||window.__tgyNav.exam;window.__tgyNav.level='preview';window.__tgyNav.testIndex=i;window.__tgyNav.returnTo=returnTo||window.__tgyNav.returnTo||'series';
+    var access=false;try{access=t.demo===true||(typeof hasPurchasedTest==='function'&&hasPurchasedTest(t))}catch(e){access=t.demo===true}
+    var start=access?'<button type="button" class="btn orange tgy-start-btn" onclick="return tgyStartSelectedTest('+i+')">▶️ शुरू करें</button>':'<button type="button" class="btn orange tgy-start-btn" onclick="return tgyOpenLockedPurchase('+E(JSON.stringify(t.exam||''))+')">🔒 Access लें</button>';
+    box.innerHTML='<div class="tgy-test-preview"><div class="tgy-test-preview-head"><div><div class="tgy-kicker">'+E(t.exam||'Test Series')+'</div><h2>📝 '+E(t.name||'Test')+'</h2></div><button type="button" class="btn gray" onclick="return tgyShowTestList('+E(JSON.stringify(t.exam||''))+','+E(JSON.stringify(window.__tgyNav.returnTo||'series'))+')">← Test List</button></div><div class="tgy-test-info-grid"><div><b>📋 Questions</b><span>'+((t.questions||[]).length)+'</span></div><div><b>⏱️ समय</b><span>'+Number(t.time||60)+' मिनट</span></div><div><b>🔐 Access</b><span>'+(access?(t.demo===true?'FREE Demo':'Access Active'):'Access Required')+'</span></div></div><div class="tgy-start-card"><h3>🚀 Test शुरू करने के लिए तैयार?</h3><p class="muted">नीचे <b>शुरू करें</b> दबाने पर ही टेस्ट शुरू होगा और Timer चलेगा।</p>'+start+'</div></div>';
+    showExamModal();return false;
+  };
+  window.tgyOpenTestSeriesFinal=function(ex){return window.tgyShowTestList(ex,'series')};
+  window.tgyOpenSeriesInside=function(ex){return window.tgyShowTestList(ex,'series')};
+  window.tgyOpenExamTestSeries=function(ex){return window.tgyShowTestList(ex,'hub')};
+  window.openExam=function(ex){return window.tgyOpenExamHubFinal(ex)};
+
+  window.tgyOpenExamHubFinal=function(ex){
+    window.__tgyNav={exam:ex,level:'hub',testIndex:null,returnTo:'home'};
+    var box=ec(),m=em();if(!box||!m)return false;
+    var arr=testRows(ex),notes=J('tgy_pdf_notes',[]).filter(function(n){return n&&((n.folder||n.exam||'').trim()===ex)&&n.visible!==false&&n.published!==false});
+    box.innerHTML='<div class="tgy-exam-hub"><div class="tgy-list-head"><div><div class="tgy-kicker">परीक्षा</div><h2>📁 '+E(ex)+'</h2><p class="muted">नीचे से Test Series या Study Material चुनें।</p></div><button type="button" class="btn gray" onclick="closeExam();return false;">✕ बंद करें</button></div><div class="tgy-hub-grid"><div class="tgy-hub-card"><div class="tgy-hub-icon">📝</div><h3>Test Series</h3><p>'+arr.length+' Tests उपलब्ध हैं</p><button type="button" class="btn orange" onclick="return window.tgyShowTestList('+E(JSON.stringify(ex))+',\'hub\')">📚 Test Series खोलें</button></div><div class="tgy-hub-card"><div class="tgy-hub-icon">📚</div><h3>Study Material</h3><p>'+notes.length+' सामग्री उपलब्ध</p><button type="button" class="btn orange" onclick="return window.tgyOpenNotesFolderFinal('+E(JSON.stringify(ex))+')">📚 Study Material खोलें</button></div></div></div>';
+    showExamModal();return false;
+  };
+
+  var oldOpenStudentPage=window.openStudentPage;
+  window.openStudentPage=function(key){
+    if(key==='mock')key='series';
+    if(key==='series')return renderSeriesExamList();
+    return oldOpenStudentPage.apply(this,arguments);
+  };
+
+  // Keep the existing data keys/functions intact, but rename only visible UI text from PDF Notes to Study Material.
+  function renameVisible(root){
+    if(!root)return;
+    var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];
+    while(w.nextNode())nodes.push(w.currentNode);
+    nodes.forEach(function(n){var p=n.parentElement;if(!p||/^(SCRIPT|STYLE|NOSCRIPT)$/.test(p.tagName))return;if(n.nodeValue.indexOf('PDF Notes')>=0)n.nodeValue=n.nodeValue.replace(/PDF Notes/g,'Study Material')});
+  }
+  function renameNow(){renameVisible(document.body)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(renameNow,50)});else setTimeout(renameNow,50);
+  if(window.MutationObserver){new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes&&m.addedNodes.forEach(function(n){if(n.nodeType===1)renameVisible(n)})})}).observe(document.body,{childList:true,subtree:true})}
+})();
+</script>
+

@@ -1712,9 +1712,19 @@ document.addEventListener("DOMContentLoaded",()=>{
      }
    }catch(e){console.warn("[TGY Admin Cloud] boot",e)}
    finally{
+     // Always refresh Users separately: an earlier cloud-key error must not prevent user data from loading.
+     try{
+       const localUsers=J("tgy_users",null);
+       if(valEmpty(localUsers)){
+         const ur=await row("tgy_users");
+         if(ur && !valEmpty(ur.value)) setLocal("tgy_users",ur.value);
+       }
+     }catch(e){console.warn("[TGY Admin Cloud] users refresh",e)}
      pulling=false;ready=true;
      try{if(window.mtRenderAll)window.mtRenderAll()}catch(e){}
      try{if(window.renderExamMaster)window.renderExamMaster()}catch(e){}
+     try{if(typeof window.renderAll==="function")window.renderAll()}catch(e){}
+     try{if(typeof window.renderUsers==="function")window.renderUsers()}catch(e){}
    }
  }
  window.tgyCloud={
@@ -1793,3 +1803,22 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 </body></html>
+
+<script id="tgy-admin-final-visible-naming-and-users-refresh">
+(function(){
+  function renameVisible(root){
+    if(!root)return;
+    var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];
+    while(w.nextNode())nodes.push(w.currentNode);
+    nodes.forEach(function(n){var p=n.parentElement;if(!p||/^(SCRIPT|STYLE|NOSCRIPT)$/.test(p.tagName))return;if(n.nodeValue.indexOf('PDF Notes')>=0)n.nodeValue=n.nodeValue.replace(/PDF Notes/g,'Study Material')});
+  }
+  function run(){
+    renameVisible(document.body);
+    try{if(typeof window.renderUsers==='function')window.renderUsers()}catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,250)});else setTimeout(run,250);
+  window.addEventListener('focus',function(){setTimeout(function(){try{if(typeof window.renderUsers==='function')window.renderUsers()}catch(e){}},100)});
+  if(window.MutationObserver){new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes&&m.addedNodes.forEach(function(n){if(n.nodeType===1)renameVisible(n)})})}).observe(document.body,{childList:true,subtree:true})}
+})();
+</script>
+
