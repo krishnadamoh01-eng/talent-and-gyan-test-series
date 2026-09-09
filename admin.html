@@ -1955,3 +1955,125 @@ document.addEventListener("DOMContentLoaded",()=>{
   };
 })();
 </script>
+<script id="tgy-payment-dashboard-final-20260909">
+(function(){
+  function TGYJ(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function TGYEsc(v){return typeof esc==='function'?esc(v):String(v==null?'':v).replace(/[&<>"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])})}
+  function TGYConfirmed(p){var s=String(p&&p.status||'').toLowerCase();return !!(p&&(p.accessActivated===true||p.adminConfirmed===true||p.status==='Access Activated'||s==='confirmed'||s==='complete'||s.indexOf('access activated')>=0));}
+  function TGYIdentity(p){return String((p&&p.email)||'').trim().toLowerCase()||String((p&&p.mobile)||'').replace(/\D/g,'')||String((p&&p.name)||'').trim().toLowerCase()}
+  function TGYStats(){
+    var a=TGYJ('tgy_payments',[]);if(!Array.isArray(a))a=[];
+    var pending=a.filter(function(p){return !TGYConfirmed(p)&&p.adminCleared!==true}).length;
+    var confirmed=a.filter(TGYConfirmed).length;
+    var granted={};a.filter(TGYConfirmed).forEach(function(p){var id=TGYIdentity(p);if(id)granted[id]=1});
+    var today=new Date().toISOString().slice(0,10);
+    var todayReq=a.filter(function(p){var d=String(p&& (p.date||p.createdAt||p.submittedAt)||'');return d.slice(0,10)===today}).length;
+    var cleared=a.filter(function(p){return p&&p.adminCleared===true}).length;
+    return {total:a.length,pending:pending,confirmed:confirmed,granted:Object.keys(granted).length,today:todayReq,cleared:cleared};
+  }
+  function TGYRenderStats(){
+    var dash=document.getElementById('dash');if(!dash)return;
+    var grid=dash.querySelector('.grid');if(!grid)return;
+    var old=document.getElementById('tgyPaymentStats');if(old)old.remove();
+    var d=TGYStats(),box=document.createElement('div');box.id='tgyPaymentStats';box.className='grid';box.style.marginTop='14px';
+    box.innerHTML='<div class="card">📥 कुल Payment Requests<div class="stat">'+d.total+'</div></div>'+
+      '<div class="card">⏳ Pending Requests<div class="stat">'+d.pending+'</div></div>'+
+      '<div class="card">✅ Confirmed / Access Given<div class="stat">'+d.confirmed+'</div></div>'+
+      '<div class="card">🎓 Access दिए गए Users<div class="stat">'+d.granted+'</div></div>'+
+      '<div class="card">📅 आज की Requests<div class="stat">'+d.today+'</div></div>'+
+      '<div class="card">🧹 Cleared Requests<div class="stat">'+d.cleared+'</div></div>';
+    grid.insertAdjacentElement('afterend',box);
+    var sp=document.getElementById('sp');if(sp)sp.textContent=d.pending;
+  }
+  async function TGYClear(i,checked){
+    if(!checked){return TGYRenderPayments()}
+    var a=TGYJ('tgy_payments',[]),p=a[i];if(!p)return;
+    if(!TGYConfirmed(p)){alert('पहले Give Access करके Payment को Confirm करें।');return TGYRenderPayments()}
+    if(!confirm('इस completed payment request को Payment list से Clear करना है?\nUser का Access और database record सुरक्षित रहेगा।'))return TGYRenderPayments();
+    p.adminCleared=true;p.adminClearedAt=new Date().toISOString();
+    localStorage.setItem('tgy_payments',JSON.stringify(a));
+    try{if(window.tgyCloud&&typeof window.tgyCloud.push==='function')await window.tgyCloud.push('tgy_payments')}catch(e){}
+    TGYRenderPayments();TGYRenderStats();
+  }
+  function TGYRenderPayments(){
+    var tb=document.getElementById('pt');if(!tb)return;
+    var a=TGYJ('tgy_payments',[]);if(!Array.isArray(a))a=[];
+    var visible=a.map(function(x,i){return {x:x,i:i}}).filter(function(o){return o.x&&o.x.adminCleared!==true});
+    if(!visible.length){tb.innerHTML="<tr><td colspan='9'>अभी कोई Active Payment Request नहीं। Cleared requests Dashboard में सुरक्षित हैं।</td></tr>";TGYRenderStats();return}
+    tb.innerHTML=visible.map(function(o){
+      var x=o.x,i=o.i,confirmed=TGYConfirmed(x);
+      var status=confirmed?'✅ Confirmed / Access Given':String(x.status||'Pending');
+      var action=confirmed
+        ? '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap"><input type="checkbox" onchange="tgyClearPaymentRequest('+i+',this.checked)" style="width:18px;height:18px"> Clear / हटाएँ</label>'
+        : '<button class="btn" onclick="activate('+i+')">Give Access</button>';
+      return '<tr><td>'+TGYEsc(x.name||'-')+'</td><td>'+TGYEsc(x.email||'-')+'</td><td>'+TGYEsc(x.mobile||x.phone||'-')+'</td><td>'+TGYEsc(x.course||x.exam||'-')+'</td><td>'+TGYEsc(x.seriesCount?(x.seriesCount+' Tests'):(x.days?(x.days+' दिन'):(x.plan||'-')))+'</td><td>₹'+TGYEsc(x.amount||'-')+'</td><td>'+TGYEsc(x.utr||'-')+'</td><td>'+TGYEsc(status)+'</td><td>'+action+'</td></tr>';
+    }).join('');
+    TGYRenderStats();
+  }
+  window.tgyClearPaymentRequest=TGYClear;
+  var oldActivate=window.activate;
+  window.activate=async function(i){
+    if(typeof oldActivate==='function')await oldActivate(i);
+    var a=TGYJ('tgy_payments',[]),p=a[i];
+    if(p){p.adminCleared=false;localStorage.setItem('tgy_payments',JSON.stringify(a));try{if(window.tgyCloud&&typeof window.tgyCloud.push==='function')await window.tgyCloud.push('tgy_payments')}catch(e){}}
+    TGYRenderPayments();TGYRenderStats();
+  };
+  window.renderPayments=TGYRenderPayments;
+  var oldRenderAll=window.renderAll;
+  window.renderAll=function(){if(typeof oldRenderAll==='function')oldRenderAll.apply(this,arguments);TGYRenderPayments();TGYRenderStats()};
+  setTimeout(function(){TGYRenderPayments();TGYRenderStats()},0);
+})();
+</script>
+
+<script id="tgy-payment-auto-access-by-plan-final-20260909">
+(function(){
+  'use strict';
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function N(v){var n=Number(v);return isFinite(n)?n:0}
+  function norm(v){return String(v==null?'':v).trim().toLowerCase()}
+  function resolvePlan(p){
+    var days=N(p&&p.days), count=N(p&&p.seriesCount), amount=N(p&&p.amount), exam=norm(p&&p.exam), name=norm(p&&p.accessName);
+    if(days>0)return {days:days,count:count};
+    var a=J('tgy_access_pricing',[]);if(!Array.isArray(a))a=[];
+    var best=null,score=-1;
+    a.forEach(function(x){
+      if(!x)return;
+      var s=0,xe=norm(x.exam),xn=norm(x.name);
+      if(exam&&xe===exam)s+=8; else if(exam&&xe&&xe!==exam)return;
+      var xc=N(x.count); if(count&&xc===count)s+=5;
+      var xa=N(x.amount||x.price||x.finalPrice); if(amount&&xa===amount)s+=4;
+      if(name&&xn===name)s+=3;
+      if(s>score){score=s;best=x;}
+    });
+    if(best){var d=N(best.days||best.durationValue||best.duration);if(d>0)return {days:d,count:count||N(best.count)};}
+    return {days:30,count:count};
+  }
+  var oldActivate=window.activate;
+  window.activate=async function(i){
+    var a=J('tgy_payments',[]),p=a[i];
+    if(!p)return;
+    var plan=resolvePlan(p);
+    /* Payment itself carries the purchased duration when submitted. If an older
+       payment has no duration, recover it from the matching Access Plan. */
+    if(plan.days>0)p.days=plan.days;
+    if(!N(p.seriesCount)&&plan.count>0)p.seriesCount=plan.count;
+    localStorage.setItem('tgy_payments',JSON.stringify(a));
+    if(typeof oldActivate==='function')return oldActivate(i);
+  };
+  /* Make the action label explicit: this button gives exactly the purchased
+     plan's duration; no second manual duration step is needed. */
+  var oldRender=window.renderPayments;
+  window.renderPayments=function(){
+    if(typeof oldRender==='function')oldRender.apply(this,arguments);
+    var tb=document.getElementById('pt');if(!tb)return;
+    tb.querySelectorAll('button').forEach(function(b){
+      if((b.textContent||'').indexOf('Give Access')<0)return;
+      var tr=b.closest('tr');if(!tr)return;
+      var cells=tr.querySelectorAll('td'),duration='';
+      if(cells.length>=5)duration=(cells[4].textContent||'').trim();
+      if(duration)b.textContent='Give Access • '+duration;
+    });
+  };
+  setTimeout(function(){if(typeof window.renderPayments==='function')window.renderPayments()},100);
+})();
+</script>
