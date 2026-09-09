@@ -1897,3 +1897,61 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
+
+
+<script id="tgy-admin-access-authoritative-final-20260909">
+(function(){
+  'use strict';
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function S(k,v){localStorage.setItem(k,JSON.stringify(v))}
+  function em(v){return String(v||'').trim().toLowerCase()}
+  function mo(v){return String(v||'').replace(/\D/g,'')}
+  async function cloud(k){try{if(window.tgyCloud&&typeof window.tgyCloud.push==='function')await window.tgyCloud.push(k)}catch(e){}}
+  async function row(k){try{var r=await fetch('https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store?select=key,value&key=eq.'+encodeURIComponent(k),{headers:{apikey:'sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U',Authorization:'Bearer sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U',Accept:'application/json'}});if(!r.ok)return[];var a=await r.json();return a&&a[0]&&Array.isArray(a[0].value)?a[0].value:[]}catch(e){return[]}}
+  async function persistUsers(users){S('tgy_users',users);await cloud('tgy_users')}
+  function findUser(users,p){var e=em(p.email),m=mo(p.mobile);return users.find(function(u){return (e&&em(u.email)===e)||(m.length>=8&&mo(u.mobile)===m)})}
+  function activateUser(u,p){
+    var days=Number(p.days)||30,exp=new Date(Date.now()+days*86400000).toISOString();
+    u.seriesAccess=u.seriesAccess||[];
+    var item={exam:p.exam||p.course,accessName:p.accessName||p.course||p.exam,accessType:p.accessType||'testseries',count:p.accessType==='folder'?999999:(Number(p.seriesCount)||999999),amount:Number(p.amount)||0,activatedAt:new Date().toISOString(),expiresAt:exp,source:p.source||'admin'};
+    u.seriesAccess=u.seriesAccess.filter(function(x){return !(x.exam===item.exam&&x.accessName===item.accessName)});u.seriesAccess.push(item);
+    u.access='Active • '+(item.count>=999999?'Full Series':item.count+' Tests')+' • '+item.exam+' • '+days+' दिन';u.accessExam=item.exam;u.accessExpiresAt=exp;
+    return item;
+  }
+  window.tgyActivateUserAccess=async function(prefill){
+    var users=J('tgy_users',[]),u=users[Number(prefill)]||null;if(!u)return alert('User नहीं मिला।');
+    var exams=(typeof allExams==='function'?allExams():[]);if(!exams.length)return alert('कोई परीक्षा उपलब्ध नहीं है।');
+    var exam=prompt('परीक्षा का नाम लिखें:',u.accessExam||exams[0]);if(!exam)return;
+    var count=Number(prompt('कितने Tests का Access दें? (1/5/10/25/50/999999=Full Series)','999999'))||999999;
+    var days=Number(prompt('कितने दिन का Access दें?','30'))||30;
+    var name=prompt('Access Name (Optional):',count>=999999?'Full Series • '+exam:count+' Tests • '+exam)||((count>=999999?'Full Series':count+' Tests')+' • '+exam);
+    activateUser(u,{exam:exam,seriesCount:count,days:days,accessName:name,accessType:'testseries',source:'admin-users'});
+    await persistUsers(users);
+    var ns=J('tgy_notifications_'+u.email,[]);ns.unshift({text:'🎉 '+exam+' का Access Activate हो गया: '+name+' • '+days+' दिन',date:new Date().toLocaleString(),read:false});S('tgy_notifications_'+u.email,ns);await cloud('tgy_notifications_'+u.email);
+    if(typeof renderUsers==='function')renderUsers();if(typeof renderPayments==='function')renderPayments();
+    alert('✅ Access चालू हो गया। Student Side पर भी Cloud से Active दिखेगा।');
+  };
+  // Users table button: replace the old local-only Give Access action with the authoritative version.
+  var oldRU=window.renderUsers;
+  if(typeof oldRU==='function')window.renderUsers=function(){oldRU.apply(this,arguments);var tb=document.getElementById('ut');if(!tb)return;tb.querySelectorAll('tr').forEach(function(tr,i){var b=tr.querySelector("button[onclick^='giveUserAccess']");if(b){b.onclick=function(){tgyActivateUserAccess(i)}}})};
+  // Payment Give Access: update User + Payment together, then push both keys to Cloud.
+  window.activate=async function(i){
+    var payments=J('tgy_payments',[]),p=payments[i];if(!p)return;
+    var users=J('tgy_users',[]),u=findUser(users,p);
+    if(!u){var cu=await row('tgy_users');u=findUser(cu,p);if(u){users=cu;}}
+    if(!u)return alert('इस Payment के Email/Mobile से User नहीं मिला।');
+    var activatedAt=new Date().toISOString();p.status='Access Activated';p.activatedAt=activatedAt;
+    if(p.type==='pdfFolder'){
+      u.notesFolderAccess=u.notesFolderAccess||[];var exp=new Date(Date.now()+(Number(p.days)||30)*86400000).toISOString();u.notesFolderAccess=u.notesFolderAccess.filter(function(x){return x.folder!==p.folder});u.notesFolderAccess.push({folder:p.folder,amount:Number(p.amount)||0,activatedAt:activatedAt,expiresAt:exp});
+    }else{
+      activateUser(u,p);
+    }
+    u.access=u.access||'Active';
+    S('tgy_users',users);S('tgy_payments',payments);
+    await Promise.all([cloud('tgy_users'),cloud('tgy_payments')]);
+    var ns=J('tgy_notifications_'+u.email,[]);ns.unshift({text:'🎉 Access Activate हो गया: '+(p.accessName||p.course||p.exam),date:new Date().toLocaleString(),read:false});S('tgy_notifications_'+u.email,ns);await cloud('tgy_notifications_'+u.email);
+    if(typeof renderPayments==='function')renderPayments();if(typeof renderUsers==='function')renderUsers();
+    alert('✅ Payment Complete + Access Activated. Student Side पर Access चालू है।');
+  };
+})();
+</script>

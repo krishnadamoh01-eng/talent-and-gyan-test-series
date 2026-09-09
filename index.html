@@ -3008,3 +3008,68 @@ html,body{max-width:100%;overflow-x:hidden}
   });
 })();
 </script>
+
+
+<script id="tgy-access-registration-runtime-final-20260909">
+(function(){
+  'use strict';
+  var SUPA='https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store';
+  var KEY='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U';
+  var H={apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json','Content-Type':'application/json'};
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function S(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+  function normEmail(v){return String(v||'').trim().toLowerCase()}
+  function normMobile(v){return String(v||'').replace(/\D/g,'')}
+  function dev(){return /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent||'')?'mobile':'pc'}
+  function icon(v){return v==='mobile'?'📱':'💻'}
+  async function getUsers(){try{var r=await fetch(SUPA+'?select=key,value&key=eq.tgy_users',{headers:H});if(!r.ok)return[];var a=await r.json();return a&&a[0]&&Array.isArray(a[0].value)?a[0].value:[]}catch(e){return[]}}
+  async function putUsers(v){try{await fetch(SUPA+'?on_conflict=key',{method:'POST',headers:Object.assign({},H,{Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:'tgy_users',value:v,updated_at:new Date().toISOString()})})}catch(e){console.warn('[TGY access sync]',e)}}
+  function mergeIdentity(base,extra){
+    var out=Array.isArray(base)?base.slice():[];
+    (Array.isArray(extra)?extra:[]).forEach(function(u){if(!u)return;var em=normEmail(u.email),mo=normMobile(u.mobile),ix=out.findIndex(function(x){return (em&&normEmail(x.email)===em)||(mo.length>=8&&normMobile(x.mobile)===mo)});if(ix<0)out.push(u);else out[ix]=Object.assign({},out[ix],u)});
+    return out;
+  }
+  // Registration accepts normal Indian 10-digit mobile input (spaces/dashes are ignored).
+  window.doRegister=async function(){
+    var name=((document.getElementById('rname')||{}).value||'').trim();
+    var em=normEmail((document.getElementById('remail')||{}).value);
+    var mo=normMobile((document.getElementById('rmobile')||{}).value);
+    var pass=(document.getElementById('rpass')||{}).value||'';
+    var cp=(document.getElementById('rcpass')||{}).value||'';
+    var emailOk=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em), mobileOk=/^[6-9]\d{9}$/.test(mo);
+    if(!name||!emailOk||!mobileOk||!pass||pass!==cp){alert('कृपया नाम, Email, 10 अंकों का सही Mobile Number और Password/Confirm Password सही भरें।');return false;}
+    var cloud=await getUsers(), local=J('tgy_users',[]), users=mergeIdentity(cloud,local);
+    var byEmail=users.find(function(u){return normEmail(u.email)===em}), byMobile=users.find(function(u){return normMobile(u.mobile)===mo});
+    if(byEmail||byMobile){
+      if(byEmail&&byMobile&&((byEmail===byMobile)||(normEmail(byEmail.email)===normEmail(byMobile.email)))){
+        var d=dev(),u=Object.assign({},byEmail,{deviceType:d,deviceIcon:icon(d),lastLoginAt:new Date().toISOString(),deviceHistory:Array.from(new Set((byEmail.deviceHistory||[]).concat([d])))});
+        // Preserve any Access already granted by Admin.
+        var ci=cloud.find(function(x){return normEmail(x.email)===em||(normMobile(x.mobile)===mo&&mo.length>=8)});
+        if(ci){['seriesAccess','purchasedTests','purchasedNotes','notesFolderAccess','access','accessExam','accessExpiresAt'].forEach(function(k){if(ci[k]!==undefined)u[k]=ci[k]})}
+        users=mergeIdentity(users,[u]);S('tgy_users',users);S('tgy_user',u);await putUsers(users);
+        try{closeAuth();updateAuthUI()}catch(e){} try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests()}catch(e){}
+        alert('यह Account पहले से मौजूद है। इसी Account में Login कर दिया गया है।');return false;
+      }
+      if(byEmail){alert('यह Email पहले से Registered है। उसी Account से Login करें।');return false;}
+      alert('यह Mobile Number पहले से Registered है। उसी Account से Login करें।');return false;
+    }
+    var d=dev(),u={name:name,email:em,mobile:mo,password:pass,created:new Date().toLocaleString(),access:null,deviceType:d,deviceIcon:icon(d),lastLoginAt:new Date().toISOString(),deviceHistory:[d]};
+    users.push(u);S('tgy_users',users);S('tgy_user',u);await putUsers(users);
+    try{closeAuth();updateAuthUI()}catch(e){} try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests()}catch(e){}
+    alert('Registration सफल हुआ।');return false;
+  };
+  async function refreshCurrentUser(){
+    var cur=J('tgy_user',null);if(!cur)return;
+    var cloud=await getUsers(),cu=cloud.find(function(x){return normEmail(x.email)===normEmail(cur.email)||(normMobile(x.mobile)===normMobile(cur.mobile)&&normMobile(cur.mobile).length>=8)});
+    if(!cu)return;
+    // Cloud/Admin Access is authoritative; local device metadata is retained.
+    var u=Object.assign({},cur,cu,{deviceType:dev(),deviceIcon:icon(dev()),lastLoginAt:cur.lastLoginAt||new Date().toISOString()});
+    S('tgy_user',u);S('tgy_users',mergeIdentity(J('tgy_users',[]),[u]));
+    try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests()}catch(e){}
+    try{if(typeof window.tgyRenderNotifications==='function')window.tgyRenderNotifications()}catch(e){}
+  }
+  window.tgyRefreshCurrentUserAccess=refreshCurrentUser;
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(refreshCurrentUser,1200);setInterval(refreshCurrentUser,5000)},{once:true});
+  window.addEventListener('focus',function(){setTimeout(refreshCurrentUser,100)});
+})();
+</script>
