@@ -2225,6 +2225,19 @@ document.addEventListener("DOMContentLoaded",()=>{
     u.seriesAccess=Array.isArray(u.seriesAccess)?u.seriesAccess:[];
     var item={exam:exam,accessName:name,accessType:'testseries',count:count,amount:0,activatedAt:now,expiresAt:exp,source:'admin-users'};
     u.seriesAccess=u.seriesAccess.filter(function(x){return !(x.exam===exam&&x.accessName===name)});u.seriesAccess.push(item);
+    /* Also mirror Admin-given access into purchasedTests so the Student's
+       existing Purchase/Purchased-Test access path can recognize it even if
+       a legacy renderer ignores seriesAccess. */
+    var allTests=J('tgy_tests',[]); if(!Array.isArray(allTests))allTests=[];
+    var exn=String(exam||'').trim().replace(/\s+/g,' ').toLowerCase();
+    var eligible=allTests.map(function(t,idx){return {t:t,idx:idx}}).filter(function(z){
+      var t=z.t||{}; return String(t.exam||'').trim().replace(/\s+/g,' ').toLowerCase()===exn && t.demo!==true && t.published!==false && t.visible!==false;
+    });
+    var take=count>=999999?eligible.length:Math.min(Math.max(0,count),eligible.length);
+    var chosen=eligible.slice(0,take);
+    u.purchasedTests=Array.isArray(u.purchasedTests)?u.purchasedTests:[];
+    u.purchasedTests=u.purchasedTests.filter(function(q){return !(q&&String(q.exam||'').trim().replace(/\s+/g,' ').toLowerCase()===exn&&q.source==='admin-give-access')});
+    chosen.forEach(function(z){var t=z.t||{};u.purchasedTests.push({exam:exam,index:z.idx,id:t.id||null,testId:t.id||null,name:t.name||('Test '+(z.idx+1)),expiresAt:exp,source:'admin-give-access',activatedAt:now});});
     u.access='Active • '+(count>=999999?'Full Series':count+' Tests')+' • '+exam+' • '+days+' दिन';u.accessExam=exam;u.accessExpiresAt=exp;
   }
   function clearAccess(u){
@@ -2292,5 +2305,22 @@ document.addEventListener("DOMContentLoaded",()=>{
     var users=J('tgy_users',[]),best=window.tgyFindUserBest(users,identity)||identity;
     return oldRemove(best);
   };
+})();
+</script>
+
+<script id="tgy-admin-access-final-fallback-20260910">
+(function(){
+'use strict';
+var SUPA='https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store',KEY='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U',H={apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json','Content-Type':'application/json'};
+function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+function S(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function em(v){return String(v||'').trim().toLowerCase()} function mo(v){return String(v||'').replace(/\D/g,'')}
+function score(a,b){var e=em(a&&a.email),f=em(b&&b.email),m=mo(a&&a.mobile),n=mo(b&&b.mobile),s=-1;if(m&&n&&m===n)s=8;if(e&&f&&e===f)s=Math.max(s,4);if(e&&f&&m&&n&&e===f&&m===n)s=10;return s}
+async function cloud(){try{var r=await fetch(SUPA+'?select=key,value&key=eq.tgy_users',{headers:H});if(!r.ok)return[];var a=await r.json();return a&&a[0]&&Array.isArray(a[0].value)?a[0].value:[]}catch(e){return[]}}
+async function put(v){try{return (await fetch(SUPA+'?on_conflict=key',{method:'POST',headers:Object.assign({},H,{Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:'tgy_users',value:v,updated_at:new Date().toISOString()})})).ok}catch(e){return false}}
+function merge(c,l){var out=Array.isArray(c)?c.slice():[];(Array.isArray(l)?l:[]).forEach(function(x){var bi=-1,bs=-1;out.forEach(function(y,i){var z=score(y,x);if(z>bs){bs=z;bi=i}});if(bi<0)out.push(x);else out[bi]=Object.assign({},x,out[bi]);});return out}
+window.tgyAdminRefreshUsersAccessSafe=async function(){var c=await cloud(),l=J('tgy_users',[]),u=merge(c,l);S('tgy_users',u);if(c.length)await put(u);if(typeof renderUsers==='function')renderUsers();return u};
+window.addEventListener('focus',function(){setTimeout(window.tgyAdminRefreshUsersAccessSafe,200)});
+document.addEventListener('DOMContentLoaded',function(){setTimeout(window.tgyAdminRefreshUsersAccessSafe,1200);setTimeout(window.tgyAdminRefreshUsersAccessSafe,3000);setInterval(window.tgyAdminRefreshUsersAccessSafe,15000)},{once:true});
 })();
 </script>

@@ -3217,3 +3217,31 @@ html,body{max-width:100%;overflow-x:hidden}
   window.addEventListener('focus',function(){setTimeout(resolve,120)});
 })();
 </script>
+
+<script id="tgy-access-final-fallback-20260910">
+(function(){
+'use strict';
+function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+function norm(v){return String(v||'').trim().replace(/\s+/g,' ').toLowerCase()}
+function active(u,exam,testIndex){
+ if(!u)return false; var ex=norm(exam), now=Date.now();
+ var sa=Array.isArray(u.seriesAccess)?u.seriesAccess:[];
+ for(var i=0;i<sa.length;i++){var x=sa[i]||{};if(norm(x.exam)!==ex)continue;if(x.expiresAt&&new Date(x.expiresAt).getTime()<=now)continue;var c=Number(x.count)||0;if(c>=999999)return true;
+   if(typeof testIndex==='number'&&c>=testIndex+1)return true;
+ }
+ var pt=Array.isArray(u.purchasedTests)?u.purchasedTests:[];
+ for(var j=0;j<pt.length;j++){var q=pt[j]||{};if(q.exam&&norm(q.exam)!==ex)continue;if(q.expiresAt&&new Date(q.expiresAt).getTime()<=now)continue;var qi=Number(q.index);if(typeof testIndex==='number'&&Number.isFinite(qi)&&qi===testIndex)return true;if(q.testId&&Array.isArray(window.tests)){var ti=window.tests.findIndex(function(t){return t&&((t.id&&t.id===q.testId)||(t.name&&q.name&&t.name===q.name));});if(ti===testIndex)return true;}}
+ var ae=norm(u.accessExam||'');
+ if(ae&&ae===ex&&(!u.accessExpiresAt||new Date(u.accessExpiresAt).getTime()>now)){
+   var m=String(u.access||'').match(/(?:tests|test)\s*:\s*(\d+)/i);var c2=m?Number(m[1]):0;if(c2>=999999)return true;if(typeof testIndex==='number'&&c2>=testIndex+1)return true;
+   if(/full\s*series|active/i.test(String(u.access||''))&&!m)return true;
+ }
+ return false;
+}
+window.tgyHasSeriesAccess=function(exam){return active(J('tgy_user',null),exam,null)};
+window.hasSeriesAccess=function(exam,testIndex){return active(J('tgy_user',null),exam,testIndex)};
+window.tgyOpenTestFromFolder=function(i){var t=Array.isArray(window.tests)?window.tests[i]:null;if(!t)return;if(typeof requireStudentLogin==='function'&&!requireStudentLogin({type:'test',index:i,exam:t.exam}))return;if(t.demo!==true&&!active(J('tgy_user',null),t.exam,i)){window.tgyLockedTest(i);return;}window.activeTestExam=t.exam||null;window.openedTestFromSeries=true;if(typeof closeExam==='function')closeExam();setTimeout(function(){if(typeof window.startFinalMockTest==='function')window.startFinalMockTest(i);else if(typeof openTest==='function')openTest(i)},30)};
+window.tgyLockedTest=function(i){var t=Array.isArray(window.tests)?window.tests[i]:null;var exam=t&&t.exam?t.exam:(window.tgyNavExam||'');try{if(typeof requireStudentLogin==='function'&&!requireStudentLogin({type:'series',exam:exam,index:i}))return;}catch(e){}if(typeof window.ensureBuyPage==='function')return window.ensureBuyPage(exam);if(typeof window.tgyOpenLockedPurchase==='function')return window.tgyOpenLockedPurchase(exam);alert('Purchase option उपलब्ध नहीं है।');};
+window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||function(){};
+})();
+</script>
