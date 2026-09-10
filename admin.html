@@ -2200,3 +2200,97 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.addEventListener('focus',function(){setTimeout(refreshUsersAuthoritative,150)});
 })();
 </script>
+
+<script id="tgy-admin-users-actions-final-20260910">
+(function(){
+  'use strict';
+  var SUPA='https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store';
+  var KEY='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U';
+  var H={apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json','Content-Type':'application/json'};
+  var ACCESS=['seriesAccess','purchasedTests','purchasedNotes','notesFolderAccess','access','accessExam','accessExpiresAt'];
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function S(k,v){localStorage.setItem(k,JSON.stringify(v))}
+  function em(v){return String(v||'').trim().toLowerCase()}
+  function mo(v){return String(v||'').replace(/\D/g,'')}
+  function same(a,b){return !!a&&!!b&&((em(a.email)&&em(a.email)===em(b.email))||(mo(a.mobile).length>=8&&mo(a.mobile)===mo(b.mobile)))}
+  async function getUsers(){try{var r=await fetch(SUPA+'?select=key,value&key=eq.tgy_users',{headers:H});if(!r.ok)return[];var a=await r.json();return a&&a[0]&&Array.isArray(a[0].value)?a[0].value:[]}catch(e){return[]}}
+  async function put(k,v){try{var r=await fetch(SUPA+'?on_conflict=key',{method:'POST',headers:Object.assign({},H,{Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:k,value:v,updated_at:new Date().toISOString()})});return r.ok}catch(e){return false}}
+  function mergeCloudFirst(cloud,local){
+    var out=Array.isArray(cloud)?cloud.slice():[];
+    (Array.isArray(local)?local:[]).forEach(function(l){if(!l)return;var i=out.findIndex(function(c){return same(c,l)});if(i<0)out.push(l);else out[i]=Object.assign({},l,out[i]);});
+    return out;
+  }
+  function setAccess(u,exam,count,days,name){
+    var now=new Date().toISOString(),exp=new Date(Date.now()+days*86400000).toISOString();
+    u.seriesAccess=Array.isArray(u.seriesAccess)?u.seriesAccess:[];
+    var item={exam:exam,accessName:name,accessType:'testseries',count:count,amount:0,activatedAt:now,expiresAt:exp,source:'admin-users'};
+    u.seriesAccess=u.seriesAccess.filter(function(x){return !(x.exam===exam&&x.accessName===name)});u.seriesAccess.push(item);
+    u.access='Active • '+(count>=999999?'Full Series':count+' Tests')+' • '+exam+' • '+days+' दिन';u.accessExam=exam;u.accessExpiresAt=exp;
+  }
+  function clearAccess(u){
+    ACCESS.forEach(function(k){if(k==='seriesAccess'||k==='notesFolderAccess')u[k]=[];else if(k==='purchasedTests'||k==='purchasedNotes')u[k]=[];else delete u[k]});
+    u.access=null;u.accessExam=null;u.accessExpiresAt=null;
+  }
+  async function saveUsers(users){S('tgy_users',users);await put('tgy_users',users)}
+  window.tgyGiveUserAccessFinal=async function(identity){
+    var cloud=await getUsers(),local=J('tgy_users',[]),users=mergeCloudFirst(cloud,local);
+    var u=users.find(function(x){return same(x,identity)})||users[Number(identity)];
+    if(!u)return alert('User नहीं मिला।');
+    var exams=typeof allExams==='function'?allExams():[];if(!exams.length)exams=J('tgy_exams',[]).map(function(x){return typeof x==='string'?x:x&&x.name}).filter(Boolean);
+    var exam=prompt('परीक्षा का नाम लिखें:',u.accessExam||exams[0]||'');if(!exam)return;
+    var count=Number(prompt('कितने Tests का Access दें? 1/5/10/25/50/999999 = Full Series', '50'))||50;
+    var days=Number(prompt('कितने दिन का Access दें?', '30'))||30;
+    var name=prompt('Access Name (Optional):',count>=999999?'Full Series • '+exam:count+' Tests • '+exam);
+    name=(name||((count>=999999?'Full Series':count+' Tests')+' • '+exam)).trim();
+    setAccess(u,exam,count,days,name);await saveUsers(users);
+    var nk='tgy_notifications_'+(u.email||'');if(u.email){var ns=J(nk,[]);if(!Array.isArray(ns))ns=[];ns.unshift({text:'🎉 '+exam+' का Access Activate हो गया: '+name+' • '+days+' दिन',date:new Date().toLocaleString(),read:false});S(nk,ns);await put(nk,ns)}
+    renderUsers();alert('✅ Give Access सफल हुआ। Student को Access मिल गया और Cloud में Save हो गया।');
+  };
+  window.tgyRemoveUserAccessFinal=async function(identity){
+    if(!confirm('क्या इस User का पूरा Access हटाना है? User Account रहेगा, केवल Access हटेगा।'))return;
+    var cloud=await getUsers(),local=J('tgy_users',[]),users=mergeCloudFirst(cloud,local),u=users.find(function(x){return same(x,identity)})||users[Number(identity)];
+    if(!u)return alert('User नहीं मिला।');
+    clearAccess(u);await saveUsers(users);renderUsers();alert('✅ User का Access हटा दिया गया। Account सुरक्षित है; वह बाद में फिर Login कर सकता है।');
+  };
+  function renderUsersFinal(){
+    var tb=document.getElementById('ut');if(!tb)return;var users=J('tgy_users',[]);if(!Array.isArray(users))users=[];
+    if(!users.length){tb.innerHTML="<tr><td colspan='6'>अभी कोई User Register नहीं है।</td></tr>";return;}
+    tb.innerHTML=users.map(function(u,i){
+      var ident=encodeURIComponent(JSON.stringify({email:u.email||'',mobile:u.mobile||''}));
+      var ac=u.access?'<span class="badge">'+esc(u.access)+'</span>':'No Access';
+      var icon=String(u.deviceType||'').toLowerCase()==='mobile'?'📱':'💻';
+      return '<tr><td><span style="font-size:20px;margin-right:6px">'+icon+'</span>'+esc(u.name||'-')+'</td><td>'+esc(u.email||'-')+'</td><td>'+esc(u.mobile||'-')+'</td><td>'+esc(u.created||'-')+'</td><td>'+ac+'</td><td><button type="button" class="btn tgy-give-user" data-id="'+ident+'">Give Access</button> <button type="button" class="btn orange" onclick="managePurchasedTests('+i+')">🎓 Purchased Tests</button> <button type="button" class="btn danger tgy-remove-user" data-id="'+ident+'">Remove</button></td></tr>';
+    }).join('');
+  }
+  window.renderUsers=renderUsersFinal;
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('.tgy-give-user,.tgy-remove-user');if(!b)return;
+    e.preventDefault();e.stopPropagation();
+    var id={};try{id=JSON.parse(decodeURIComponent(b.getAttribute('data-id')||'%7B%7D'))}catch(x){}
+    if(b.classList.contains('tgy-give-user'))window.tgyGiveUserAccessFinal(id);else window.tgyRemoveUserAccessFinal(id);
+  },true);
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(renderUsersFinal,900);setTimeout(renderUsersFinal,2200);setInterval(renderUsersFinal,15000)},{once:true});
+  window.addEventListener('focus',function(){setTimeout(renderUsersFinal,200)});
+})();
+</script>
+
+<script id="tgy-admin-identity-priority-final-20260910">
+(function(){
+  'use strict';
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function em(v){return String(v||'').trim().toLowerCase()}
+  function mo(v){return String(v||'').replace(/\D/g,'')}
+  function score(a,b){if(!a||!b)return -1;var e1=em(a.email),e2=em(b.email),m1=mo(a.mobile),m2=mo(b.mobile),s=-1;if(e1&&e2&&e1===e2)s=4;if(m1&&m2&&m1.length>=8&&m1===m2)s=Math.max(s,6);if(e1&&e2&&e1===e2&&m1&&m2&&m1===m2)s=10;return s}
+  window.tgyFindUserBest=function(users,identity){var a=Array.isArray(users)?users:[],best=null,bs=-1;a.forEach(function(u){var s=score(u,identity);if(s>bs){bs=s;best=u}});return bs>=0?best:null};
+  var oldGive=window.tgyGiveUserAccessFinal;
+  if(typeof oldGive==='function')window.tgyGiveUserAccessFinal=async function(identity){
+    var users=J('tgy_users',[]),best=window.tgyFindUserBest(users,identity)||identity;
+    return oldGive(best);
+  };
+  var oldRemove=window.tgyRemoveUserAccessFinal;
+  if(typeof oldRemove==='function')window.tgyRemoveUserAccessFinal=async function(identity){
+    var users=J('tgy_users',[]),best=window.tgyFindUserBest(users,identity)||identity;
+    return oldRemove(best);
+  };
+})();
+</script>
