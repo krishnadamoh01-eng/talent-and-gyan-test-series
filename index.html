@@ -3245,3 +3245,74 @@ window.tgyLockedTest=function(i){var t=Array.isArray(window.tests)?window.tests[
 window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||function(){};
 })();
 </script>
+
+<style id="tgy-mobile-test-scroll-final-20260910">
+/* Mobile Test Series + actual Test screen: never trap the page after 3-4 items. */
+@media (max-width:700px){
+  #examModal{overflow:auto!important;-webkit-overflow-scrolling:touch!important}
+  #examModal .box,#examModal .modal-box{max-height:none!important;height:auto!important;overflow:visible!important}
+  #examModal .tgy-test-grid,
+  #examModal .tgy-test-grid.expanded{max-height:none!important;height:auto!important;overflow:visible!important}
+  #examModal .tgy-more-btn{display:none!important}
+
+  #modal.tgy-payment-fullscreen{overflow:hidden!important}
+  #modal:not(.tgy-payment-fullscreen){overflow:hidden!important}
+  #modal .box{max-height:none!important}
+  #modalContent{max-width:100%!important}
+  .tgy-exam-shell{
+    position:fixed!important;inset:0!important;
+    width:100vw!important;height:100dvh!important;min-height:100dvh!important;
+    overflow:hidden!important;display:flex!important;flex-direction:column!important;
+  }
+  .tgy-exam-top{flex:0 0 auto!important;padding:9px 10px!important}
+  .tgy-exam-top h2{font-size:17px!important;line-height:1.25!important}
+  .tgy-exam-main{
+    flex:1 1 auto!important;min-height:0!important;
+    display:flex!important;flex-direction:column!important;
+    overflow:hidden!important;padding:8px!important;gap:8px!important;
+  }
+  .tgy-exam-question{
+    flex:1 1 auto!important;min-height:0!important;width:100%!important;
+    overflow-y:auto!important;overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch!important;
+    padding:14px!important;box-sizing:border-box!important;
+  }
+  .tgy-exam-question #tgyExamQuestion{padding-bottom:20px!important}
+  .tgy-exam-options label{padding:11px!important;margin:7px 0!important}
+  .tgy-palette{
+    width:100%!important;max-height:105px!important;overflow-y:auto!important;
+    flex:0 0 auto!important;box-sizing:border-box!important;padding:8px!important;
+  }
+  .tgy-palette h3,.tgy-palette p{margin:2px 0 5px!important;font-size:12px!important}
+  .tgy-palette-grid{grid-template-columns:repeat(8,minmax(28px,1fr))!important;gap:5px!important}
+  .tgy-palette-btn{padding:6px 2px!important;font-size:12px!important}
+  .tgy-exam-bottom{
+    flex:0 0 auto!important;padding:7px 8px!important;
+    gap:6px!important;flex-wrap:wrap!important;
+  }
+  .tgy-exam-bottom>div{display:flex!important;gap:5px!important;flex-wrap:wrap!important}
+  .tgy-exam-bottom .btn{width:auto!important;min-height:40px!important;padding:8px 10px!important}
+}
+</style>
+<script id="tgy-mobile-test-scroll-final-20260910-js">
+(function(){
+  'use strict';
+  function fix(){
+    var g=document.querySelector('#examModal .tgy-test-grid');
+    if(g){g.style.maxHeight='none';g.style.height='auto';g.style.overflow='visible';}
+    var m=document.getElementById('examModal');
+    if(m && window.matchMedia && window.matchMedia('(max-width:700px)').matches){m.style.overflow='auto';m.style.webkitOverflowScrolling='touch';}
+    var shell=document.querySelector('#modal .tgy-exam-shell');
+    if(shell && window.matchMedia && window.matchMedia('(max-width:700px)').matches){
+      shell.style.height='100dvh';shell.style.minHeight='100dvh';shell.style.maxHeight='100dvh';shell.style.overflow='hidden';
+      var q=shell.querySelector('.tgy-exam-question');
+      if(q){q.style.overflowY='auto';q.style.webkitOverflowScrolling='touch';}
+    }
+  }
+  document.addEventListener('DOMContentLoaded',fix);
+  window.addEventListener('resize',fix);
+  window.addEventListener('orientationchange',function(){setTimeout(fix,100)});
+  var mo=new MutationObserver(fix); mo.observe(document.body,{childList:true,subtree:true});
+  setInterval(fix,1000);
+})();
+</script>
