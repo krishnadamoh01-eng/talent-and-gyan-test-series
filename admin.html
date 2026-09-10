@@ -1703,7 +1703,20 @@ document.addEventListener("DOMContentLoaded",()=>{
      for(const k of KEYS){
        const local=J(k,null);
        const r=await row(k);
-       if(valEmpty(local)){
+       /* Users are cloud-authoritative: Admin access granted on another device
+          must survive every Admin refresh. Keep local-only users, but for the
+          same user always retain the latest cloud record (including access). */
+       if(k==='tgy_users'){
+         const cv=Array.isArray(r&&r.value)?r.value:[];
+         const lv=Array.isArray(local)?local:[];
+         const normEmail=v=>String(v||'').trim().toLowerCase();
+         const normMobile=v=>String(v||'').replace(/\D/g,'');
+         const sameUser=(a,b)=>((normEmail(a.email)&&normEmail(a.email)===normEmail(b.email))||(normMobile(a.mobile).length>=8&&normMobile(a.mobile)===normMobile(b.mobile)));
+         const merged=cv.slice();
+         lv.forEach(u=>{if(!u)return; if(!merged.some(c=>sameUser(c,u)))merged.push(u)});
+         setLocal(k,merged);
+         await upsert(k,merged);
+       }else if(valEmpty(local)){
          if(r && !valEmpty(r.value)) setLocal(k,r.value);
          else if(r && r.value!==null) setLocal(k,r.value);
        }else{
@@ -1864,6 +1877,54 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
+<script id="tgy-payment-access-cloud-authoritative-final-20260910">
+(function(){
+  'use strict';
+  var SUPA='https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store';
+  var KEY='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U';
+  var H={apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json','Content-Type':'application/json'};
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function S(k,v){localStorage.setItem(k,JSON.stringify(v))}
+  function em(v){return String(v||'').trim().toLowerCase()}
+  function mo(v){return String(v||'').replace(/\D/g,'')}
+  async function get(k){try{var r=await fetch(SUPA+'?select=key,value&key=eq.'+encodeURIComponent(k),{headers:H});if(!r.ok)return[];var a=await r.json();return a&&a[0]&&Array.isArray(a[0].value)?a[0].value:[]}catch(e){return[]}}
+  async function put(k,v){try{var r=await fetch(SUPA+'?on_conflict=key',{method:'POST',headers:Object.assign({},H,{Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:k,value:v,updated_at:new Date().toISOString()})});return r.ok}catch(e){return false}}
+  function same(a,b){return (em(a.email)&&em(a.email)===em(b.email))||(mo(a.mobile).length>=8&&mo(a.mobile)===mo(b.mobile))}
+  function applyAccess(u,p){
+    var days=Number(p.days)||30,exp=new Date(Date.now()+days*86400000).toISOString();
+    if(p.type==='pdfFolder'){
+      u.notesFolderAccess=Array.isArray(u.notesFolderAccess)?u.notesFolderAccess:[];
+      u.notesFolderAccess=u.notesFolderAccess.filter(function(x){return x.folder!==p.folder});
+      u.notesFolderAccess.push({folder:p.folder,amount:Number(p.amount)||0,activatedAt:new Date().toISOString(),expiresAt:exp});
+    }else{
+      u.seriesAccess=Array.isArray(u.seriesAccess)?u.seriesAccess:[];
+      var item={exam:p.exam||p.course,accessName:p.accessName||p.course||p.exam,accessType:p.accessType||'testseries',count:p.accessType==='folder'?999999:(Number(p.seriesCount)||999999),amount:Number(p.amount)||0,activatedAt:new Date().toISOString(),expiresAt:exp,source:p.source||'payment'};
+      u.seriesAccess=u.seriesAccess.filter(function(x){return !(x.exam===item.exam&&x.accessName===item.accessName)});u.seriesAccess.push(item);
+      u.access='Active • '+(item.count>=999999?'Full Series':item.count+' Tests')+' • '+item.exam+' • '+days+' दिन';u.accessExam=item.exam;u.accessExpiresAt=exp;
+    }
+    return u;
+  }
+  window.tgyActivatePaymentAuthoritative=async function(i){
+    var payments=J('tgy_payments',[]),p=payments[i];if(!p)return;
+    // Always start from the latest Cloud users, so a stale Admin local user cannot erase access.
+    var cloudUsers=await get('tgy_users'),localUsers=J('tgy_users',[]);
+    var users=Array.isArray(cloudUsers)?cloudUsers.slice():[];
+    (Array.isArray(localUsers)?localUsers:[]).forEach(function(l){if(!l)return;var ix=users.findIndex(function(c){return same(c,l)});if(ix<0)users.push(l);});
+    var u=users.find(function(x){return same(x,p)});
+    if(!u)return alert('इस Payment के Email/Mobile से User नहीं मिला।');
+    applyAccess(u,p);
+    p.status='Access Activated';p.accessActivated=true;p.adminConfirmed=true;p.activatedAt=p.activatedAt||new Date().toISOString();p.adminCleared=false;
+    S('tgy_users',users);S('tgy_payments',payments);
+    await put('tgy_users',users);await put('tgy_payments',payments);
+    var nk='tgy_notifications_'+(u.email||p.email),ns=J(nk,[]);if(!Array.isArray(ns))ns=[];
+    ns.unshift({text:'🎉 Access Activate हो गया: '+(p.accessName||p.course||p.exam),date:new Date().toLocaleString(),read:false});
+    S(nk,ns);await put(nk,ns);
+    if(typeof renderPayments==='function')renderPayments();if(typeof renderUsers==='function')renderUsers();
+    alert('✅ Access Activated. Student Side पर खरीदे हुए Tests अब Unlock होंगे।');
+  };
+  window.activate=function(i){return window.tgyActivatePaymentAuthoritative(i)};
+})();
+</script>
 </body></html>
 
 <script id="tgy-admin-final-visible-naming-and-users-refresh">
@@ -2075,5 +2136,67 @@ document.addEventListener("DOMContentLoaded",()=>{
     });
   };
   setTimeout(function(){if(typeof window.renderPayments==='function')window.renderPayments()},100);
+})();
+</script>
+
+
+<script id="tgy-final-admin-access-refresh-protection-20260910">
+(function(){
+  'use strict';
+  var SUPA='https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store';
+  var KEY='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U';
+  var H={apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json','Content-Type':'application/json'};
+  var ACCESS=['seriesAccess','purchasedTests','purchasedNotes','notesFolderAccess','access','accessExam','accessExpiresAt'];
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function S(k,v){localStorage.setItem(k,JSON.stringify(v))}
+  function em(v){return String(v||'').trim().toLowerCase()}
+  function mo(v){return String(v||'').replace(/\D/g,'')}
+  function same(a,b){return !!a&&!!b&&((em(a.email)&&em(a.email)===em(b.email))||(mo(a.mobile).length>=8&&mo(a.mobile)===mo(b.mobile)))}
+  function copyAccess(dst,src){ACCESS.forEach(function(k){if(src&&src[k]!==undefined)dst[k]=src[k]});return dst}
+  async function getUsers(){try{var r=await fetch(SUPA+'?select=key,value&key=eq.tgy_users',{headers:H});if(!r.ok)return[];var a=await r.json();return a&&a[0]&&Array.isArray(a[0].value)?a[0].value:[]}catch(e){return[]}}
+  async function put(k,v){try{await fetch(SUPA+'?on_conflict=key',{method:'POST',headers:Object.assign({},H,{Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:k,value:v,updated_at:new Date().toISOString()})})}catch(e){}}
+  function mergeCloudFirst(cloud,local){
+    var out=Array.isArray(cloud)?cloud.slice():[];
+    (Array.isArray(local)?local:[]).forEach(function(l){if(!l)return;var i=out.findIndex(function(c){return same(c,l)});if(i<0)out.push(l);else{
+      var c=out[i],m=Object.assign({},l,c);copyAccess(m,c);out[i]=m;
+    }});
+    return out;
+  }
+  async function refreshUsersAuthoritative(){
+    var cloud=await getUsers();if(!Array.isArray(cloud))return[];
+    var local=J('tgy_users',[]),users=mergeCloudFirst(cloud,local);
+    // Never let a stale local user overwrite Cloud-granted Access.
+    S('tgy_users',users);await put('tgy_users',users);
+    try{if(typeof window.renderUsers==='function')window.renderUsers()}catch(e){}
+    return users;
+  }
+  async function activateAuthoritative(i){
+    var payments=J('tgy_payments',[]),p=payments[i];if(!p)return;
+    // Start from Cloud every time. Local Admin data is used only for missing users.
+    var cloud=await getUsers(),local=J('tgy_users',[]),users=mergeCloudFirst(cloud,local),u=users.find(function(x){return same(x,p)});
+    if(!u)return alert('इस Payment के Email/Mobile से User नहीं मिला।');
+    var days=Number(p.days)||30,exp=new Date(Date.now()+days*86400000).toISOString(),now=new Date().toISOString();
+    if(p.type==='pdfFolder'){
+      u.notesFolderAccess=Array.isArray(u.notesFolderAccess)?u.notesFolderAccess:[];
+      u.notesFolderAccess=u.notesFolderAccess.filter(function(x){return x.folder!==p.folder});
+      u.notesFolderAccess.push({folder:p.folder,amount:Number(p.amount)||0,activatedAt:now,expiresAt:exp});
+    }else{
+      u.seriesAccess=Array.isArray(u.seriesAccess)?u.seriesAccess:[];
+      var item={exam:p.exam||p.course,accessName:p.accessName||p.course||p.exam,accessType:p.accessType||'testseries',count:p.accessType==='folder'?999999:(Number(p.seriesCount)||999999),amount:Number(p.amount)||0,activatedAt:now,expiresAt:exp,source:p.source||'payment'};
+      u.seriesAccess=u.seriesAccess.filter(function(x){return !(x.exam===item.exam&&x.accessName===item.accessName)});u.seriesAccess.push(item);
+      u.access='Active • '+(item.count>=999999?'Full Series':item.count+' Tests')+' • '+item.exam+' • '+days+' दिन';u.accessExam=item.exam;u.accessExpiresAt=exp;
+    }
+    p.status='Access Activated';p.accessActivated=true;p.adminConfirmed=true;p.activatedAt=p.activatedAt||now;p.adminCleared=false;
+    S('tgy_users',users);S('tgy_payments',payments);await put('tgy_users',users);await put('tgy_payments',payments);
+    var nk='tgy_notifications_'+(u.email||p.email),ns=J(nk,[]);if(!Array.isArray(ns))ns=[];ns.unshift({text:'🎉 Access Activate हो गया: '+(p.accessName||p.course||p.exam),date:new Date().toLocaleString(),read:false});S(nk,ns);await put(nk,ns);
+    if(typeof renderPayments==='function')renderPayments();if(typeof renderUsers==='function')renderUsers();
+    alert('✅ Access Activated. Refresh के बाद भी Access सुरक्षित रहेगा।');
+  }
+  // This is deliberately the LAST activation override, so older activation wrappers
+  // cannot reintroduce the stale-local overwrite bug.
+  window.activate=activateAuthoritative;
+  window.tgyActivatePaymentAuthoritative=activateAuthoritative;
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(refreshUsersAuthoritative,800);setTimeout(refreshUsersAuthoritative,2000);setInterval(refreshUsersAuthoritative,15000)},{once:true});
+  window.addEventListener('focus',function(){setTimeout(refreshUsersAuthoritative,150)});
 })();
 </script>

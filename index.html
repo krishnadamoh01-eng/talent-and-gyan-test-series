@@ -3073,3 +3073,81 @@ html,body{max-width:100%;overflow-x:hidden}
   window.addEventListener('focus',function(){setTimeout(refreshCurrentUser,100)});
 })();
 </script>
+
+
+<script id="tgy-final-access-protection-20260910">
+(function(){
+  'use strict';
+  var SUPA='https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store';
+  var KEY='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U';
+  var H={apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json','Content-Type':'application/json'};
+  var ACCESS=['seriesAccess','purchasedTests','purchasedNotes','notesFolderAccess','access','accessExam','accessExpiresAt'];
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function S(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+  function em(v){return String(v||'').trim().toLowerCase()}
+  function mo(v){return String(v||'').replace(/\D/g,'')}
+  function same(a,b){return !!a&&!!b&&((em(a.email)&&em(a.email)===em(b.email))||(mo(a.mobile).length>=8&&mo(a.mobile)===mo(b.mobile)))}
+  async function getUsers(){try{var r=await fetch(SUPA+'?select=key,value&key=eq.tgy_users',{headers:H});if(!r.ok)return[];var a=await r.json();return a&&a[0]&&Array.isArray(a[0].value)?a[0].value:[]}catch(e){return[]}}
+  async function putUsers(v){try{await fetch(SUPA+'?on_conflict=key',{method:'POST',headers:Object.assign({},H,{Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:'tgy_users',value:v,updated_at:new Date().toISOString()})})}catch(e){}}
+  function copyAccess(dst,src){ACCESS.forEach(function(k){if(src&&src[k]!==undefined)dst[k]=src[k]});return dst}
+  function mergeCloudFirst(cloud,local){
+    var out=Array.isArray(cloud)?cloud.slice():[];
+    (Array.isArray(local)?local:[]).forEach(function(l){if(!l)return;var i=out.findIndex(function(c){return same(c,l)});if(i<0)out.push(l);else{
+      var c=out[i], merged=Object.assign({},l,c); // Cloud wins, including Access.
+      copyAccess(merged,c); out[i]=merged;
+    }});
+    return out;
+  }
+  async function protectCurrent(){
+    var cur=J('tgy_user',null);if(!cur)return;
+    var cloud=await getUsers(),cu=cloud.find(function(x){return same(x,cur)});if(!cu)return;
+    var u=Object.assign({},cur,cu);
+    copyAccess(u,cu);
+    S('tgy_user',u);
+    S('tgy_users',mergeCloudFirst(cloud,[u]));
+    try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests()}catch(e){}
+    try{if(typeof window.tgyRenderNotifications==='function')window.tgyRenderNotifications()}catch(e){}
+    try{if(typeof window.tgyRenderPurchasePage==='function')window.tgyRenderPurchasePage()}catch(e){}
+  }
+  async function syncProtected(){
+    var cur=J('tgy_user',null);if(!cur)return;
+    var cloud=await getUsers(),cu=cloud.find(function(x){return same(x,cur)});
+    if(!cu)return;
+    var u=Object.assign({},cur,cu);copyAccess(u,cu);
+    var users=mergeCloudFirst(cloud,[u]);
+    S('tgy_user',u);S('tgy_users',users);
+    await putUsers(users);
+    try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests()}catch(e){}
+    try{if(typeof window.tgyRenderNotifications==='function')window.tgyRenderNotifications()}catch(e){}
+  }
+  window.tgySyncCurrentStudentDevice=async function(){return syncProtected()};
+  window.tgyRefreshCurrentUserAccess=async function(){return protectCurrent()};
+
+  // Preserve Admin-granted Access across Login/Registration even when an older
+  // local copy exists on the device.
+  ['doLogin','doRegister'].forEach(function(name){
+    var old=window[name];
+    if(typeof old!=='function')return;
+    window[name]=async function(){
+      var ident=(document.getElementById(name==='doLogin'?'aemail':'remail')?.value||'').trim();
+      var mob=(document.getElementById(name==='doLogin'?'aemail':'rmobile')?.value||'').trim();
+      var before=await getUsers(), protectedUser=before.find(function(x){return em(x.email)===em(ident)||(mo(x.mobile)===mo(mob)&&mo(mob).length>=8)});
+      var r=await old.apply(this,arguments);
+      try{
+        if(protectedUser){
+          var after=await getUsers(), target=after.find(function(x){return same(x,protectedUser)});
+          if(target){copyAccess(target,protectedUser);var users=mergeCloudFirst(after,[target]);S('tgy_users',users);S('tgy_user',target);await putUsers(users);}
+        }
+      }catch(e){}
+      return r;
+    };
+  });
+
+  document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(protectCurrent,900);
+    setTimeout(protectCurrent,2200);
+    setInterval(protectCurrent,5000);
+  },{once:true});
+  window.addEventListener('focus',function(){setTimeout(protectCurrent,120)});
+})();
+</script>
