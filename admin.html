@@ -1925,6 +1925,60 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.activate=function(i){return window.tgyActivatePaymentAuthoritative(i)};
 })();
 </script>
+
+<script id="tgy-unlimited-exams-final-20260911">
+(function(){
+  "use strict";
+  function readExams(){
+    try{const v=JSON.parse(localStorage.getItem("tgy_exams")||"[]");return Array.isArray(v)?v:[];}catch(e){return []}
+  }
+  function writeExams(a){localStorage.setItem("tgy_exams",JSON.stringify(a));}
+  function examName(x){return String(typeof x==="string"?x:(x&&x.name)||"").trim();}
+  function refresh(){
+    try{if(typeof refreshAllExamDropdowns==="function")refreshAllExamDropdowns("");}catch(e){}
+    try{if(typeof mtRenderAll==="function")mtRenderAll();}catch(e){}
+    try{if(typeof renderAccessPricing==="function")renderAccessPricing();}catch(e){}
+    try{if(typeof renderExamMaster==="function")renderExamMaster();}catch(e){}
+  }
+  window.tgySaveUnlimitedExam=function(name,visible){
+    name=String(name||"").trim();
+    if(!name)return false;
+    const a=readExams();
+    const i=a.findIndex(x=>examName(x)===name);
+    if(i>=0){
+      const old=typeof a[i]==="object"&&a[i]!==null?a[i]:{name};
+      a[i]={...old,name,visible:visible!==false};
+    }else{
+      a.push({name,visible:visible!==false});
+    }
+    writeExams(a);
+    refresh();
+    return true;
+  };
+  window.saveExamMaster=function(){
+    const inp=document.getElementById("examNewName");
+    const name=String(inp&&inp.value||"").trim();
+    if(!name)return alert("परीक्षा का नाम लिखें।");
+    const visible=document.getElementById("examNewVisible")?.value!=="false";
+    const file=document.getElementById("examNewLogo")?.files?.[0];
+    const finish=(logo)=>{
+      const a=readExams();
+      const i=a.findIndex(x=>examName(x)===name);
+      const old=i>=0&&typeof a[i]==="object"&&a[i]!==null?a[i]:{name};
+      const obj={...old,name,visible};
+      if(logo)obj.logo=logo;
+      if(i>=0)a[i]=obj;else a.push(obj);
+      writeExams(a);
+      if(inp)inp.value="";
+      const lf=document.getElementById("examNewLogo");if(lf)lf.value="";
+      refresh();
+      alert(i>=0?"✅ परीक्षा Update हो गई।":"✅ नई परीक्षा Save हो गई। अब आप जितनी चाहें परीक्षाएँ जोड़ सकते हैं।");
+    };
+    if(file){const r=new FileReader();r.onload=()=>finish(r.result);r.readAsDataURL(file);}else finish(null);
+  };
+})();
+</script>
+
 </body></html>
 
 <script id="tgy-admin-final-visible-naming-and-users-refresh">
