@@ -2025,6 +2025,141 @@ document.addEventListener("DOMContentLoaded",()=>{
   else {bind();setTimeout(bind,500)}
 })();
 </script>
+
+<script id="tgy-exam-management-final-fix">
+(function(){
+  "use strict";
+
+  /*
+    ONLY Exam Management is handled here.
+    This code reads/writes ONLY localStorage key: tgy_exams.
+    It never rewrites tgy_tests or question data.
+  */
+
+  function readExams(){
+    try{
+      var v = JSON.parse(localStorage.getItem("tgy_exams") || "[]");
+      return Array.isArray(v) ? v : [];
+    }catch(e){ return []; }
+  }
+
+  function nameOf(x){
+    return String(typeof x === "string" ? x : (x && x.name) || "").trim();
+  }
+
+  function writeExams(arr){
+    localStorage.setItem("tgy_exams", JSON.stringify(arr));
+    try{
+      if(window.tgyCloud && typeof window.tgyCloud.push === "function"){
+        window.tgyCloud.push("tgy_exams");
+      }
+    }catch(e){}
+  }
+
+  function refreshUI(selected){
+    try{ if(typeof renderExamMaster === "function") renderExamMaster(); }catch(e){}
+    try{ if(typeof refreshAllExamDropdowns === "function") refreshAllExamDropdowns(selected || ""); }catch(e){}
+    try{ if(typeof renderAccessPricing === "function") renderAccessPricing(); }catch(e){}
+    try{ if(typeof mtRenderAll === "function") mtRenderAll(); }catch(e){}
+  }
+
+  function saveOnlyExamManagement(){
+    var input = document.getElementById("examNewName");
+    var visibleEl = document.getElementById("examNewVisible");
+    var logoEl = document.getElementById("examNewLogo");
+
+    if(!input) return;
+
+    var name = String(input.value || "").trim();
+    if(!name){
+      alert("परीक्षा का नाम लिखें।");
+      return;
+    }
+
+    var visible = !visibleEl || visibleEl.value !== "false";
+    var file = logoEl && logoEl.files ? logoEl.files[0] : null;
+    var exams = readExams();
+
+    // Duplicate check is case-insensitive, but existing records are preserved.
+    var index = -1;
+    for(var i=0;i<exams.length;i++){
+      if(nameOf(exams[i]).toLowerCase() === name.toLowerCase()){
+        index = i;
+        break;
+      }
+    }
+
+    function finish(logoData){
+      if(index >= 0){
+        var old = (exams[index] && typeof exams[index] === "object")
+          ? exams[index] : {name:name};
+        var updated = Object.assign({}, old, {name:name, visible:visible});
+        if(logoData) updated.logo = logoData;
+        exams[index] = updated;
+        writeExams(exams);
+        input.value = "";
+        if(logoEl) logoEl.value = "";
+        refreshUI(name);
+        alert("✅ परीक्षा Update हो गई।");
+      }else{
+        var obj = {name:name, visible:visible};
+        if(logoData) obj.logo = logoData;
+        exams.push(obj);
+        writeExams(exams);
+        input.value = "";
+        if(logoEl) logoEl.value = "";
+        refreshUI(name);
+        alert("✅ नई परीक्षा Save हो गई। अब यह सभी Exam dropdown में दिखेगी।");
+      }
+    }
+
+    if(file){
+      var reader = new FileReader();
+      reader.onload = function(){ finish(reader.result); };
+      reader.readAsDataURL(file);
+    }else{
+      finish(null);
+    }
+  }
+
+  function bindExamSave(){
+    var section = document.getElementById("examManagement");
+    if(!section) return;
+
+    var button = section.querySelector('button[onclick*="saveExamMaster"]');
+    if(!button) return;
+
+    // Remove the old inline handler so multiple older saveExamMaster definitions
+    // cannot run after this fix.
+    button.removeAttribute("onclick");
+    button.type = "button";
+
+    if(button.__tgyExamSaveBound) return;
+    button.__tgyExamSaveBound = true;
+
+    button.addEventListener("click", function(ev){
+      ev.preventDefault();
+      ev.stopPropagation();
+      try{ ev.stopImmediatePropagation(); }catch(e){}
+      saveOnlyExamManagement();
+    }, true);
+  }
+
+  function boot(){
+    bindExamSave();
+    setTimeout(bindExamSave, 250);
+    setTimeout(bindExamSave, 750);
+    setTimeout(bindExamSave, 1500);
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", boot, {once:true});
+  }else{
+    boot();
+  }
+})();
+</script>
+
 </body></html>
 
 <script id="tgy-admin-final-visible-naming-and-users-refresh">
