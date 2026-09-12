@@ -2030,25 +2030,26 @@ document.addEventListener("DOMContentLoaded",()=>{
 (function(){
   "use strict";
 
-  /*
-    ONLY Exam Management is handled here.
-    This code reads/writes ONLY localStorage key: tgy_exams.
-    It never rewrites tgy_tests or question data.
-  */
-
   function readExams(){
     try{
-      var v = JSON.parse(localStorage.getItem("tgy_exams") || "[]");
+      const v = JSON.parse(localStorage.getItem("tgy_exams") || "[]");
       return Array.isArray(v) ? v : [];
     }catch(e){ return []; }
   }
 
-  function nameOf(x){
+  function writeExams(a){
+    localStorage.setItem("tgy_exams", JSON.stringify(a));
+  }
+
+  function examName(x){
     return String(typeof x === "string" ? x : (x && x.name) || "").trim();
   }
 
-  function writeExams(arr){
-    localStorage.setItem("tgy_exams", JSON.stringify(arr));
+  function refreshExamOnly(name){
+    try{ if(typeof refreshAllExamDropdowns === "function") refreshAllExamDropdowns(name || ""); }catch(e){}
+    try{ if(typeof renderExamMaster === "function") renderExamMaster(); }catch(e){}
+    try{ if(typeof mtRenderAll === "function") mtRenderAll(); }catch(e){}
+    try{ if(typeof renderAccessPricing === "function") renderAccessPricing(); }catch(e){}
     try{
       if(window.tgyCloud && typeof window.tgyCloud.push === "function"){
         window.tgyCloud.push("tgy_exams");
@@ -2056,106 +2057,106 @@ document.addEventListener("DOMContentLoaded",()=>{
     }catch(e){}
   }
 
-  function refreshUI(selected){
-    try{ if(typeof renderExamMaster === "function") renderExamMaster(); }catch(e){}
-    try{ if(typeof refreshAllExamDropdowns === "function") refreshAllExamDropdowns(selected || ""); }catch(e){}
-    try{ if(typeof renderAccessPricing === "function") renderAccessPricing(); }catch(e){}
-    try{ if(typeof mtRenderAll === "function") mtRenderAll(); }catch(e){}
-  }
-
-  function saveOnlyExamManagement(){
-    var input = document.getElementById("examNewName");
-    var visibleEl = document.getElementById("examNewVisible");
-    var logoEl = document.getElementById("examNewLogo");
-
-    if(!input) return;
-
-    var name = String(input.value || "").trim();
+  function saveExam(){
+    const inp = document.getElementById("examNewName");
+    const name = String(inp && inp.value || "").trim();
     if(!name){
       alert("परीक्षा का नाम लिखें।");
-      return;
+      return false;
     }
 
-    var visible = !visibleEl || visibleEl.value !== "false";
-    var file = logoEl && logoEl.files ? logoEl.files[0] : null;
-    var exams = readExams();
+    const visibleEl = document.getElementById("examNewVisible");
+    const visible = !visibleEl || visibleEl.value !== "false";
 
-    // Duplicate check is case-insensitive, but existing records are preserved.
-    var index = -1;
-    for(var i=0;i<exams.length;i++){
-      if(nameOf(exams[i]).toLowerCase() === name.toLowerCase()){
-        index = i;
-        break;
+    const logoEl = document.getElementById("examNewLogo");
+    const file = logoEl && logoEl.files && logoEl.files.length ? logoEl.files[0] : null;
+
+    const exams = readExams();
+    let index = exams.findIndex(x => examName(x).toLowerCase() === name.toLowerCase());
+
+    const old = index >= 0 && typeof exams[index] === "object" && exams[index] !== null
+      ? exams[index]
+      : {name:name};
+
+    const finish = function(logoData){
+      const obj = Object.assign({}, old, {
+        name: name,
+        visible: visible
+      });
+
+      // IMPORTANT: when a logo is selected, save the actual Data URL with the exam.
+      // When no new logo is selected, keep the previously saved logo.
+      if(logoData){
+        obj.logo = logoData;
+      }else if(old.logo){
+        obj.logo = old.logo;
       }
-    }
 
-    function finish(logoData){
-      if(index >= 0){
-        var old = (exams[index] && typeof exams[index] === "object")
-          ? exams[index] : {name:name};
-        var updated = Object.assign({}, old, {name:name, visible:visible});
-        if(logoData) updated.logo = logoData;
-        exams[index] = updated;
-        writeExams(exams);
-        input.value = "";
-        if(logoEl) logoEl.value = "";
-        refreshUI(name);
-        alert("✅ परीक्षा Update हो गई।");
-      }else{
-        var obj = {name:name, visible:visible};
-        if(logoData) obj.logo = logoData;
-        exams.push(obj);
-        writeExams(exams);
-        input.value = "";
-        if(logoEl) logoEl.value = "";
-        refreshUI(name);
-        alert("✅ नई परीक्षा Save हो गई। अब यह सभी Exam dropdown में दिखेगी।");
-      }
-    }
+      if(index >= 0) exams[index] = obj;
+      else exams.push(obj);
+
+      writeExams(exams);
+
+      if(inp) inp.value = "";
+      if(logoEl) logoEl.value = "";
+
+      refreshExamOnly(name);
+
+      alert(index >= 0
+        ? "✅ परीक्षा नाम और Logo Update हो गया।"
+        : "✅ परीक्षा नाम और Logo दोनों Save हो गए।");
+      return true;
+    };
 
     if(file){
-      var reader = new FileReader();
-      reader.onload = function(){ finish(reader.result); };
+      // FileReader is intentionally used here so the logo is stored with
+      // the exam record itself; no other storage key is touched.
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        finish(ev && ev.target ? ev.target.result : null);
+      };
+      reader.onerror = function(){
+        alert("❌ Logo पढ़ा नहीं जा सका। कृपया Logo की image फिर से चुनें।");
+      };
       reader.readAsDataURL(file);
     }else{
       finish(null);
     }
+
+    return false;
   }
 
   function bindExamSave(){
-    var section = document.getElementById("examManagement");
-    if(!section) return;
+    const btn =
+      document.querySelector('#examManagement button[onclick*="saveExamMaster"]') ||
+      document.querySelector('button[onclick="saveExamMaster()"]');
 
-    var button = section.querySelector('button[onclick*="saveExamMaster"]');
-    if(!button) return;
+    if(!btn || btn.__tgyExamLogoFixed) return;
+    btn.__tgyExamLogoFixed = true;
 
-    // Remove the old inline handler so multiple older saveExamMaster definitions
-    // cannot run after this fix.
-    button.removeAttribute("onclick");
-    button.type = "button";
+    // Remove the old inline handler so only this corrected handler runs.
+    btn.removeAttribute("onclick");
+    btn.type = "button";
 
-    if(button.__tgyExamSaveBound) return;
-    button.__tgyExamSaveBound = true;
-
-    button.addEventListener("click", function(ev){
+    btn.addEventListener("click", function(ev){
       ev.preventDefault();
-      ev.stopPropagation();
-      try{ ev.stopImmediatePropagation(); }catch(e){}
-      saveOnlyExamManagement();
+      ev.stopImmediatePropagation();
+      saveExam();
     }, true);
   }
 
-  function boot(){
-    bindExamSave();
-    setTimeout(bindExamSave, 250);
-    setTimeout(bindExamSave, 750);
-    setTimeout(bindExamSave, 1500);
-  }
+  window.saveExamMaster = saveExam;
 
   if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", boot, {once:true});
+    document.addEventListener("DOMContentLoaded", function(){
+      bindExamSave();
+      setTimeout(bindExamSave, 300);
+      setTimeout(bindExamSave, 1000);
+    });
   }else{
-    boot();
+    bindExamSave();
+    setTimeout(bindExamSave, 300);
+    setTimeout(bindExamSave, 1000);
   }
 })();
 </script>
