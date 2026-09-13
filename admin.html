@@ -1027,6 +1027,13 @@ function mtToggleFolder(exam){
  mtRenderAll();
  alert(now?"👁️ Folder Student Site पर Show कर दिया गया है।":"🙈 पूरा Exam Folder Hide कर दिया गया है।");
 }
+function mtToggleFolderTests(id,btn){
+ const rows=document.querySelectorAll('.'+id);
+ if(!rows.length)return;
+ const expand=rows[0].style.display==='none' || rows[0].style.display==='';
+ rows.forEach(r=>r.style.display=expand?'table-row':'none');
+ if(btn)btn.textContent=expand?'➖ कम दिखाएँ':'➕ More Tests';
+}
 function mtRenderAll(){
  const box=document.getElementById("mtAllTests");if(!box)return;
  const d=mtStore(),groups={};
@@ -1040,8 +1047,9 @@ function mtRenderAll(){
    box.innerHTML='<div class="card"><h3>📭 अभी कोई परीक्षा नहीं है।</h3><p>पहले परीक्षा Management में परीक्षा जोड़ें।</p></div>';
    return;
  }
- box.innerHTML=exams.map(e=>{
+ box.innerHTML=exams.map((e,fi)=>{
    const folderVisible=getFolderVisibility(e),tests=groups[e]||[];
+   const extraClass='mt-extra-tests-'+fi;
    return `<div class="card" style="margin:14px 0;border:2px solid #1d65a6">
      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
        <div><h2 style="margin:0">📁 ${mtEsc(e)}</h2><p class="muted" style="margin:4px 0">${tests.length} Test • Folder ${folderVisible?"दिख रहा है":"Hidden है"}</p></div>
@@ -1049,7 +1057,7 @@ function mtRenderAll(){
      </div>
      ${tests.length?`<div style="overflow:auto;margin-top:10px">
      <table><thead><tr><th>Test</th><th>Questions</th><th>Time</th><th>Negative</th><th>Status</th><th>Action</th></tr></thead><tbody>
-     ${tests.map(([t,x])=>`<tr>
+     ${tests.map(([t,x],ti)=>`<tr${ti>=4?` class="${extraClass}" style="display:none"`:''}>
        <td>${mtEsc(x.name||t)}</td><td>${x.questions?.length||0}</td><td>${x.time||60} min</td>
        <td>${x.published===false?"🙈 Hidden":"👁️ Show"}</td>
        <td>
@@ -1060,7 +1068,9 @@ function mtRenderAll(){
         <button class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">🗑️ Delete</button>
        </td>
      </tr>`).join("")}
-     </tbody></table></div>`:
+     </tbody></table>
+     ${tests.length>4?`<div style="text-align:center;margin-top:10px"><button class="btn" onclick="mtToggleFolderTests('${extraClass}',this)">➕ More Tests</button></div>`:''}
+     </div>`:
      `<div class="card" style="margin-top:10px;background:#f7f7f7"><h3>📭 इस Folder में अभी कोई Test नहीं है</h3><p>ऊपर इसी परीक्षा को चुनकर Test का नाम और Questions तैयार करें।</p></div>`}
    </div>`;
  }).join("");
