@@ -3316,3 +3316,26 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
   setInterval(fix,1000);
 })();
 </script>
+
+<script id="tgy-only-answer-details-fix">
+(function(){
+  window.tgyShowAnswerDetails=function(){
+    const s=window.state,c=document.getElementById("modalContent");if(!c||!s||!s.t||!Array.isArray(s.t.questions))return;
+    let html=`<div style="padding:20px;max-height:100vh;overflow:auto"><h2>📋 Question-wise Answer Details</h2>`;
+    s.t.questions.forEach((q,i)=>{
+      const a=s.answers[i];
+      const opts=Array.isArray(q)?q[1]:(Array.isArray(q.o)?q.o:[]);
+      const correct=Array.isArray(q)?q[2]:(q.answer??q.correct);
+      const ai=(a===null||a===undefined||a==='')?null:Number(a);
+      const ci=(correct===null||correct===undefined||correct==='')?null:Number(correct);
+      const ok=ai!==null&&ci!==null&&ai===ci;
+      const answerText=ai===null?'नहीं दिया':(opts[ai]??'');
+      const correctText=ci===null?'':(opts[ci]??'');
+      html+=`<div class="tgy-answer-row"><b>Question ${i+1}</b><p>आपका Answer: ${ai===null?'नहीं दिया':String.fromCharCode(65+ai)+" — "+esc(answerText)}</p><p>सही Answer: ${ci===null?'उपलब्ध नहीं':String.fromCharCode(65+ci)+" — "+esc(correctText)}</p><p style="font-weight:800;color:${ok?'#1f9d55':'#e53935'}">Status: ${ok?'Correct':'Wrong'}</p></div>`;
+    });
+    html+=`<button class="btn orange" onclick="tgyShowExplanations()">📖 सबसे अंत में Explanation / Solution देखें</button>
+      <button class="btn gray" onclick="tgyBackToFolder()">← Test List पर वापस</button></div>`;
+    c.innerHTML=html;
+  };
+})();
+</script>
