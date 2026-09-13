@@ -108,8 +108,8 @@ function checkAdmin(){
   <div class="card">
     <h2>Questions जोड़ें</h2>
     <div class="row">
-      <div><label>📄 PDF से Questions</label><input id="mtPdf" type="file" accept=".pdf,application/pdf" style="width:100%;padding:9px"><button class="btn orange" style="margin-top:7px" onclick="mtPdfPreview()">📄 PDF Preview</button></div>
-      <div><label>📝 Bulk Questions</label><textarea id="mtBulkText" rows="8" placeholder="प्रश्न 1. ...&#10;(A) ...&#10;(B) ...&#10;(C) ...&#10;(D) ...&#10;सही उत्तर: (A)"></textarea><button class="btn" style="margin-top:7px" onclick="mtTextPreview()">📝 Bulk Preview</button></div>
+      <div><label>📝 Bulk Questions</label><textarea id="mtBulkText" rows="8" placeholder="प्रश्न 1. ...&#10;(A) ...&#10;(B) ...&#10;(C) ...&#10;(D) ...&#10;सही उत्तर: (A)&#10;जानकारी: ..."></textarea><button class="btn" style="margin-top:7px" onclick="mtTextPreview()">📝 Bulk Preview</button></div>
+      <div><label>🖼️ Image + Questions Group</label><input id="mtGroupImage" type="file" accept="image/*" style="width:100%;padding:9px"><small class="muted">एक Image चुनें। उसी Image के नीचे जितने चाहें Questions जोड़ें। Image बार-बार नहीं लगानी पड़ेगी।</small><textarea id="mtGroupText" rows="8" style="margin-top:8px" placeholder="प्रश्न 1. ...&#10;(A) ...&#10;(B) ...&#10;(C) ...&#10;(D) ...&#10;सही उत्तर: (A)&#10;जानकारी: ...&#10;&#10;प्रश्न 2. ..."></textarea><div class="bqm-actions" style="margin-top:7px"><button class="btn" onclick="mtImageGroupPreview()">🖼️ Image Group Preview</button><button class="btn orange" onclick="mtImageGroupSave()">➕ Image Group Questions जोड़ें</button></div></div>
     </div>
     <div style="margin-top:12px"><button class="btn" onclick="mtManualAdd()">✏️ Manual Question</button><button class="btn gray" onclick="mtClearPreview()">🗑️ Preview साफ करें</button></div>
     <div id="mtStatus" class="muted" style="margin-top:12px"></div><div id="mtPreview" style="margin-top:12px;max-height:520px;overflow:auto"></div>
@@ -2187,6 +2187,137 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
+<script id="tgy-diagram-bulk-question-fix">
+(function(){
+  "use strict";
+  const escv=function(v){return typeof mtEsc==="function"?mtEsc(v):String(v==null?"":v).replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})};
+  function compressImage(file){return new Promise(function(resolve,reject){
+    if(!file){resolve("");return}
+    const r=new FileReader();
+    r.onerror=function(){reject(new Error("Image पढ़ने में समस्या हुई।"))};
+    r.onload=function(){
+      const img=new Image();
+      img.onload=function(){
+        const max=900,scale=Math.min(1,max/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height));
+        const w=Math.max(1,Math.round((img.naturalWidth||img.width)*scale)),h=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
+        const c=document.createElement("canvas");c.width=w;c.height=h;
+        const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+        resolve(c.toDataURL("image/jpeg",0.82));
+      };
+      img.onerror=function(){reject(new Error("Image format पढ़ा नहीं जा सका।"))};img.src=r.result;
+    };
+    r.readAsDataURL(file);
+  })}
+  function norm(x,i){
+    if(Array.isArray(x))return {q:x[0]||"",o:Array.isArray(x[1])?x[1].slice(0,4):["","","",""],answer:x[2]??"",ex:x[3]||"",number:i+1,image:""};
+    return {q:x&&x.q||"",o:Array.isArray(x&&x.o)?x.o.slice(0,4):["","","",""],answer:x&&x.answer!=null?x.answer:"",ex:x&&(x.ex||x.explanation)||"",number:x&&x.number||i+1,image:x&&(x.image||x.imageData)||""}
+  }
+  window.mtNormQuestion=norm;
+
+  // Keep the existing Bulk Preview behavior, with optional per-question image support retained.
+  window.mtShowPreview=function(qs,source){
+    window.mtPreview=Array.isArray(qs)?qs.map(norm):[];
+    const st=document.getElementById("mtStatus"),box=document.getElementById("mtPreview");
+    if(st)st.innerHTML=window.mtPreview.length?"✅ <b>"+window.mtPreview.length+" Questions मिले — "+escv(source)+"</b>":"❌ कोई Question पहचान में नहीं आया।";
+    if(!box)return;
+    box.innerHTML=window.mtPreview.map(function(x,i){
+      const img=x.image?'<div style="margin:8px 0"><img src="'+escv(x.image)+'" style="display:block;max-width:100%;max-height:280px;object-fit:contain;border:1px solid #ddd;border-radius:6px;background:#fff"></div>':'';
+      return '<div class="card" style="margin:8px 0;padding:12px">'+img+'<b>प्रश्न '+(i+1)+'.</b> '+escv(x.q)+'<br>(A) '+escv(x.o[0])+'<br>(B) '+escv(x.o[1])+'<br>(C) '+escv(x.o[2])+'<br>(D) '+escv(x.o[3])+'<br><b>सही उत्तर:</b> '+escv(x.answer)+(x.ex?'<br><b>जानकारी/Explanation:</b> '+escv(x.ex):'')+'</div>';
+    }).join('');
+  };
+
+  window.mtTextPreview=function(){
+    const raw=document.getElementById("mtBulkText")?.value||"";
+    if(!raw.trim()){alert("पहले पूरा Question Set Paste करें।");return}
+    const qs=typeof mtParse==="function"?mtParse(raw):[];
+    mtShowPreview(qs,"Bulk Text");
+  };
+
+  // New: one image shared by a group of questions.
+  window.mtImageGroupPreview=async function(){
+    const raw=document.getElementById("mtGroupText")?.value||"";
+    if(!raw.trim()){alert("पहले Image Group के Questions लिखें।");return}
+    const qs=typeof mtParse==="function"?mtParse(raw):[];
+    if(!qs.length){alert("कोई Question पहचान में नहीं आया।");return}
+    const f=document.getElementById("mtGroupImage")?.files?.[0];
+    if(!f){alert("पहले एक Image/Diagram चुनें।");return}
+    const st=document.getElementById("mtStatus");if(st)st.textContent="⏳ Image तैयार की जा रही है...";
+    try{
+      const image=await compressImage(f);
+      window.mtImageGroupPreviewData={image:image,questions:qs};
+      const box=document.getElementById("mtPreview");
+      if(st)st.innerHTML="✅ <b>Image Group: "+qs.length+" Questions तैयार हैं</b>";
+      if(box)box.innerHTML='<div class="card" style="margin:8px 0;padding:12px;border:2px solid #1d65a6"><b>🖼️ यह Image इन सभी Questions के साथ रहेगी</b><br><img src="'+escv(image)+'" style="display:block;max-width:100%;max-height:320px;object-fit:contain;margin:10px 0;border:1px solid #ddd;border-radius:6px;background:#fff">'+qs.map(function(x,i){return '<div style="padding:10px 0;border-top:1px solid #eee"><b>प्रश्न '+(i+1)+'.</b> '+escv(x.q)+'<br>(A) '+escv(x.o[0])+'<br>(B) '+escv(x.o[1])+'<br>(C) '+escv(x.o[2])+'<br>(D) '+escv(x.o[3])+'<br><b>सही उत्तर:</b> '+escv(x.answer)+(x.ex?'<br><b>जानकारी/Explanation:</b> '+escv(x.ex):'')+'</div>'}).join('')+'</div>';
+    }catch(e){alert(e.message||"Image upload में समस्या हुई।")}
+  };
+
+  function appendToCurrentTest(additions){
+    const e=document.getElementById("mtExam")?.value;
+    const n=(document.getElementById("mtName")?.value||"").trim()||(document.getElementById("mtType")?.value==="demo"?"Demo Test":"");
+    const time=Number(document.getElementById("mtTime")?.value)||60;
+    const negative=document.getElementById("mtNegative")?.value==="yes";
+    const negativeMarks=negative?Number(document.getElementById("mtNegativeValue")?.value)||0:0;
+    if(!e){alert("पहले परीक्षा चुनें।");return false}
+    if(!n){alert("Test का नाम लिखें।");return false}
+    if(negative&&negativeMarks<=0){alert("Negative Marks की value डालें।");return false}
+    let flat=[];try{flat=JSON.parse(localStorage.getItem("tgy_tests")||"[]")}catch(err){flat=[]}
+    if(!Array.isArray(flat))flat=[];
+    const idx=flat.findIndex(function(t){return String(t?.exam||"")===String(e)&&String(t?.name||"")===String(n)});
+    const old=idx>=0&&flat[idx]&&typeof flat[idx]==="object"?flat[idx]:{name:n,exam:e,questions:[],published:true,visible:true};
+    const existing=Array.isArray(old.questions)?old.questions.slice():[];
+    const base=existing.length;
+    const add=additions.map(function(x,i){const z={...x,number:base+i+1};return z});
+    const updated={...old,name:n,exam:e,time:time,demo:document.getElementById("mtType")?.value==="demo",negativeMarking:negative,negativeMarks:negativeMarks,questions:existing.concat(add),published:old.published!==false,visible:old.visible!==false};
+    const next=flat.slice();if(idx>=0)next[idx]=updated;else next.push(updated);
+    try{localStorage.setItem("tgy_tests",JSON.stringify(next))}catch(err){alert("❌ Test Save नहीं हुआ। Storage में जगह कम है। पुराने डेटा को छुआ नहीं गया।\n\nImage का size कम करके फिर कोशिश करें।");return false}
+    if(typeof mtRenderAll==="function")mtRenderAll();
+    // Important: do NOT render the saved questions back into the entry area.
+    // Existing Folder/Preview/Edit/Delete system remains available when the Test is selected/opened there.
+    const qbox=document.getElementById("mtQuestions"),qcount=document.getElementById("mtQuestionCount");
+    if(qbox)qbox.innerHTML="";if(qcount)qcount.innerHTML="";
+    return true;
+  }
+
+  window.mtFinalSave=function(){
+    const pending=Array.isArray(window.mtPreview)?window.mtPreview.map(function(x){const z={q:x.q,o:x.o,answer:x.answer,ex:x.ex};if(x.image)z.image=x.image;return z}):[];
+    if(!pending.length){alert("पहले Questions का Preview बनाएं।");return}
+    if(appendToCurrentTest(pending)){
+      window.mtPreview=[];
+      const tx=document.getElementById("mtBulkText");if(tx)tx.value="";
+      const box=document.getElementById("mtPreview");if(box)box.innerHTML="";
+      const st=document.getElementById("mtStatus");if(st)st.innerHTML="✅ <b>"+pending.length+" Questions Save हो गए।</b>";
+    }
+  };
+
+  window.mtImageGroupSave=function(){
+    const data=window.mtImageGroupPreviewData;
+    if(!data||!data.image||!Array.isArray(data.questions)||!data.questions.length){alert("पहले Image Group Preview बनाएं।");return}
+    const additions=data.questions.map(function(x){return {q:x.q,o:x.o,answer:x.answer,ex:x.ex,image:data.image}});
+    if(appendToCurrentTest(additions)){
+      window.mtImageGroupPreviewData=null;
+      const im=document.getElementById("mtGroupImage"),tx=document.getElementById("mtGroupText");if(im)im.value="";if(tx)tx.value="";
+      const box=document.getElementById("mtPreview");if(box)box.innerHTML="";
+      const st=document.getElementById("mtStatus");if(st)st.innerHTML="✅ <b>"+additions.length+" Image Group Questions Save हो गए।</b>";
+    }
+  };
+
+  // Preserve the existing saved-question renderer for folder/test management.
+  window.mtRenderQuestions=function(){
+    const e=document.getElementById("mtExam")?.value,t=(document.getElementById("mtName")?.value||"").trim(),box=document.getElementById("mtQuestions"),count=document.getElementById("mtQuestionCount");if(!box)return;
+    const raw=typeof mtStore==="function"?(mtStore().exams?.[e]?.tests?.[t]?.questions||[]):[],qs=raw.map(norm);if(count)count.innerHTML="कुल Questions: <b>"+qs.length+"</b>";
+    box.innerHTML=qs.length?qs.map(function(x,i){return '<div class="qrow" style="margin:8px 0;padding:10px;border:1px solid #ddd;border-radius:6px">'+(x.image?'<div style="margin-bottom:8px"><img src="'+escv(x.image)+'" style="display:block;max-width:100%;max-height:240px;object-fit:contain;border:1px solid #ddd;border-radius:6px"></div>':'')+'<b>प्रश्न '+(i+1)+'.</b> '+escv(x.q)+'<div>(A) '+escv(x.o[0])+'<br>(B) '+escv(x.o[1])+'<br>(C) '+escv(x.o[2])+'<br>(D) '+escv(x.o[3])+'</div><button class="btn" onclick="mtEditQuestion('+i+')">✏️ Edit</button> <button class="btn danger" onclick="mtDeleteQuestion('+i+')">🗑️ Delete</button></div>'}).join(''):"<p>अभी कोई Question Save नहीं है।</p>";
+  };
+  window.mtEditQuestion=function(i){
+    const e=document.getElementById("mtExam").value,t=(document.getElementById("mtName").value||"").trim(),d=mtStore(),qs=d.exams?.[e]?.tests?.[t]?.questions||[];if(!qs[i])return;
+    const x=norm(qs[i],i),q=prompt("Question:",x.q);if(q===null)return;
+    const o=[prompt("Option A:",x.o[0]),prompt("Option B:",x.o[1]),prompt("Option C:",x.o[2]),prompt("Option D:",x.o[3])];if(o.some(function(v){return v===null}))return;
+    const ans=(prompt("सही उत्तर A/B/C/D:",x.answer)||x.answer).toUpperCase(),ex=prompt("जानकारी / Explanation:",x.ex||"")??x.ex;
+    const obj={q:q.trim(),o:o.map(function(v){return String(v).trim()}),answer:ans,ex:ex,number:i+1};if(x.image)obj.image=x.image;
+    qs[i]=obj;d.exams[e].tests[t].questions=qs;mtSaveStore(d);mtRenderQuestions();mtRenderAll();
+  };
+  window.mtClearPreview=function(){window.mtPreview=[];window.mtImageGroupPreviewData=null;const b=document.getElementById("mtPreview"),s=document.getElementById("mtStatus"),im=document.getElementById("mtGroupImage"),tx=document.getElementById("mtGroupText"),bt=document.getElementById("mtBulkText");if(b)b.innerHTML="";if(s)s.textContent="";if(im)im.value="";if(tx)tx.value="";if(bt)bt.value=""};
+})();
+</script>
 </body></html>
 
 <script id="tgy-admin-final-visible-naming-and-users-refresh">
