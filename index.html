@@ -2483,126 +2483,37 @@ html,body{max-width:100%;overflow-x:hidden}
   });
 })();
 </script>\n
-<!-- TGY FINAL: preserve 5 options + answers + explanations in submitted-result view -->
-<script id="tgy-final-answer-explanation-fix">
+
+<script id="tgy-only-answer-display-fix">
+/* ONLY FIX: after Test Submit, make the saved user's answer and correct answer visible. */
 (function(){
-  "use strict";
-  const E=window.esc||function(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))};
-  function answerIndex(v){
-    if(typeof v==='number' && Number.isFinite(v)) return v;
-    const s=String(v??'').trim().toUpperCase().replace(/[().]/g,'');
-    const m=s.match(/^(A|B|C|D|E)$/); if(m)return "ABCDE".indexOf(m[1]);
-    const n=Number(s); return Number.isFinite(n)?n:-1;
+  function idx(v){
+    if(v===null || v===undefined || v==='') return null;
+    if(typeof v==='number') return v;
+    const s=String(v).trim().toUpperCase();
+    if(/^[A-E]$/.test(s)) return s.charCodeAt(0)-65;
+    const n=Number(s);
+    return Number.isFinite(n)?n:null;
   }
-  function normQ(q){
-    if(Array.isArray(q)){
-      const o=Array.isArray(q[1])?q[1].slice(0,5):['','','','',''];
-      while(o.length<5)o.push('');
-      return {q:String(q[0]??''),o,answer:answerIndex(q[2]),ex:String(q[3]??''),type:'normal',image:'',passage:'',intro:'',statements:[],conclusions:[]};
-    }
-    const o=Array.isArray(q?.o)?q.o.slice(0,5):[q?.a??'',q?.b??'',q?.c??'',q?.d??'',q?.e??''];
-    while(o.length<5)o.push('');
-    return {
-      q:String(q?.q??q?.question??''),o,answer:answerIndex(q?.answer??q?.correct),
-      ex:String(q?.ex??q?.explanation??q?.info??''),type:String(q?.type??'normal'),
-      image:String(q?.image??q?.imageData??''),passage:String(q?.passage??''),intro:String(q?.intro??''),
-      statements:Array.isArray(q?.statements)?q.statements.map(String):[],
-      conclusions:Array.isArray(q?.conclusions)?q.conclusions.map(String):[]
-    };
-  }
-  function normTest(t){return {...t,questions:Array.isArray(t?.questions)?t.questions.map(normQ):[]}}
-  function allTests(){try{const a=JSON.parse(localStorage.getItem('tgy_tests')||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
-  function renderQuestion(s){
-    const q=s.t.questions[s.idx],b=document.getElementById('tgyExamQuestion'); if(!q||!b)return;
-    let h='<h3>प्रश्न '+(s.idx+1)+' / '+s.t.questions.length+'</h3>';
-    if(q.image)h+='<div style="text-align:center;margin:10px 0"><img src="'+E(q.image)+'" alt="Question Image" style="max-width:100%;max-height:360px;object-fit:contain;border:1px solid #ddd;border-radius:8px"></div>';
-    if(q.passage)h+='<div style="padding:12px;margin:8px 0 14px;background:#f7fbff;border-left:4px solid #1d65a6;border-radius:7px;white-space:pre-wrap"><b>📖 निर्देश / Passage</b><div style="margin-top:7px">'+E(q.passage)+'</div></div>';
-    if(q.type==='statement-conclusion'){
-      h+='<div style="font-size:20px;font-weight:800;margin:15px 0">'+E(q.intro||q.q).replace(/\n/g,'<br>')+'</div>';
-      if(q.statements.length)h+='<div style="margin:10px 0"><b>कथन:</b>'+q.statements.map((x,i)=>'<div style="margin:5px 0;white-space:pre-wrap">'+E(x)+'</div>').join('')+'</div>';
-      if(q.conclusions.length)h+='<div style="margin:10px 0"><b>निष्कर्ष:</b>'+q.conclusions.map((x,i)=>'<div style="margin:5px 0;white-space:pre-wrap">'+E(x)+'</div>').join('')+'</div>';
-    }else h+='<div style="font-size:20px;font-weight:800;margin:15px 0">'+E(q.q).replace(/\n/g,'<br>')+'</div>';
-    h+='<div class="tgy-exam-options">'+q.o.map((o,j)=>o!==''?'<label><input type="radio" name="tgyAns" value="'+j+'" '+(s.answers[s.idx]===j?'checked':'')+' onchange="state.answers[state.idx]=+this.value;tgyRenderPalette()"> '+String.fromCharCode(65+j)+'. '+E(o)+'</label>':'').join('')+'</div>';
-    b.innerHTML=h;
-    const p=document.getElementById('tgyPrevBtn'),n=document.getElementById('tgyNextBtn');if(p)p.style.visibility=s.idx?'visible':'hidden';if(n)n.textContent=s.idx===s.t.questions.length-1?'Submit Test':'Next →';
-    if(typeof window.tgyRenderPalette==='function')window.tgyRenderPalette();
-  }
-  function resultDetailHtml(s){
-    return s.t.questions.map((q,i)=>{
-      const a=s.answers[i],correct=q.answer,ok=a!==null&&a===correct;
-      let h='<div class="tgy-answer-row"><h3 style="margin:0 0 8px">प्रश्न '+(i+1)+'</h3>';
-      if(q.image)h+='<div style="text-align:center;margin:8px 0"><img src="'+E(q.image)+'" alt="Question Image" style="max-width:100%;max-height:300px;object-fit:contain;border:1px solid #ddd;border-radius:8px"></div>';
-      if(q.passage)h+='<div style="padding:10px;margin:8px 0;background:#f7fbff;border-left:4px solid #1d65a6;border-radius:7px;white-space:pre-wrap"><b>📖 निर्देश / Passage</b><div style="margin-top:5px">'+E(q.passage)+'</div></div>';
-      if(q.type==='statement-conclusion'){
-        h+='<div><b>प्रश्न:</b> '+E(q.intro||q.q).replace(/\n/g,'<br>')+'</div>';
-        if(q.statements.length)h+='<div style="margin-top:7px"><b>कथन:</b>'+q.statements.map(x=>'<div style="margin:4px 0;white-space:pre-wrap">'+E(x)+'</div>').join('')+'</div>';
-        if(q.conclusions.length)h+='<div style="margin-top:7px"><b>निष्कर्ष:</b>'+q.conclusions.map(x=>'<div style="margin:4px 0;white-space:pre-wrap">'+E(x)+'</div>').join('')+'</div>';
-      }else h+='<div><b>प्रश्न:</b> '+E(q.q).replace(/\n/g,'<br>')+'</div>';
-      h+='<div style="margin-top:8px">'+q.o.map((o,j)=>o!==''?'<div style="padding:3px 0">('+String.fromCharCode(65+j)+') '+E(o)+'</div>':'').join('')+'</div>';
-      h+='<p><b>आपका उत्तर:</b> '+(a===null?'नहीं दिया':(String.fromCharCode(65+a)+' — '+E(q.o[a]??'')))+' '+(ok?'✅':'❌')+'</p>';
-      h+='<p><b>सही उत्तर:</b> '+(correct>=0&&correct<5?String.fromCharCode(65+correct)+' — '+E(q.o[correct]??''):E(q.answer||''))+'</p>';
-      h+='<p style="font-weight:800;color:'+(ok?'#1f9d55':'#e53935')+'">Status: '+(ok?'Correct':'Wrong')+'</p>';
-      if(q.ex)h+='<div class="tgy-explanation"><b>📖 जानकारी / Explanation:</b><div style="margin-top:6px;white-space:pre-wrap">'+E(q.ex)+'</div></div>';
-      else h+='<div class="tgy-explanation"><b>📖 जानकारी / Explanation:</b><div style="margin-top:6px">जानकारी उपलब्ध नहीं है।</div></div>';
-      return h+'</div>';
-    }).join('');
-  }
-  window.startFinalMockTest=function(i){
-    const raw=allTests()[Number(i)];if(!raw)return;
-    if(typeof window.requireStudentLogin==='function'&&!window.requireStudentLogin({type:'test',index:Number(i),exam:raw.exam}))return;
-    if(raw.demo!==true && typeof window.hasPurchasedTest==='function' && !window.hasPurchasedTest(raw)){
-      try{const p=typeof window.getSeriesPricing==='function'?window.getSeriesPricing(raw.exam||''):[];if(p.length)return window.buySeriesAccess(raw.exam,0)}catch(e){}
-      alert('इस Test के लिए Access उपलब्ध नहीं है।');return;
-    }
-    const t=normTest(raw),qs=t.questions;if(!qs.length){alert('इस Test में अभी कोई Question नहीं है।');return}
-    window.activeTestExam=t.exam||'';window.openedTestFromSeries=true;
-    window.state={t,idx:0,answers:Array(qs.length).fill(null),review:Array(qs.length).fill(false),startedAt:Date.now()};
-    const modal=document.getElementById('modal'),content=document.getElementById('modalContent');if(!modal||!content){alert('Test screen उपलब्ध नहीं है।');return}
-    const em=document.getElementById('examModal');if(em)em.style.display='none';
-    modal.style.display='flex';modal.style.padding='0';content.style.cssText='padding:0;max-width:none;width:100%;height:100vh;border-radius:0;background:#f4f7fb';
-    content.innerHTML='<div class="tgy-exam-shell"><div class="tgy-exam-top"><h2>📝 '+E(t.name||'Test')+'</h2><div><span id="tgyExamTimer">⏱️ '+Number(t.time||60)+':00</span></div></div><div class="tgy-exam-main"><div class="tgy-exam-question"><div id="tgyExamQuestion"></div></div><aside class="tgy-palette"><h3 style="margin-top:0">Question Palette</h3><p style="font-size:13px">🔴 Not Attempted &nbsp; 🟢 Attempted &nbsp; 🟡 Review</p><div id="tgyPalette" class="tgy-palette-grid"></div></aside></div><div class="tgy-exam-bottom"><div><button class="btn gray" id="tgyPrevBtn" onclick="tgyPrevQ()">← Previous</button> <button class="btn" onclick="tgyMarkReview()">🟡 Mark for Review</button></div><div><button class="btn gray" onclick="tgyExitExam()">✕ Exit</button> <button class="btn orange" id="tgyNextBtn" onclick="tgyNextQ()">Next →</button></div></div></div>';
-    window.tgyRenderExamQ=function(){renderQuestion(window.state)};
-    window.tgyRenderPalette=function(){const b=document.getElementById('tgyPalette'),s=window.state;if(!b||!s)return;b.innerHTML=s.t.questions.map((q,j)=>'<button class="tgy-palette-btn '+(j===s.idx?'current':s.review[j]?'review':s.answers[j]!==null?'attempted':'notattempted')+'" onclick="tgyGoQ('+j+')">'+(j+1)+'</button>').join('')};
-    window.tgyGoQ=function(j){if(window.state){window.state.idx=Number(j);renderQuestion(window.state)}};
-    window.tgyPrevQ=function(){if(window.state&&window.state.idx>0){window.state.idx--;renderQuestion(window.state)}};
-    window.tgyNextQ=function(){const s=window.state;if(!s)return;if(s.answers[s.idx]===null){alert('पहले कोई विकल्प चुनें।');return}if(s.idx===s.t.questions.length-1)window.tgySubmitExam(false);else{s.idx++;renderQuestion(s)}};
-    window.tgyMarkReview=function(){const s=window.state;if(!s)return;s.review[s.idx]=!s.review[s.idx];if(s.idx<s.t.questions.length-1){s.idx++;renderQuestion(s)}else window.tgyRenderPalette()};
-    window.tgyShowAnswerDetails=function(){
-      const s=window.state,c=document.getElementById('modalContent');if(!c||!s)return;
-      let html='<div style="padding:20px;max-height:100vh;overflow:auto;background:#f4f7fb"><h2>📋 Question-wise Answer Details</h2><p class="muted">यहाँ पहले सभी प्रश्नों के आपके उत्तर और सही उत्तर देखें। Explanation/जानकारी सबसे अंत में अलग से दिखाई जाएगी।</p>';
-      s.t.questions.forEach((q,i)=>{
-        const a=s.answers[i],correct=Number(q.answer),ok=a!==null&&Number(a)===correct;
-        html+='<div class="tgy-answer-row"><h3 style="margin:0 0 8px">प्रश्न '+(i+1)+'</h3>';
-        if(q.image)html+='<div style="text-align:center;margin:8px 0"><img src="'+E(q.image)+'" alt="Question Image" style="max-width:100%;max-height:300px;object-fit:contain;border:1px solid #ddd;border-radius:8px"></div>';
-        if(q.passage)html+='<div style="padding:10px;margin:8px 0;background:#f7fbff;border-left:4px solid #1d65a6;border-radius:7px;white-space:pre-wrap"><b>📖 निर्देश / Passage</b><div style="margin-top:5px">'+E(q.passage)+'</div></div>';
-        if(q.type==='statement-conclusion'){
-          html+='<div><b>प्रश्न:</b> '+E(q.intro||q.q).replace(/\n/g,'<br>')+'</div>';
-          if(Array.isArray(q.statements)&&q.statements.length)html+='<div style="margin-top:7px"><b>कथन:</b>'+q.statements.map(x=>'<div style="margin:4px 0;white-space:pre-wrap">'+E(x)+'</div>').join('')+'</div>';
-          if(Array.isArray(q.conclusions)&&q.conclusions.length)html+='<div style="margin-top:7px"><b>निष्कर्ष:</b>'+q.conclusions.map(x=>'<div style="margin:4px 0;white-space:pre-wrap">'+E(x)+'</div>').join('')+'</div>';
-        }else html+='<div><b>प्रश्न:</b> '+E(q.q).replace(/\n/g,'<br>')+'</div>';
-        html+='<div style="margin-top:8px">'+(Array.isArray(q.o)?q.o.map((o,j)=>o!==''?'<div style="padding:3px 0">('+String.fromCharCode(65+j)+') '+E(o)+'</div>':'').join(''):'')+'</div>';
-        html+='<p><b>आपका उत्तर:</b> '+(a===null?'नहीं दिया':(String.fromCharCode(65+a)+' — '+E(q.o?.[a]??'')))+' '+(ok?'✅':'❌')+'</p>';
-        html+='<p><b>सही उत्तर:</b> '+(correct>=0&&correct<5?String.fromCharCode(65+correct)+' — '+E(q.o?.[correct]??''):E(q.answer||''))+'</p>';
-        html+='<p style="font-weight:800;color:'+(ok?'#1f9d55':'#e53935')+'">Status: '+(ok?'Correct':'Wrong')+'</p></div>';
-      });
-      html+='<button class="btn orange" onclick="tgyShowExplanations()">📖 सबसे अंत में Explanation / जानकारी देखें</button> <button class="btn gray" onclick="tgyBackToFolder()">← Test List पर वापस</button></div>';
-      c.innerHTML=html;
-    };
-    window.tgyShowExplanations=function(){const s=window.state,c=document.getElementById('modalContent');if(!c||!s)return;c.innerHTML='<div style="padding:20px;max-height:100vh;overflow:auto;background:#f4f7fb"><h2>📖 Explanation / जानकारी — सभी प्रश्न</h2>'+s.t.questions.map((q,i)=>'<div class="tgy-answer-row"><h3>Question '+(i+1)+'</h3><div class="tgy-explanation" style="white-space:pre-wrap">'+E(q.ex||'जानकारी उपलब्ध नहीं है।')+'</div></div>').join('')+'<button class="btn gray" onclick="tgyShowAnswerDetails()">← Answer Details पर वापस</button> <button class="btn gray" onclick="tgyBackToFolder()">← Test List पर वापस</button></div>'};
-    window.tgySubmitExam=function(auto){
-      const s=window.state;if(!s)return;clearInterval(window.timer);
-      const total=s.t.questions.length,attempted=s.answers.filter(x=>x!==null).length;let correct=0;
-      s.t.questions.forEach((q,j)=>{if(s.answers[j]!==null&&Number(s.answers[j])===Number(q.answer))correct++});
-      const wrong=attempted-correct,skipped=total-attempted,neg=s.t.negativeMarking?Number(s.t.negativeMarks||0):0,negativeMarks=wrong*neg,score=correct-negativeMarks,percent=total?((score/total)*100).toFixed(2):'0.00',timeTaken=Math.max(0,Math.round((Date.now()-(s.startedAt||Date.now()))/1000));
-      try{localStorage.setItem('tgy_done_'+encodeURIComponent((s.t.exam||'')+'||'+(s.t.name||'')),'1')}catch(e){}
-      let rs=[];try{rs=JSON.parse(localStorage.getItem('tgy_results')||'[]')}catch(e){}rs.unshift({test:s.t.name,exam:s.t.exam,total,attempted,wrong,correct,skipped,score,negativeMarks,percent,timeTaken,date:new Date().toLocaleString()});localStorage.setItem('tgy_results',JSON.stringify(rs));
-      const c=document.getElementById('modalContent');if(!c)return;
-      const min=Math.floor(timeTaken/60),sec=timeTaken%60;
-      c.innerHTML='<div style="padding:20px;max-height:100vh;overflow:auto;background:#f4f7fb"><h2>🏆 Test Result</h2><div class="tgy-summary-grid"><div class="tgy-summary-box"><b>🟢 सही</b><br><span style="font-size:26px">'+correct+'</span></div><div class="tgy-summary-box"><b>🔴 गलत</b><br><span style="font-size:26px">'+wrong+'</span></div><div class="tgy-summary-box"><b>⚪ Attempted</b><br><span style="font-size:26px">'+attempted+'</span></div><div class="tgy-summary-box"><b>⚪ Not Attempted</b><br><span style="font-size:26px">'+skipped+'</span></div><div class="tgy-summary-box"><b>📊 Marks</b><br><span style="font-size:26px">'+Number(score).toFixed(2)+'</span></div><div class="tgy-summary-box"><b>❌ Negative</b><br><span style="font-size:26px">'+Number(negativeMarks).toFixed(2)+'</span></div></div><div class="card"><p><b>Total Questions:</b> '+total+'</p><p><b>Final Score:</b> '+Number(score).toFixed(2)+' / '+total+'</p><p><b>Percentage:</b> '+percent+'%</p><p><b>Time Taken:</b> '+min+'m '+sec+'s</p></div><div style="margin-top:18px;text-align:center"><button class="btn orange" onclick="tgyShowAnswerDetails()">📋 View Answers / उत्तर देखें</button></div><button class="btn gray" onclick="tgyBackToFolder()">← Test List पर वापस</button></div>';
-    };
-    window.tgyExitExam=function(){if(!confirm('क्या आप Test से बाहर निकलना चाहते हैं? आपका वर्तमान प्रयास Submit नहीं होगा।'))return;clearInterval(window.timer);modal.style.display='none';content.style.cssText='';if(typeof window.tgyShowSeriesSafe==='function')window.tgyShowSeriesSafe(t.exam||'')};
-    renderQuestion(window.state);
-    let sec=Math.max(1,Number(t.time||60)*60);clearInterval(window.timer);window.timer=setInterval(()=>{sec--;const el=document.getElementById('tgyExamTimer');if(el)el.textContent='⏱️ '+Math.max(0,Math.floor(sec/60))+':'+String(Math.max(0,sec%60)).padStart(2,'0');if(sec<=0)window.tgySubmitExam(true)},1000);
+  window.tgyShowAnswerDetails=function(){
+    const s=window.state, c=document.getElementById('modalContent');
+    if(!c || !s || !s.t || !Array.isArray(s.t.questions)) return;
+    let html='<div style="padding:20px;max-height:100vh;overflow:auto"><h2>📋 Question-wise Answer Details</h2>';
+    s.t.questions.forEach(function(q,i){
+      const opts=Array.isArray(q)?(Array.isArray(q[1])?q[1]:[]):(Array.isArray(q?.o)?q.o:[q?.a,q?.b,q?.c,q?.d]);
+      const userIdx=idx(s.answers?.[i]);
+      const correctIdx=idx(Array.isArray(q)?q[2]:(q?.answer??q?.correct));
+      const ok=userIdx!==null && correctIdx!==null && userIdx===correctIdx;
+      const userText=userIdx!==null && opts[userIdx]!==undefined ? String.fromCharCode(65+userIdx)+' — '+(window.esc?esc(opts[userIdx]):String(opts[userIdx])) : 'नहीं दिया';
+      const correctText=correctIdx!==null && opts[correctIdx]!==undefined ? String.fromCharCode(65+correctIdx)+' — '+(window.esc?esc(opts[correctIdx]):String(opts[correctIdx])) : 'उपलब्ध नहीं';
+      html+='<div class="tgy-answer-row"><b>Question '+(i+1)+'</b>'+
+        '<p>आपका Answer: '+userText+'</p>'+
+        '<p>सही Answer: '+correctText+'</p>'+
+        '<p style="font-weight:800;color:'+(ok?'#1f9d55':'#e53935')+'">Status: '+(ok?'Correct':'Wrong')+'</p></div>';
+    });
+    html+='<button class="btn orange" onclick="tgyShowExplanations()">📖 सबसे अंत में Explanation / Solution देखें</button>'+
+      '<button class="btn gray" onclick="tgyBackToFolder()">← Test List पर वापस</button></div>';
+    c.innerHTML=html;
   };
 })();
 </script>
