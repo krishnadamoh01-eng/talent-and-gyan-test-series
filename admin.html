@@ -2360,6 +2360,10 @@ document.addEventListener("DOMContentLoaded",()=>{
     return true;
   }
 
+  // Expose the existing save helper so the later question-type override can call it.
+  // This does not change storage behavior; it only fixes the scope issue that caused the "Save system उपलब्ध नहीं है" alert.
+  window.appendToCurrentTest=appendToCurrentTest;
+
   window.mtFinalSave=function(){
     const pending=Array.isArray(window.mtPreview)?window.mtPreview.map(function(x){const z={q:x.q,o:x.o,answer:x.answer,ex:x.ex};if(x.image)z.image=x.image;return z}):[];
     if(!pending.length){alert("पहले Questions का Preview बनाएं।");return}
@@ -2412,6 +2416,37 @@ document.addEventListener("DOMContentLoaded",()=>{
     }).join('');
   };
   window.mtClearPreview=function(){window.mtPreview=[];window.mtImageGroupPreviewData=null;const b=document.getElementById("mtPreview"),s=document.getElementById("mtStatus"),im=document.getElementById("mtGroupImage"),tx=document.getElementById("mtGroupText"),bt=document.getElementById("mtBulkText");if(b)b.innerHTML="";if(s)s.textContent="";if(im)im.value="";if(tx)tx.value="";if(bt)bt.value=""};
+})();
+</script>
+<script id="tgy-admin-info-edit-fix">
+(function(){
+  function esc2(v){return typeof esc==='function'?esc(String(v??'')):String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function getCtx(){const e=document.getElementById('mtExam')?.value,t=(document.getElementById('mtName')?.value||'').trim(),d=typeof mtStore==='function'?mtStore():{exams:{}};return {e,t,d,qs:d.exams?.[e]?.tests?.[t]?.questions||[]};}
+  window.mtRenderQuestions=function(){
+    const c=getCtx(),box=document.getElementById('mtQuestions'),count=document.getElementById('mtQuestionCount');if(!box)return;
+    const qs=c.qs||[];if(count)count.innerHTML='कुल Questions: <b>'+qs.length+'</b>';
+    let lastPassage='';
+    box.innerHTML=qs.length?qs.map(function(x,i){x=x||{};const o=Array.isArray(x.o)?x.o:[],ex=String(x.ex??x.explanation??x.info??'');let h='<div class="qrow" style="margin:8px 0;padding:12px;border:1px solid #ddd;border-radius:7px">';
+      if(x.image)h+='<div style="margin-bottom:8px"><img src="'+esc2(x.image)+'" style="display:block;max-width:100%;max-height:240px;object-fit:contain;border:1px solid #ddd;border-radius:6px"></div>';
+      if(x.passage&&x.passage!==lastPassage){h+='<div style="margin-bottom:8px;padding:8px;background:#f7fbff;border-left:4px solid #1d65a6"><b>📖 Passage / निर्देश</b><div style="white-space:pre-wrap;margin-top:5px">'+esc2(x.passage)+'</div></div>';lastPassage=x.passage;}
+      if(x.type==='statement-conclusion')h+='<div><b>प्रश्न:</b> '+esc2(x.intro||x.q).replace(/\n/g,'<br>')+'</div><div style="margin-top:7px"><b>कथन:</b><br>'+((x.statements||[]).map(esc2).join('<br>'))+'<br><b>निष्कर्ष:</b><br>'+((x.conclusions||[]).map(esc2).join('<br>'))+'</div>';else h+='<div><b>प्रश्न '+(i+1)+'.</b> '+esc2(x.q).replace(/\n/g,'<br>')+'</div>';
+      h+='<div style="margin-top:6px">'+o.map(function(v,j){return v!==undefined&&v!==null&&String(v)!==''?'<div>('+String.fromCharCode(65+j)+') '+esc2(v)+'</div>':''}).join('')+'</div><div><b>सही उत्तर:</b> '+esc2(x.answer||'')+'</div>';
+      if(ex)h+='<div style="margin-top:6px;padding:8px;background:#fff8e8;border-left:4px solid #e09b00"><b>📚 जानकारी / Explanation:</b><div style="white-space:pre-wrap;margin-top:4px">'+esc2(ex)+'</div></div>';else h+='<div style="margin-top:6px;color:#888"><b>📚 जानकारी / Explanation:</b> अभी जानकारी नहीं दी गई है।</div>';
+      h+='<div style="margin-top:8px"><button class="btn" onclick="mtEditQuestion('+i+')">✏️ Edit Question / जानकारी</button> <button class="btn danger" onclick="mtDeleteQuestion('+i+')">🗑️ Delete</button></div></div>';return h;}).join(''):'<p>अभी कोई Question Save नहीं है।</p>';
+  };
+  window.mtEditQuestion=function(i){
+    const c=getCtx(),x=c.qs[i];if(!x)return;
+    const o=Array.isArray(x.o)?x.o.slice(0,5):['','','','',''];while(o.length<5)o.push('');
+    let m=document.getElementById('tgyInfoEditModal');if(!m){m=document.createElement('div');m.id='tgyInfoEditModal';m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';m.innerHTML='<div style="background:#fff;width:min(760px,96vw);max-height:92vh;overflow:auto;border-radius:12px;padding:18px;box-shadow:0 10px 35px rgba(0,0,0,.25)"><h2 style="margin-top:0">✏️ Question / जानकारी Edit करें</h2><div id="tgyInfoEditBody"></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn" id="tgyInfoCancel">Cancel</button><button class="btn" id="tgyInfoSave">💾 Save Changes</button></div></div>';document.body.appendChild(m);}
+    const body=document.getElementById('tgyInfoEditBody');const field=(id,label,val,area)=>'<label style="display:block;font-weight:700;margin:9px 0 4px">'+label+'</label>'+(area?'<textarea id="'+id+'" style="width:100%;min-height:80px;padding:8px">'+esc2(val)+'</textarea>':'<input id="'+id+'" value="'+esc2(val)+'" style="width:100%;padding:8px">');
+    body.innerHTML=field('tgyEqQ','Question / प्रश्न',x.q||'',true)+field('tgyEqA','Option A',o[0],false)+field('tgyEqB','Option B',o[1],false)+field('tgyEqC','Option C',o[2],false)+field('tgyEqD','Option D',o[3],false)+field('tgyEqE','Option E',o[4],false)+field('tgyEqAns','सही उत्तर A/B/C/D/E',x.answer||'',false)+field('tgyEqEx','📚 जानकारी / Explanation',x.ex??x.explanation??x.info??'',true);
+    m.style.display='flex';document.getElementById('tgyInfoCancel').onclick=function(){m.style.display='none'};document.getElementById('tgyInfoSave').onclick=function(){
+      const v=id=>document.getElementById(id)?.value??'';const no=[v('tgyEqA'),v('tgyEqB'),v('tgyEqC'),v('tgyEqD'),v('tgyEqE')];while(no.length&&no[no.length-1]==='')no.pop();
+      const obj={...x,q:v('tgyEqQ').trim(),o:no,answer:v('tgyEqAns').trim().toUpperCase(),ex:v('tgyEqEx'),number:x.number||i+1};c.qs[i]=obj;c.d.exams[c.e].tests[c.t].questions=c.qs;
+      try{mtSaveStore(c.d)}catch(err){alert('Save में समस्या: '+(err.message||err));return}m.style.display='none';window.mtRenderQuestions();try{mtRenderAll()}catch(e){};
+    };
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(window.mtRenderQuestions,50)});else setTimeout(window.mtRenderQuestions,50);
 })();
 </script>
 </body></html>
@@ -2948,5 +2983,36 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(window.tgyAdm
     const e=document.getElementById("mtExam").value,t=(document.getElementById("mtName").value||"").trim(),d=mtStore(),qs=d.exams?.[e]?.tests?.[t]?.questions||[];if(!qs[i])return;const x=qs[i],q=prompt("Question / प्रश्न:",x.q||"");if(q===null)return;const old=x.o||[];const o=[prompt("Option A:",old[0]||""),prompt("Option B:",old[1]||""),prompt("Option C:",old[2]||""),prompt("Option D:",old[3]||"")];if(o.some(function(v){return v===null}))return;if(old[4]){const ev=prompt("Option E:",old[4]);if(ev===null)return;o.push(ev)}const ans=(prompt("सही उत्तर A/B/C/D/E:",x.answer||"")||x.answer||"").toUpperCase(),ex=prompt("जानकारी / Explanation:",x.ex||"");qs[i]={...x,q:q.trim(),o:o.map(function(v){return String(v).trim()}),answer:ans,ex:ex===null?(x.ex||""):ex,number:x.number||i+1};d.exams[e].tests[t].questions=qs;mtSaveStore(d);mtRenderQuestions();mtRenderAll();
   };
   const style=document.createElement("style");style.textContent="#mtBulkText{min-height:500px !important;height:500px !important;resize:vertical !important;}#mtGroupText{min-height:360px !important;}";document.head.appendChild(style);
+})();
+</script>
+
+<script id="important-info-only-fix">
+(function(){
+  'use strict';
+  function getNews(){try{var v=JSON.parse(localStorage.getItem('tgy_news_items')||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}}
+  function saveNewsData(a){localStorage.setItem('tgy_news_items',JSON.stringify(a));try{if(window.tgyCloud&&typeof window.tgyCloud.push==='function')window.tgyCloud.push('tgy_news_items')}catch(e){}}
+  function escN(v){return String(v??'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+  function renderImportantInfoManager(){
+    var box=document.getElementById('homeCustomizerArea');if(!box)return;
+    var items=getNews();
+    box.innerHTML='<div class="home-customize-card"><h2>📢 महत्वपूर्ण जानकारी</h2>'+
+      '<p>यहाँ की जानकारी Student Website की News/महत्वपूर्ण जानकारी पट्टी में दिखाई देती है।</p>'+
+      '<div id="importantInfoRows">'+(items.length?items.map(function(x,i){
+        return '<div class="news-row" style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">'+
+          '<input id="newsFix_'+i+'" value="'+escN(x.text||'')+'" style="flex:1;min-width:300px;padding:10px">'+
+          '<label><input type="checkbox" id="newsFixOn_'+i+'" '+(x.enabled!==false?'checked':'')+'> दिखाएँ</label>'+
+          '<button class="btn" onclick="editImportantInfoOnly('+i+')">✏️ Edit</button>'+
+          '<button class="btn danger" onclick="deleteImportantInfoOnly('+i+')">🗑️ हटाएँ</button>'+
+          '</div>';
+      }).join(''):'<p class="muted">अभी कोई महत्वपूर्ण जानकारी सेव नहीं है।</p>')+'</div>'+
+      '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><input id="newImportantInfoOnly" placeholder="नई महत्वपूर्ण जानकारी लिखें" style="flex:1;min-width:300px;padding:10px"><button class="btn" onclick="addImportantInfoOnly()">➕ जोड़ें</button></div>'+
+      '<div style="margin-top:12px"><button class="btn orange" onclick="saveImportantInfoOnly()">💾 Save Updates</button> <button class="btn gray" onclick="location.reload()">बंद करें</button></div></div>';
+  }
+  window.openNewsManager=renderImportantInfoManager;
+  window.addImportantInfoOnly=function(){var el=document.getElementById('newImportantInfoOnly');var t=(el&&el.value||'').trim();if(!t){alert('पहले महत्वपूर्ण जानकारी लिखें।');return}var a=getNews();a.push({text:t,enabled:true,date:Date.now()});saveNewsData(a);renderImportantInfoManager()};
+  window.quickAddImportantInfo=function(){var el=document.getElementById('quickImportantInfo');var t=(el&&el.value||'').trim();if(!t){alert('पहले महत्वपूर्ण जानकारी लिखें।');return}var a=getNews();a.push({text:t,enabled:true,date:Date.now()});saveNewsData(a);if(el)el.value='';renderImportantInfoManager();};
+  window.deleteImportantInfoOnly=function(i){var a=getNews();if(!a[i])return;if(!confirm('क्या यह महत्वपूर्ण जानकारी हटानी है?'))return;a.splice(i,1);saveNewsData(a);renderImportantInfoManager()};
+  window.editImportantInfoOnly=function(i){var a=getNews();if(!a[i])return;var v=prompt('महत्वपूर्ण जानकारी Edit करें:',a[i].text||'');if(v===null)return;v=v.trim();if(!v){alert('जानकारी खाली नहीं रख सकते।');return}a[i].text=v;saveNewsData(a);renderImportantInfoManager()};
+  window.saveImportantInfoOnly=function(){var a=getNews();a.forEach(function(x,i){var t=document.getElementById('newsFix_'+i),c=document.getElementById('newsFixOn_'+i);if(t)x.text=t.value.trim();if(c)x.enabled=c.checked});a=a.filter(function(x){return String(x.text||'').trim()});saveNewsData(a);alert('📰 महत्वपूर्ण जानकारी Save हो गई।');renderImportantInfoManager()};
 })();
 </script>
