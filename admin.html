@@ -2813,3 +2813,140 @@ window.addEventListener('focus',function(){setTimeout(window.tgyAdminRefreshUser
 document.addEventListener('DOMContentLoaded',function(){setTimeout(window.tgyAdminRefreshUsersAccessSafe,1200);setTimeout(window.tgyAdminRefreshUsersAccessSafe,3000);setInterval(window.tgyAdminRefreshUsersAccessSafe,15000)},{once:true});
 })();
 </script>
+\n
+<script id="tgy-final-smart-mixed-question-parser-20260913">
+(function(){
+  "use strict";
+  const esc=function(v){return typeof window.mtEsc==="function"?window.mtEsc(v):String(v==null?"":v).replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})};
+  const clean=function(v){return String(v==null?"":v).replace(/[\u200b\u200c\u200d\ufeff]/g,"").replace(/\u00a0/g," ").replace(/\r\n?/g,"\n").trim()};
+  const optRe=/^\s*\(?([A-Ea-e])\)?[\.\)\-:\/]\s*(.*)$/;
+  const infoRe=/^\s*(?:जानकारी|व्याख्या|विवरण|Explanation|Description|Solution|समाधान|नोट|Note|कारण|स्पष्टीकरण)\s*[:=\-]\s*(.*)$/i;
+  const ansRe=/^\s*(?:Right\s*Answer|Right\s*Ans\.?|Correct\s*Answer|Answer|Ans\.?|सही\s*उत्तर|सही\s*विकल्प|उत्तर|Correct)\s*[:=\-]\s*(.*)$/i;
+  const qReG=/^\s*(?:प्रश्न|Question|question|क्वेश्चन|Q)\s*(?:No\.?|क्रमांक|क्रम)?\s*(\d{1,4})?\s*[\.\)\-:\/|]?\s*/gim;
+  const idx={A:0,B:1,C:2,D:3,E:4};
+
+  function looksPassage(t){
+    const x=clean(t); if(!x || x.length<25)return false;
+    return /(?:Direction|Read\s+the\s+following|passage|caselet|दिशा|निम्नलिखित\s+(?:जानकारी|आँकड़ों|आंकड़ों|गद्यांश|पैसेज)|निर्देश)(?:\s*\(|\s*[:\-]|\s)/i.test(x);
+  }
+  function rangeOf(t){
+    const m=clean(t).match(/(?:Direction|निर्देश)[^\n]{0,100}?(?:\(|प्रश्न\s*)?(\d{1,4})\s*(?:-|–|—|to|से)\s*(\d{1,4})/i);
+    return m?{from:Number(m[1]),to:Number(m[2])}:null;
+  }
+  function splitStatement(full){
+    const lines=full.split("\n").map(function(x){return x.trim()}).filter(Boolean);
+    let si=lines.findIndex(function(x){return /^(?:कथन|Statements?|Statement)\s*[:：]?/i.test(x)});
+    let ci=si>=0?lines.findIndex(function(x,j){return j>si && /^(?:निष्कर्ष|Conclusions?|Conclusion)\s*[:：]?/i.test(x)}):-1;
+    if(si<0 || ci<0)return null;
+    const intro=lines.slice(0,si).join("\n").trim();
+    return {intro:intro,statements:lines.slice(si+1,ci),conclusions:lines.slice(ci+1)};
+  }
+  function parseBlock(block,num){
+    const lines=block.split("\n").map(function(x){return x.trim()}).filter(function(x){return x&&!/^[-_]{5,}$/.test(x)});
+    let first=-1;
+    for(let j=0;j<lines.length;j++){if(optRe.test(lines[j])){first=j;break}}
+    if(first<0)return null;
+    const before=lines.slice(0,first),opts=["","","","",""];
+    let answer="",ex="",current=-1,answerLine=-1,infoLine=-1;
+    for(let j=first;j<lines.length;j++){
+      const line=lines[j],im=line.match(infoRe);
+      if(im){infoLine=j;ex=im[1].trim();break}
+      const am=line.match(ansRe);
+      if(am){answerLine=j;const a=am[1].trim(),lm=a.match(/^\(?\s*([A-Ea-e])\s*\)?/);answer=lm?lm[1].toUpperCase():(a.split(/\s+/)[0]||"");current=-1;continue}
+      const om=line.match(optRe);
+      if(om){current=idx[om[1].toUpperCase()];opts[current]=(om[2]||"").trim();continue}
+      if(current>=0)opts[current]+=(opts[current]?" ":"")+line;
+    }
+    const tail=infoLine>=0?lines.slice(infoLine+1).join("\n").trim():(answerLine>=0?lines.slice(answerLine+1).join("\n").trim():"");
+    if(!before.length || opts.filter(Boolean).length<2)return null;
+    const q=before.join("\n").trim(),sc=splitStatement(q);
+    return {q:q,o:opts,answer:answer,ex:ex,number:num||"",type:sc?"statement-conclusion":"normal",tail:tail,structured:sc};
+  }
+  function autoParse(raw){
+    let text=clean(raw); if(!text)return {questions:[],type:"normal",groups:[]};
+    text=text.replace(/[‐‑‒–—―]/g,"-");
+    const starts=[]; let m; qReG.lastIndex=0;
+    while((m=qReG.exec(text))!==null)starts.push({pos:m.index,end:qReG.lastIndex,num:m[1]||""});
+    if(!starts.length){const n=/^\s*(\d{1,4})\s*[\.\)\-:\/|]\s+/gm;while((m=n.exec(text))!==null)starts.push({pos:m.index,end:n.lastIndex,num:m[1]||""})}
+    if(!starts.length)return {questions:[],type:"normal",groups:[]};
+
+    let activePassage=clean(text.slice(0,starts[0].pos));
+    if(!looksPassage(activePassage))activePassage="";
+    let activeRange=rangeOf(activePassage);
+    const out=[],groups=[];
+    for(let i=0;i<starts.length;i++){
+      const block=text.slice(starts[i].end,i+1<starts.length?starts[i+1].pos:text.length).trim();
+      const p=parseBlock(block,starts[i].num||String(i+1)); if(!p)continue;
+      const tail=clean(p.tail);
+      // Anything after the current question's final Information/Answer is NEVER part of that question.
+      if(tail && looksPassage(tail)){activePassage=tail;activeRange=rangeOf(tail)}
+      const qn=Number(p.number)||i+1;
+      let passage=activePassage;
+      if(activeRange && (qn<activeRange.from || qn>activeRange.to))passage="";
+      const item={q:p.q,o:p.o,answer:p.answer,ex:p.ex,number:p.number,type:passage?"passage":p.type,passage:passage||""};
+      if(p.structured){item.intro=p.structured.intro;item.statements=p.structured.statements;item.conclusions=p.structured.conclusions}
+      out.push(item);
+      if(passage){
+        let g=groups[groups.length-1];
+        if(!g || g.passage!==passage){g={type:"passage",passage:passage,range:activeRange,questions:[]};groups.push(g)}
+        g.questions.push(item);
+      }
+    }
+    return {questions:out,type:out.some(function(x){return x.type==="passage"})?"mixed/passage":(out.some(function(x){return x.type==="statement-conclusion"})?"statement-conclusion":"normal"),groups:groups};
+  }
+  window.mtAutoParse=autoParse;
+  window.mtQuestionTypeLabel=function(t){return t==="statement-conclusion"?"📋 कथन–निष्कर्ष":t==="passage"?"📖 Passage / Caselet":"📝 Normal Question"};
+
+  function render(qs){
+    const box=document.getElementById("mtPreview"),st=document.getElementById("mtStatus");
+    if(st)st.innerHTML=qs.length?"✅ <b>"+qs.length+" Questions मिले — Mixed Format Auto Detect</b>":"❌ कोई Question पहचान में नहीं आया।";
+    if(!box)return;
+    let html="",lastPassage="";
+    qs.forEach(function(x,i){
+      if(x.passage && x.passage!==lastPassage){html+='<div class="card" style="margin:10px 0;padding:14px;border:2px solid #1d65a6;background:#f8fbff"><b>📖 Passage / निर्देश</b><div style="margin-top:8px;white-space:pre-wrap">'+esc(x.passage)+'</div></div>';lastPassage=x.passage}
+      const o=x.o||[];
+      html+='<div class="card" style="margin:8px 0;padding:14px"><div style="margin-bottom:7px"><span class="badge">'+esc(window.mtQuestionTypeLabel(x.type))+'</span></div>';
+      if(x.type==="statement-conclusion"){
+        if(x.intro)html+='<div><b>प्रश्न:</b> '+esc(x.intro).replace(/\n/g,"<br>")+'</div>';
+        html+='<div style="margin-top:8px"><b>कथन:</b>';
+        (x.statements||[]).forEach(function(v){html+='<div style="margin:3px 0;white-space:pre-wrap">'+esc(v)+'</div>'});
+        html+='</div><div style="margin-top:8px"><b>निष्कर्ष:</b>';
+        (x.conclusions||[]).forEach(function(v){html+='<div style="margin:3px 0;white-space:pre-wrap">'+esc(v)+'</div>'});
+        html+='</div>';
+      }else html+='<div><b>प्रश्न '+(i+1)+'.</b> '+esc(x.q).replace(/\n/g,"<br>")+'</div>';
+      html+='<div style="margin-top:8px">'+o.map(function(v,j){return v?'<div>('+String.fromCharCode(65+j)+') '+esc(v)+'</div>':""}).join("")+'</div>';
+      html+='<div style="margin-top:6px"><b>सही उत्तर:</b> '+esc(x.answer||"")+'</div>';
+      if(x.ex)html+='<div><b>जानकारी/Explanation:</b> '+esc(x.ex).replace(/\n/g,"<br>")+'</div>';
+      html+='</div>';
+    });
+    box.innerHTML=html;
+  }
+  window.mtTextPreview=function(){
+    const raw=document.getElementById("mtBulkText")?.value||""; if(!raw.trim()){alert("पहले पूरा Question Set Paste करें।");return}
+    const parsed=autoParse(raw); window.mtPreview=parsed.questions||[]; window.mtLastParsed=parsed; render(window.mtPreview);
+  };
+  window.mtFinalSave=function(){
+    const pending=Array.isArray(window.mtPreview)?window.mtPreview.map(function(x){const z={q:x.q,o:x.o,answer:x.answer,ex:x.ex,type:x.type};if(x.passage)z.passage=x.passage;if(x.intro)z.intro=x.intro;if(x.statements)z.statements=x.statements;if(x.conclusions)z.conclusions=x.conclusions;return z}):[];
+    if(!pending.length){alert("पहले Questions का Preview बनाएं।");return}
+    if(typeof appendToCurrentTest!=="function"){alert("Save system उपलब्ध नहीं है।");return}
+    if(appendToCurrentTest(pending)){window.mtPreview=[];window.mtLastParsed=null;const tx=document.getElementById("mtBulkText");if(tx)tx.value="";const box=document.getElementById("mtPreview");if(box)box.innerHTML="";const st=document.getElementById("mtStatus");if(st)st.innerHTML="✅ <b>"+pending.length+" Questions Save हो गए।</b>"}
+  };
+  window.mtImageGroupPreview=async function(){
+    const raw=document.getElementById("mtGroupText")?.value||"";if(!raw.trim()){alert("पहले Image Group के Questions लिखें।");return}
+    const parsed=autoParse(raw),qs=parsed.questions||[];if(!qs.length){alert("कोई Question पहचान में नहीं आया।");return}
+    const f=document.getElementById("mtGroupImage")?.files?.[0];if(!f){alert("पहले एक Image/Diagram चुनें।");return}
+    const st=document.getElementById("mtStatus");if(st)st.textContent="⏳ Image तैयार की जा रही है...";
+    try{const r=await new Promise(function(resolve,reject){const fr=new FileReader();fr.onerror=reject;fr.onload=function(){const im=new Image();im.onerror=reject;im.onload=function(){const max=900,sc=Math.min(1,max/Math.max(im.naturalWidth||im.width,im.naturalHeight||im.height)),w=Math.max(1,Math.round((im.naturalWidth||im.width)*sc)),h=Math.max(1,Math.round((im.naturalHeight||im.height)*sc)),c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,0,w,h);resolve(c.toDataURL("image/jpeg",.82))};im.src=fr.result};fr.readAsDataURL(f)});window.mtImageGroupPreviewData={image:r,questions:qs};render(qs);if(st)st.innerHTML="✅ <b>Image Group: "+qs.length+" Questions तैयार हैं</b>"}catch(e){alert("Image तैयार करने में समस्या हुई।")}
+  };
+  window.mtRenderQuestions=function(){
+    const e=document.getElementById("mtExam")?.value,t=(document.getElementById("mtName")?.value||"").trim(),box=document.getElementById("mtQuestions"),count=document.getElementById("mtQuestionCount");if(!box)return;
+    const raw=typeof mtStore==="function"?(mtStore().exams?.[e]?.tests?.[t]?.questions||[]):[];if(count)count.innerHTML="कुल Questions: <b>"+raw.length+"</b>";
+    let lastPassage="";
+    box.innerHTML=raw.length?raw.map(function(x,i){const o=x.o||[];let h="<div class=\"qrow\" style=\"margin:8px 0;padding:12px;border:1px solid #ddd;border-radius:7px\">";if(x.passage&&x.passage!==lastPassage){h+='<div style="margin-bottom:8px;padding:8px;background:#f7fbff;border-left:4px solid #1d65a6"><b>📖 Passage / निर्देश</b><div style="white-space:pre-wrap;margin-top:5px">'+esc(x.passage)+'</div></div>';lastPassage=x.passage}if(x.type==="statement-conclusion"){h+='<div><b>प्रश्न:</b> '+esc(x.intro||x.q).replace(/\n/g,"<br>")+'</div><div style="margin-top:7px"><b>कथन:</b><br>'+(x.statements||[]).map(esc).join('<br>')+'<br><b>निष्कर्ष:</b><br>'+(x.conclusions||[]).map(esc).join('<br>')+'</div>'}else h+='<div><b>प्रश्न '+(i+1)+'.</b> '+esc(x.q).replace(/\n/g,"<br>")+'</div>';h+='<div style="margin-top:6px">'+o.map(function(v,j){return v?'<div>('+String.fromCharCode(65+j)+') '+esc(v)+'</div>':""}).join("")+'</div><div><b>सही उत्तर:</b> '+esc(x.answer||"")+'</div>'+(x.ex?'<div><b>जानकारी/Explanation:</b> '+esc(x.ex).replace(/\n/g,"<br>")+'</div>':'')+'<button class="btn" onclick="mtEditQuestion('+i+')">✏️ Edit</button> <button class="btn danger" onclick="mtDeleteQuestion('+i+')">🗑️ Delete</button></div>';return h}).join(""):"<p>अभी कोई Question Save नहीं है।</p>";
+  };
+  window.mtEditQuestion=function(i){
+    const e=document.getElementById("mtExam").value,t=(document.getElementById("mtName").value||"").trim(),d=mtStore(),qs=d.exams?.[e]?.tests?.[t]?.questions||[];if(!qs[i])return;const x=qs[i],q=prompt("Question / प्रश्न:",x.q||"");if(q===null)return;const old=x.o||[];const o=[prompt("Option A:",old[0]||""),prompt("Option B:",old[1]||""),prompt("Option C:",old[2]||""),prompt("Option D:",old[3]||"")];if(o.some(function(v){return v===null}))return;if(old[4]){const ev=prompt("Option E:",old[4]);if(ev===null)return;o.push(ev)}const ans=(prompt("सही उत्तर A/B/C/D/E:",x.answer||"")||x.answer||"").toUpperCase(),ex=prompt("जानकारी / Explanation:",x.ex||"");qs[i]={...x,q:q.trim(),o:o.map(function(v){return String(v).trim()}),answer:ans,ex:ex===null?(x.ex||""):ex,number:x.number||i+1};d.exams[e].tests[t].questions=qs;mtSaveStore(d);mtRenderQuestions();mtRenderAll();
+  };
+  const style=document.createElement("style");style.textContent="#mtBulkText{min-height:500px !important;height:500px !important;resize:vertical !important;}#mtGroupText{min-height:360px !important;}";document.head.appendChild(style);
+})();
+</script>
