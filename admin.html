@@ -108,8 +108,8 @@ function checkAdmin(){
   <div class="card">
     <h2>Questions जोड़ें</h2>
     <div class="row">
-      <div><label>📝 Bulk Questions</label><textarea id="mtBulkText" rows="8" placeholder="प्रश्न 1. ...&#10;(A) ...&#10;(B) ...&#10;(C) ...&#10;(D) ...&#10;सही उत्तर: (A)&#10;जानकारी: ..."></textarea><button class="btn" style="margin-top:7px" onclick="mtTextPreview()">📝 Bulk Preview</button></div>
-      <div><label>🖼️ Image + Questions Group</label><input id="mtGroupImage" type="file" accept="image/*" style="width:100%;padding:9px"><small class="muted">एक Image चुनें। उसी Image के नीचे जितने चाहें Questions जोड़ें। Image बार-बार नहीं लगानी पड़ेगी।</small><textarea id="mtGroupText" rows="8" style="margin-top:8px" placeholder="प्रश्न 1. ...&#10;(A) ...&#10;(B) ...&#10;(C) ...&#10;(D) ...&#10;सही उत्तर: (A)&#10;जानकारी: ...&#10;&#10;प्रश्न 2. ..."></textarea><div class="bqm-actions" style="margin-top:7px"><button class="btn" onclick="mtImageGroupPreview()">🖼️ Image Group Preview</button><button class="btn orange" onclick="mtImageGroupSave()">➕ Image Group Questions जोड़ें</button></div></div>
+      <div><label>📝 Bulk Questions</label><textarea id="mtBulkText" rows="18" style="min-height:360px;resize:vertical" placeholder="प्रश्न 1. ...&#10;(A) ...&#10;(B) ...&#10;(C) ...&#10;(D) ...&#10;सही उत्तर: (A)&#10;जानकारी: ..."></textarea><button class="btn" style="margin-top:7px" onclick="mtTextPreview()">📝 Bulk Preview</button><small class="muted" style="display:block;margin-top:7px">🔄 Auto Detect: Normal, कथन–निष्कर्ष और Passage/Caselet को उसके format के आधार पर पहचानने की कोशिश करेगा।</small></div>
+      <div><label>🖼️ Image + Questions Group</label><input id="mtGroupImage" type="file" accept="image/*" style="width:100%;padding:9px"><small class="muted">एक Image चुनें। उसी Image के नीचे जितने चाहें Questions जोड़ें। Image बार-बार नहीं लगानी पड़ेगी।</small><textarea id="mtGroupText" rows="14" style="margin-top:8px;min-height:300px;resize:vertical" placeholder="प्रश्न 1. ...&#10;(A) ...&#10;(B) ...&#10;(C) ...&#10;(D) ...&#10;सही उत्तर: (A)&#10;जानकारी: ...&#10;&#10;प्रश्न 2. ..."></textarea><div class="bqm-actions" style="margin-top:7px"><button class="btn" onclick="mtImageGroupPreview()">🖼️ Image Group Preview</button><button class="btn orange" onclick="mtImageGroupSave()">➕ Image Group Questions जोड़ें</button></div></div>
     </div>
     <div style="margin-top:12px"><button class="btn" onclick="mtManualAdd()">✏️ Manual Question</button><button class="btn gray" onclick="mtClearPreview()">🗑️ Preview साफ करें</button></div>
     <div id="mtStatus" class="muted" style="margin-top:12px"></div><div id="mtPreview" style="margin-top:12px;max-height:520px;overflow:auto"></div>
@@ -966,7 +966,7 @@ function mtManualAdd(){
 }
 function mtNormQuestion(x,i){
  if(Array.isArray(x)){
-   return {q:x[0]||"",o:Array.isArray(x[1])?x[1].slice(0,4):["","","",""],answer:x[2]??"",ex:x[3]||"",number:i+1};
+   return {q:x[0]||"",o:Array.isArray(x[1])?x[1].slice(0,5):["","","","",""],answer:x[2]??"",ex:x[3]||"",number:i+1};
  }
  return {q:x.q||"",o:Array.isArray(x.o)?x.o.slice(0,4):["","","",""],answer:x.answer??"",ex:x.ex||x.explanation||"",number:x.number||i+1};
 }
@@ -2197,6 +2197,78 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
+
+<script id="tgy-question-type-auto-detect">
+(function(){
+  "use strict";
+  function clean(v){return String(v==null?"":v).replace(/[\u200b\u200c\u200d\ufeff]/g,"").replace(/\u00a0/g," ").trim()}
+  function detectType(fullBlock, prefix){
+    const b=clean(fullBlock), p=clean(prefix);
+    const hasConclusion=/(?:निष्कर्ष|conclusion)\s*:/i.test(b);
+    const hasStatement=/(?:कथन|statement)\s*:/i.test(b);
+    const hasRoman=/\b(?:I|II|III)\s*[.)\-:]/i.test(b) || /(?:निष्कर्ष|conclusion)[\s\S]*\bI\s*[.)]/i.test(b);
+    const hasFiveOptions=/(?:^|\n)\s*\(?E\)?\s*[.)\-:]/im.test(b);
+    if(hasStatement && hasConclusion && hasRoman) return "statement-conclusion";
+    if(/(?:Direction|दिशा|Read the following passage|निम्नलिखित जानकारी|निम्नलिखित गद्यांश|passage|caselet|केसलेट|निर्देश)\s*[:\-]?/i.test(p) && p.length>20) return "passage";
+    if(hasStatement && hasConclusion) return "statement-conclusion";
+    return "normal";
+  }
+  function autoParse(raw){
+    let text=String(raw||"").replace(/\r\n?/g,"\n").replace(/[\u200b\u200c\u200d\ufeff]/g,"").replace(/\u00a0/g," ").trim();
+    if(!text) return {questions:[],type:"normal",groups:[]};
+    text=text.replace(/[‐‑‒–—―]/g,"-");
+    const qStart=/^\s*(?:प्रश्न|Question|question|क्वेश्चन|Q)\s*(?:No\.?|क्रमांक|क्रम)?\s*(\d{1,4})?\s*[\.\)\-:/|]?\s*/gmi;
+    const starts=[];let m;
+    while((m=qStart.exec(text))!==null) starts.push({pos:m.index,end:qStart.lastIndex,num:m[1]||""});
+    if(!starts.length){
+      const q2=/^\s*(?:प्रश्?न)\s*(\d{1,4})?\s*[\.\)\-:/|]?\s*/gmi;
+      while((m=q2.exec(text))!==null) starts.push({pos:m.index,end:q2.lastIndex,num:m[1]||""});
+    }
+    if(!starts.length){
+      const n=/^\s*(\d{1,4})\s*[\.\)\-:/|]\s+/gm;
+      while((m=n.exec(text))!==null) starts.push({pos:m.index,end:n.lastIndex,num:m[1]||""});
+    }
+    if(!starts.length) return {questions:[],type:"normal",groups:[]};
+    const preamble=text.slice(0,starts[0].pos).trim();
+    const infoRe=/^(?:जानकारी|व्याख्या|विवरण|Explanation|explanation|Description|Solution|समाधान|Answer\s*के\s*बारे\s*में\s*जानकारी|उत्तर\s*के\s*बारे\s*में\s*जानकारी|नोट|Note|कारण|स्पष्टीकरण)\s*[:=\-]\s*(.*)$/i;
+    const ansRe=/^(?:Right\s*Answer|Right\s*Ans\.?|Correct\s*Answer|Answer|Ans\.?|सही\s*उत्तर|सही\s*विकल्प|उत्तर|Correct)\s*[:=\-]\s*(.*)$/i;
+    const optRe=/^(?:\(?\s*([A-Ea-e]|[अआबभसदई]|[1-5]|I|II|III|IV|V)\s*\)?)[\.\)\-:/]\s*(.*)$/;
+    const idxMap={A:0,B:1,C:2,D:3,E:4,"अ":0,"आ":0,"ब":1,"भ":1,"स":2,"द":3,"ई":4,"1":0,"2":1,"3":2,"4":3,"5":4,I:0,II:1,III:2,IV:3,V:4};
+    const out=[];
+    for(let i=0;i<starts.length;i++){
+      const block=text.slice(starts[i].end,i+1<starts.length?starts[i+1].pos:text.length).trim();
+      if(!block) continue;
+      const lines=block.split("\n").map(x=>x.trim()).filter(x=>x&&!/^-{5,}$/.test(x));
+      let firstOpt=-1;
+      for(let j=0;j<lines.length;j++){if(optRe.test(lines[j])){firstOpt=j;break}}
+      if(firstOpt<0) continue;
+      const q=lines.slice(0,firstOpt).join(" ").trim();
+      const opts=["","","","",""];let answer="",ex="",current=-1,mode="question";
+      for(let j=firstOpt;j<lines.length;j++){
+        const line=lines[j],im=line.match(infoRe);
+        if(im){ex=im[1].trim();if(j+1<lines.length)ex+=(ex?"\n":"")+lines.slice(j+1).join("\n");break}
+        const am=line.match(ansRe);
+        if(am){const a=am[1].trim();const lm=a.match(/^\(?\s*(I{1,3}V?|[A-Ea-e]|[अआबभसदई]|[1-5])\s*\)?(?:\s*[.)])?(?:\s+|$)/);answer=lm?String(lm[1]).toUpperCase():(a.split(/\s+/)[0]||"");current=-1;mode="answer";continue}
+        const om=line.match(optRe);
+        if(om){const key=om[1].toUpperCase();current=idxMap[key]??-1;if(current>=0)opts[current]=(om[2]||"").trim();mode="options";continue}
+        if(current>=0&&mode==="options")opts[current]+=(opts[current]?" ":"")+line;
+      }
+      const nonEmpty=opts.filter(Boolean).length;
+      if(q&&nonEmpty>=2){
+        const type=detectType(block,i===0?preamble:"");
+        out.push({q,o:opts,answer,ex,number:starts[i].num||i+1,type:type,passage:type==="passage"&&preamble?preamble:""});
+      }
+    }
+    // If a shared preamble looks like a Passage/Direction, attach it to all questions.
+    const groupType=detectType(out.map(x=>x.q).join("\n"),preamble);
+    if(groupType==="passage" && preamble){out.forEach(x=>{x.type="passage";x.passage=preamble})}
+    const finalType=out.some(x=>x.type==="statement-conclusion")?"statement-conclusion":(out.some(x=>x.type==="passage")?"passage":"normal");
+    return {questions:out,type:finalType,groups:finalType==="passage"&&out.length?[{type:"passage",passage:preamble,questions:out}]:[]};
+  }
+  window.mtAutoParse=autoParse;
+  window.mtQuestionTypeLabel=function(t){return t==="statement-conclusion"?"📋 कथन–निष्कर्ष":t==="passage"?"📖 Passage / Caselet":"📝 Normal Question"};
+})();
+</script>
 <script id="tgy-diagram-bulk-question-fix">
 (function(){
   "use strict";
@@ -2219,8 +2291,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     r.readAsDataURL(file);
   })}
   function norm(x,i){
-    if(Array.isArray(x))return {q:x[0]||"",o:Array.isArray(x[1])?x[1].slice(0,4):["","","",""],answer:x[2]??"",ex:x[3]||"",number:i+1,image:""};
-    return {q:x&&x.q||"",o:Array.isArray(x&&x.o)?x.o.slice(0,4):["","","",""],answer:x&&x.answer!=null?x.answer:"",ex:x&&(x.ex||x.explanation)||"",number:x&&x.number||i+1,image:x&&(x.image||x.imageData)||""}
+    if(Array.isArray(x))return {q:x[0]||"",o:Array.isArray(x[1])?x[1].slice(0,5):["","","","",""],answer:x[2]??"",ex:x[3]||"",number:i+1,image:""};
+    return {q:x&&x.q||"",o:Array.isArray(x&&x.o)?x.o.slice(0,5):["","","","",""] ,answer:x&&x.answer!=null?x.answer:"",ex:x&&(x.ex||x.explanation)||"",number:x&&x.number||i+1,image:x&&(x.image||x.imageData)||""}
   }
   window.mtNormQuestion=norm;
 
@@ -2315,15 +2387,29 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.mtRenderQuestions=function(){
     const e=document.getElementById("mtExam")?.value,t=(document.getElementById("mtName")?.value||"").trim(),box=document.getElementById("mtQuestions"),count=document.getElementById("mtQuestionCount");if(!box)return;
     const raw=typeof mtStore==="function"?(mtStore().exams?.[e]?.tests?.[t]?.questions||[]):[],qs=raw.map(norm);if(count)count.innerHTML="कुल Questions: <b>"+qs.length+"</b>";
-    box.innerHTML=qs.length?qs.map(function(x,i){return '<div class="qrow" style="margin:8px 0;padding:10px;border:1px solid #ddd;border-radius:6px">'+(x.image?'<div style="margin-bottom:8px"><img src="'+escv(x.image)+'" style="display:block;max-width:100%;max-height:240px;object-fit:contain;border:1px solid #ddd;border-radius:6px"></div>':'')+'<b>प्रश्न '+(i+1)+'.</b> '+escv(x.q)+'<div>(A) '+escv(x.o[0])+'<br>(B) '+escv(x.o[1])+'<br>(C) '+escv(x.o[2])+'<br>(D) '+escv(x.o[3])+'</div><button class="btn" onclick="mtEditQuestion('+i+')">✏️ Edit</button> <button class="btn danger" onclick="mtDeleteQuestion('+i+')">🗑️ Delete</button></div>'}).join(''):"<p>अभी कोई Question Save नहीं है।</p>";
+    box.innerHTML=qs.length?qs.map(function(x,i){return '<div class="qrow" style="margin:8px 0;padding:10px;border:1px solid #ddd;border-radius:6px">'+(x.image?'<div style="margin-bottom:8px"><img src="'+escv(x.image)+'" style="display:block;max-width:100%;max-height:240px;object-fit:contain;border:1px solid #ddd;border-radius:6px"></div>':'')+'<b>प्रश्न '+(i+1)+'.</b> '+escv(x.q)+'<div>(A) '+escv(x.o[0])+'<br>(B) '+escv(x.o[1])+'<br>(C) '+escv(x.o[2])+'<br>(D) '+escv(x.o[3])+(x.o[4]?'<br>(E) '+escv(x.o[4]):'')+'</div><button class="btn" onclick="mtEditQuestion('+i+')">✏️ Edit</button> <button class="btn danger" onclick="mtDeleteQuestion('+i+')">🗑️ Delete</button></div>'}).join(''):"<p>अभी कोई Question Save नहीं है।</p>";
   };
   window.mtEditQuestion=function(i){
     const e=document.getElementById("mtExam").value,t=(document.getElementById("mtName").value||"").trim(),d=mtStore(),qs=d.exams?.[e]?.tests?.[t]?.questions||[];if(!qs[i])return;
     const x=norm(qs[i],i),q=prompt("Question:",x.q);if(q===null)return;
-    const o=[prompt("Option A:",x.o[0]),prompt("Option B:",x.o[1]),prompt("Option C:",x.o[2]),prompt("Option D:",x.o[3])];if(o.some(function(v){return v===null}))return;
+    const o=[prompt("Option A:",x.o[0]),prompt("Option B:",x.o[1]),prompt("Option C:",x.o[2]),prompt("Option D:",x.o[3])];if(o.some(function(v){return v===null}))return;if(x.o[4]){const ev=prompt("Option E:",x.o[4]);if(ev===null)return;o.push(ev)}
     const ans=(prompt("सही उत्तर A/B/C/D:",x.answer)||x.answer).toUpperCase(),ex=prompt("जानकारी / Explanation:",x.ex||"")??x.ex;
     const obj={q:q.trim(),o:o.map(function(v){return String(v).trim()}),answer:ans,ex:ex,number:i+1};if(x.image)obj.image=x.image;
     qs[i]=obj;d.exams[e].tests[t].questions=qs;mtSaveStore(d);mtRenderQuestions();mtRenderAll();
+  };
+  window.mtTextPreview=function(){
+    const raw=document.getElementById("mtBulkText")?.value||"";
+    if(!raw.trim()){alert("पहले पूरा Question Set Paste करें।");return}
+    const parsed=typeof mtAutoParse==="function"?mtAutoParse(raw):{questions:(typeof mtParse==="function"?mtParse(raw):[]),type:"normal"};
+    const qs=parsed.questions||[]; window.mtPreview=qs;
+    const label=typeof mtQuestionTypeLabel==="function"?mtQuestionTypeLabel(parsed.type):parsed.type;
+    const st=document.getElementById("mtStatus"),box=document.getElementById("mtPreview");
+    if(st)st.innerHTML=qs.length?"✅ <b>"+qs.length+" Questions मिले — "+escv(label)+"</b>":"❌ कोई Question पहचान में नहीं आया।";
+    if(!box)return;
+    let sharedPassage=""; if(parsed.type==="passage"&&qs[0]?.passage)sharedPassage=qs[0].passage;
+    box.innerHTML=(sharedPassage?'<div class="card" style="margin:8px 0;padding:12px;border:2px solid #1d65a6"><b>📖 Passage / निर्देश</b><div style="margin-top:8px;white-space:pre-wrap">'+escv(sharedPassage)+'</div></div>':'')+qs.map(function(x,i){
+      const n=x.o||[]; return '<div class="card" style="margin:8px 0;padding:12px"><div style="margin-bottom:6px"><span class="badge">'+escv(typeof mtQuestionTypeLabel==="function"?mtQuestionTypeLabel(x.type):label)+'</span></div><b>प्रश्न '+(i+1)+'.</b> '+escv(x.q)+'<br>(A) '+escv(n[0]||'')+'<br>(B) '+escv(n[1]||'')+'<br>(C) '+escv(n[2]||'')+'<br>(D) '+escv(n[3]||'')+(n[4]?'<br>(E) '+escv(n[4]):'')+'<br><b>सही उत्तर:</b> '+escv(x.answer)+(x.ex?'<br><b>जानकारी/Explanation:</b> '+escv(x.ex):'')+'</div>';
+    }).join('');
   };
   window.mtClearPreview=function(){window.mtPreview=[];window.mtImageGroupPreviewData=null;const b=document.getElementById("mtPreview"),s=document.getElementById("mtStatus"),im=document.getElementById("mtGroupImage"),tx=document.getElementById("mtGroupText"),bt=document.getElementById("mtBulkText");if(b)b.innerHTML="";if(s)s.textContent="";if(im)im.value="";if(tx)tx.value="";if(bt)bt.value=""};
 })();
