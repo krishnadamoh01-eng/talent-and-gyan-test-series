@@ -3358,3 +3358,40 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
   };
 })();
 </script>
+
+<script id="tgy-only-submit-direct-answer-info-fix">
+(function(){
+  window.tgyShowResultSummary=function(r){
+    const s=window.state,c=document.getElementById("modalContent");if(!c||!s||!s.t||!Array.isArray(s.t.questions))return;
+    const min=Math.floor(r.timeTaken/60),sec=r.timeTaken%60;
+    const E=window.esc||function(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))};
+    let html=`<div style="padding:20px;max-height:100vh;overflow:auto;background:#f4f7fb">
+      <h2>🏆 Test Result</h2>
+      <div class="tgy-summary-grid">
+       <div class="tgy-summary-box"><b>🟢 सही</b><br><span style="font-size:26px">${r.correct}</span></div>
+       <div class="tgy-summary-box"><b>🔴 गलत</b><br><span style="font-size:26px">${r.wrong}</span></div>
+       <div class="tgy-summary-box"><b>⚪ Attempted</b><br><span style="font-size:26px">${r.attempted}</span></div>
+       <div class="tgy-summary-box"><b>⚪ Not Attempted</b><br><span style="font-size:26px">${r.skipped}</span></div>
+       <div class="tgy-summary-box"><b>📊 Marks</b><br><span style="font-size:26px">${Number(r.score).toFixed(2)}</span></div>
+       <div class="tgy-summary-box"><b>❌ Negative</b><br><span style="font-size:26px">${Number(r.negativeMarks).toFixed(2)}</span></div>
+      </div>
+      <div class="card"><p><b>Total Questions:</b> ${r.total}</p><p><b>Final Score:</b> ${Number(r.score).toFixed(2)} / ${r.total}</p><p><b>Percentage:</b> ${r.percent}%</p><p><b>Time Taken:</b> ${min}m ${sec}s</p></div>
+      <h3 style="margin:18px 0 10px">📖 सभी Questions के सही Answer और जानकारी</h3>`;
+
+    s.t.questions.forEach((q,i)=>{
+      const opts=Array.isArray(q)?(Array.isArray(q[1])?q[1]:[]):(Array.isArray(q.o)?q.o:[]);
+      const correct=Array.isArray(q)?q[2]:(q.answer??q.correct);
+      const explanation=Array.isArray(q)?(q[3]??""):(q.ex??q.explanation??"");
+      const ai=(s.answers[i]===null||s.answers[i]===undefined||s.answers[i]==='')?null:Number(s.answers[i]);
+      const ci=(correct===null||correct===undefined||correct==='')?null:Number(correct);
+      const answerText=ai===null?'नहीं दिया':(opts[ai]??'');
+      const correctText=ci===null?'उपलब्ध नहीं':(opts[ci]??'');
+      html+=`<div class="tgy-answer-row" style="margin-top:10px"><b>Question ${i+1}</b><p style="margin:7px 0"><b>आपका Answer: ${ai===null?'नहीं दिया':'('+String.fromCharCode(65+ai)+')'}</b>${answerText?` — ${E(answerText)}`:''}</p><p style="margin:7px 0"><b>सही Answer: ${ci===null?'उपलब्ध नहीं':'('+String.fromCharCode(65+ci)+')'}</b>${correctText?` — ${E(correctText)}`:''}</p><div class="tgy-explanation"><b>📖 जानकारी:</b><br>${explanation?E(explanation):'जानकारी उपलब्ध नहीं है।'}</div></div>`;
+    });
+
+    html+=`<button class="btn orange" onclick="tgyShowAnswerDetails()">📋 Answer Details देखें</button>
+      <button class="btn gray" onclick="tgyBackToFolder()">← Test List पर वापस</button></div>`;
+    c.innerHTML=html;
+  };
+})();
+</script>
