@@ -76,7 +76,16 @@ function checkAdmin(){
 <header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
 <button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('pricing',this)">💰 Pricing</button><button onclick="show('offers',this)">🎟️ Offers</button><button onclick="show('examManagement',this)">📋 परीक्षा प्रबंधन</button>
 <button onclick="show('accessPricing',this)">📁 Access Pricing</button><button onclick="show('tgyTermsManager',this)">📄 Terms &amp; Conditions</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
-<section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
+<section id="dash" class="sec show"><h1>Dashboard</h1>
+<div class="card" style="margin-bottom:14px;border:2px solid #1769aa">
+  <h2 style="margin-top:0">💾 डेटा Backup / Restore</h2>
+  <p class="muted">अपने Admin Panel के सभी <b>tgy_</b> local data का backup अपने PC में JSON file के रूप में रखें। बाद में इसी file से data restore किया जा सकता है।</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <button class="btn orange" onclick="tgyCreateLocalBackup()">⬇️ Backup File बनाएं</button>
+    <label class="btn gray" style="display:inline-block;cursor:pointer">⬆️ Backup Restore करें<input id="tgyBackupFile" type="file" accept="application/json,.json" style="display:none" onchange="tgyRestoreLocalBackup(this)"></label>
+  </div>
+  <div id="tgyBackupStatus" class="muted" style="margin-top:10px"></div>
+</div><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 
 <section id="legacyExams" class="sec">
 <h1>🎓 परीक्षा Management</h1>
@@ -2578,6 +2587,85 @@ window.tgyRunSafeRecoveryNow=async function(){
   }catch(e){if(el)el.textContent='चेक असफल: '+(e.message||e)}
 };
 </script>
+<script id="tgy-local-backup-restore">
+(function(){
+  const BACKUP_VERSION=2;
+  function getAllTgyData(){
+    const data={};
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k && k.indexOf('tgy_')===0){
+        try{data[k]=JSON.parse(localStorage.getItem(k));}
+        catch(e){data[k]=localStorage.getItem(k);}
+      }
+    }
+    return data;
+  }
+  function setStatus(msg,ok=true){
+    const el=document.getElementById('tgyBackupStatus');
+    if(el){el.textContent=msg;el.style.color=ok?'#1769aa':'#c62828';}
+  }
+  function testKey(t){
+    if(!t||typeof t!=='object')return '';
+    if(t.id!==undefined&&t.id!==null&&String(t.id).trim())return 'id:'+String(t.id).trim();
+    return 'name:'+String(t.exam||'').trim().toLowerCase()+'|'+String(t.name||'').trim().toLowerCase();
+  }
+  function mergeTests(current,backup){
+    const cur=Array.isArray(current)?current:[];
+    const old=Array.isArray(backup)?backup:[];
+    const out=cur.map(x=>x);
+    const seen=new Set(out.map(testKey).filter(Boolean));
+    let added=0;
+    old.forEach(t=>{
+      const k=testKey(t);
+      if(k && seen.has(k))return;
+      out.push(t);if(k)seen.add(k);added++;
+    });
+    return {tests:out,added};
+  }
+  window.tgyCreateLocalBackup=function(){
+    try{
+      const data=getAllTgyData();
+      const payload={backupType:'Talent And Gyan Admin Local Backup',version:BACKUP_VERSION,createdAt:new Date().toISOString(),data};
+      const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      const d=new Date(),stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');
+      a.href=url;a.download='Talent-And-Gyan-Admin-Backup-'+stamp+'.json';
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      const keys=Object.keys(data);
+      const testCount=Array.isArray(data.tgy_tests)?data.tgy_tests.length:0;
+      setStatus('✅ Backup file PC में save करने के लिए download हो गई। '+keys.length+' data sections और '+testCount+' Tests शामिल हैं।');
+    }catch(e){console.error(e);setStatus('❌ Backup नहीं बन पाया: '+e.message,false);}
+  };
+  window.tgyRestoreLocalBackup=function(input){
+    const file=input&&input.files&&input.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=function(){
+      try{
+        const payload=JSON.parse(r.result);
+        if(!payload||payload.backupType!=='Talent And Gyan Admin Local Backup'||!payload.data||typeof payload.data!=='object')throw new Error('यह Talent And Gyan का valid backup file नहीं है।');
+        const data=payload.data;
+        const keys=Object.keys(data).filter(k=>k.indexOf('tgy_')===0);
+        if(!keys.length)throw new Error('Backup में कोई tgy_ data नहीं मिला।');
+        const backupTests=Array.isArray(data.tgy_tests)?data.tgy_tests:[];
+        const currentTests=(()=>{try{return JSON.parse(localStorage.getItem('tgy_tests')||'[]')}catch(e){return[]}})();
+        const merged=mergeTests(currentTests,backupTests);
+        if(!confirm('⚠️ Safe Restore किया जाएगा।\n\nBackup के पुराने Tests और अभी के नए Tests को मिलाकर रखा जाएगा।\nअभी के नए Tests delete नहीं होंगे।\n\nBackup Tests: '+backupTests.length+'\nअभी के Tests: '+currentTests.length+'\nRestore के बाद Tests: '+merged.tests.length+'\n\nबाकी tgy_ data backup के अनुसार restore होगा।\n\nक्या आप Restore करना चाहते हैं?')){input.value='';return;}
+        keys.forEach(k=>{
+          if(k==='tgy_tests')return;
+          localStorage.setItem(k,typeof data[k]==='string'?data[k]:JSON.stringify(data[k]));
+        });
+        localStorage.setItem('tgy_tests',JSON.stringify(merged.tests));
+        setStatus('✅ Safe Restore पूरा हो गया। '+merged.added+' पुराने Tests जोड़े गए और अभी के '+currentTests.length+' Tests सुरक्षित रखे गए। कुल '+merged.tests.length+' Tests हैं।');
+        setTimeout(()=>location.reload(),700);
+      }catch(e){console.error(e);setStatus('❌ Restore नहीं हुआ: '+e.message,false);alert('Restore नहीं हुआ।\n\n'+e.message);}
+      input.value='';
+    };
+    r.readAsText(file);
+  };
+})();
+</script>
 </body></html>
 
 <script id="tgy-admin-final-visible-naming-and-users-refresh">
@@ -3190,57 +3278,69 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(window.tgyAdm
     var name=String(inp&&inp.value||'').trim();
     if(!name)return alert('परीक्षा का नया नाम लिखें।');
     if(name===oldName){closeM();return;}
-    if(a.some(function(v){return examNameX(v)===name}))return alert('यह परीक्षा नाम पहले से मौजूद है।');
+    if(a.some(function(v,n){return n!==i && examNameX(v)===name}))return alert('यह परीक्षा नाम पहले से मौजूद है।');
 
-    /* Rename only the existing exam references; do not create a new exam. */
-    if(typeof x==='string')a[i]={name:name,visible:true};
-    else x.name=name;
-
-    var tt=getList('tgy_tests');
-    tt.forEach(function(t){if(t.exam===oldName)t.exam=name});
-    setList('tgy_tests',tt);
-
-    try{
-      if(typeof getAdminNotes==='function' && typeof saveAdminNotes==='function'){
-        var nn=getAdminNotes();nn.forEach(function(n){if(n.exam===oldName)n.exam=name});saveAdminNotes(nn);
-      }
-    }catch(e){}
-
-    ['tgy_pricing','tgy_offers','tgy_access_pricing'].forEach(function(key){
-      var arr=getList(key);arr.forEach(function(v){if(v.exam===oldName)v.exam=name});setList(key,arr);
-    });
+    /* DATA-SAFE RENAME: snapshot every affected store first. No Test/Question is recreated or deleted. */
+    var affected=['tgy_exams','tgy_tests','tgy_pdf_notes','tgy_pricing','tgy_offers','tgy_access_pricing','tgy_payments','tgy_users'];
+    var snapshot={};
+    affected.forEach(function(key){snapshot[key]=localStorage.getItem(key)});
+    var backupKey='tgy_exam_rename_backup_'+Date.now();
+    try{localStorage.setItem(backupKey,JSON.stringify({oldName:oldName,newName:name,createdAt:new Date().toISOString(),data:snapshot}));}catch(e){}
 
     try{
-      if(typeof mtStore==='function' && typeof mtSaveStore==='function'){
-        var d=mtStore();
-        if(d.exams&&d.exams[oldName]){
-          if(d.exams[name])return alert('यह परीक्षा नाम Mock Test में पहले से मौजूद है।');
-          d.exams[name]=d.exams[oldName];delete d.exams[oldName];
-          Object.values(d.exams[name].tests||{}).forEach(function(t){t.exam=name});
-          mtSaveStore(d);
+      /* 1) Exam master: change only the name, preserving logo/visibility/other fields. */
+      if(typeof x==='string')a[i]={name:name,visible:true};else x.name=name;
+      setList('tgy_exams',a);
+
+      /* 2) Flat Tests: preserve every Test object exactly; change only exam reference. */
+      var tt=getList('tgy_tests');
+      tt.forEach(function(t){if(t&&t.exam===oldName)t.exam=name});
+      setList('tgy_tests',tt);
+
+      /* 3) Study Material / Pricing / Offers / Access: change only exam reference. */
+      try{if(typeof getAdminNotes==='function'&&typeof saveAdminNotes==='function'){var nn=getAdminNotes();nn.forEach(function(n){if(n&&n.exam===oldName)n.exam=name});saveAdminNotes(nn);}}catch(e){}
+      ['tgy_pricing','tgy_offers','tgy_access_pricing'].forEach(function(key){var arr=getList(key);arr.forEach(function(v){if(v&&v.exam===oldName)v.exam=name});setList(key,arr)});
+
+      /* 4) Structured Mock Test store: rename its exam bucket without touching Test objects/questions. */
+      try{
+        if(typeof mtStore==='function'&&typeof mtSaveStore==='function'){
+          var d=mtStore();
+          if(d&&d.exams&&d.exams[oldName]){
+            if(d.exams[name])throw new Error('यह परीक्षा नाम Mock Test में पहले से मौजूद है।');
+            d.exams[name]=d.exams[oldName];
+            delete d.exams[oldName];
+            Object.keys(d.exams[name].tests||{}).forEach(function(k){if(d.exams[name].tests[k])d.exams[name].tests[k].exam=name});
+            mtSaveStore(d);
+          }
         }
-      }
-    }catch(e){}
+      }catch(e){/* Flat tgy_tests remains the source of truth; do not erase it on structured-store errors. */}
 
-    var payments=getList('tgy_payments');
-    payments.forEach(function(v){
-      if(v.exam===oldName)v.exam=name;
-      if(String(v.course||'').startsWith(oldName+' • '))v.course=name+String(v.course).slice(oldName.length);
-    });
-    setList('tgy_payments',payments);
+      /* 5) Payment history / User access: update only the exam reference. */
+      var payments=getList('tgy_payments');
+      payments.forEach(function(v){if(v&&v.exam===oldName)v.exam=name;if(v&&String(v.course||'').indexOf(oldName+' • ')===0)v.course=name+String(v.course).slice(oldName.length)});
+      setList('tgy_payments',payments);
+      var users=getList('tgy_users');
+      users.forEach(function(u){(u.seriesAccess||[]).forEach(function(v){if(v&&v.exam===oldName)v.exam=name})});
+      setList('tgy_users',users);
 
-    var users=getList('tgy_users');
-    users.forEach(function(u){(u.seriesAccess||[]).forEach(function(v){if(v.exam===oldName)v.exam=name})});
-    setList('tgy_users',users);
+      /* Refresh only UI; never rebuild Tests. */
+      try{if(typeof refreshAllExamDropdowns==='function')refreshAllExamDropdowns(name)}catch(e){}
+      try{if(typeof renderExamMaster==='function')renderExamMaster()}catch(e){}
+      try{if(typeof mtRenderAll==='function')mtRenderAll()}catch(e){}
+      try{if(typeof renderAccessPricing==='function')renderAccessPricing()}catch(e){}
 
-    setList('tgy_exams',a);
-    try{if(typeof refreshAllExamDropdowns==='function')refreshAllExamDropdowns(name)}catch(e){}
-    try{if(typeof renderExamMaster==='function')renderExamMaster()}catch(e){}
-    try{if(typeof mtRenderAll==='function')mtRenderAll()}catch(e){}
-    try{if(typeof renderAccessPricing==='function')renderAccessPricing()}catch(e){}
-    try{if(window.tgyCloud&&typeof window.tgyCloud.push==='function')window.tgyCloud.push('tgy_exams')}catch(e){}
-    closeM();
-    alert('✅ परीक्षा का नाम सफलतापूर्वक सुधार दिया गया है।');
+      /* Push the renamed references, including Tests, to the existing cloud bridge. */
+      try{if(window.tgyCloud&&typeof window.tgyCloud.push==='function'){affected.forEach(function(key){try{window.tgyCloud.push(key)}catch(e){}})}}catch(e){}
+      closeM();
+      alert('✅ परीक्षा का नाम सफलतापूर्वक बदला गया है। सभी जुड़े Tests/Questions और अन्य डेटा सुरक्षित रखा गया है।');
+    }catch(err){
+      /* Transaction rollback: restore the exact pre-rename local values. */
+      affected.forEach(function(key){if(snapshot[key]===null)localStorage.removeItem(key);else localStorage.setItem(key,snapshot[key])});
+      try{if(typeof refreshAllExamDropdowns==='function')refreshAllExamDropdowns(oldName)}catch(e){}
+      try{if(typeof renderExamMaster==='function')renderExamMaster()}catch(e){}
+      try{if(typeof mtRenderAll==='function')mtRenderAll()}catch(e){}
+      alert('❌ नाम Update नहीं हुआ। पुराना डेटा सुरक्षित रखा गया है।\n\n'+err.message);
+    }
   };
 
   var originalRenderExamMaster=window.renderExamMaster;
