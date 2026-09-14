@@ -92,6 +92,12 @@ function checkAdmin(){
 </section>
 <section id="tests" class="sec">
   <h1>📝 Mock Test — Test Management</h1>
+  <div id="tgySafeRecoveryCard" class="card" style="border:2px solid #f0ad4e;margin-bottom:14px">
+    <h3>🛡️ सुरक्षित डेटा चेक / Recovery</h3>
+    <p class="muted">यह केवल डेटा की तुलना करता है। Cloud में 20 Patwari Tests की copy मिलने पर ही missing tests को वापस local में रखेगा। बाकी data को इस recovery से नहीं बदला जाएगा। पहले current local data का backup अपने-आप बनता है।</p>
+    <button class="btn orange" onclick="tgyRunSafeRecoveryNow()">🔎 डेटा फिर से चेक करें</button>
+    <span id="tgySafeRecoveryMsg" class="muted" style="margin-left:8px"></span>
+  </div>
   <div class="card">
     <div class="row">
       <div><label>📋 परीक्षा</label><select id="mtExam" onchange="mtLoadTests()"></select></div><div><label>🔓 Test प्रकार</label><select id="mtType" onchange="mtTypeChanged()"><option value="demo">🎁 Demo (Free)</option><option value="test">📝 Test (Paid/Access)</option></select></div>
@@ -1668,6 +1674,69 @@ document.addEventListener("DOMContentLoaded",()=>{
 </script>
 
 
+<script id="tgy-safe-data-recovery-before-cloud-boot">
+(function(){
+  "use strict";
+  const SUPA="https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store";
+  const KEY="sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U";
+  const H={apikey:KEY,Authorization:"Bearer "+KEY,Accept:"application/json"};
+  const KEYS=["tgy_exams","tgy_tests","tgy_pdf_notes","tgy_pdf_folder_meta","tgy_pdf_folder_pricing","tgy_access_pricing","tgy_pricing","tgy_combo_pricing","tgy_users","tgy_payments","tgy_results","tgy_news_items","tgy_help","tgy_home_custom","tgy_home_colors","tgy_exam_structure","tgy_offers","tgy_terms_sections"];
+  const J=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k)||"null");return v==null?d:v}catch(e){return d}};
+  const S=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const arr=v=>Array.isArray(v)?v:[];
+  function isPatwari(t){return /patwari/i.test(String((t&&t.exam)||"")+" "+String((t&&t.name)||""));}
+  function count(v){return Array.isArray(v)?v.length:(v&&typeof v==='object'?Object.keys(v).length:(v==null?0:1));}
+  async function row(k){
+    const r=await fetch(SUPA+"?select=key,value,updated_at&key=eq."+encodeURIComponent(k),{headers:H});
+    if(!r.ok)throw new Error("Supabase "+r.status);
+    const a=await r.json(); return a&&a[0]?a[0]:null;
+  }
+  function backupAll(){
+    const snap={savedAt:new Date().toISOString(),keys:{}};
+    KEYS.forEach(k=>{try{const raw=localStorage.getItem(k);if(raw!==null)snap.keys[k]=JSON.parse(raw)}catch(e){}});
+    try{localStorage.setItem('tgy_recovery_precheck_backup',JSON.stringify(snap))}catch(e){}
+    return snap;
+  }
+  async function inspectAndRecover(){
+    const backup=backupAll();
+    const report={savedAt:backup.savedAt,local:{},cloud:{},restored:[],warnings:[]};
+
+    // CRITICAL: check/restore tgy_tests FIRST, before the normal 450ms cloud boot can run.
+    const localTests=arr(J('tgy_tests',[]));
+    let cloudTests=[];
+    try{const r=await row('tgy_tests'); cloudTests=arr(r&&r.value);}catch(e){report.warnings.push('tgy_tests: '+e.message)}
+    const lp=localTests.filter(isPatwari), cp=cloudTests.filter(isPatwari);
+    report.localPatwari=lp.length; report.cloudPatwari=cp.length;
+    if(cp.length>=20 && lp.length<20){
+      S('tgy_tests',cloudTests);
+      report.restored.push('tgy_tests restored from cloud: '+cp.length+' Patwari tests found; local had '+lp.length+'.');
+      report.local.tgy_tests=cloudTests.length; report.cloud.tgy_tests=cloudTests.length;
+      try{localStorage.setItem('tgy_recovery_report',JSON.stringify(report))}catch(e){}
+      setTimeout(function(){try{if(window.mtRenderAll)window.mtRenderAll();if(window.renderAll)window.renderAll();if(window.refreshAllExamDropdowns)window.refreshAllExamDropdowns('');}catch(e){}},20);
+    }else{
+      report.local.tgy_tests=localTests.length; report.cloud.tgy_tests=cloudTests.length;
+      if(cp.length<20)report.warnings.push('Cloud tgy_tests does not currently contain 20 Patwari tests; no automatic overwrite was performed.');
+      else report.warnings.push('Local tgy_tests already contains 20 or more Patwari tests; no overwrite was performed.');
+    }
+
+    // Non-destructive audit of the other shared stores. This section NEVER writes them.
+    for(const k of KEYS){
+      if(k==='tgy_tests')continue;
+      try{
+        const lv=J(k,null), r=await row(k), cv=r?r.value:null;
+        report.local[k]=count(lv); report.cloud[k]=count(cv);
+        if(count(cv)>count(lv))report.warnings.push(k+': cloud has more records/items ('+count(cv)+' vs local '+count(lv)+'). No automatic change was made.');
+      }catch(e){report.warnings.push(k+': '+e.message)}
+    }
+    try{localStorage.setItem('tgy_recovery_report',JSON.stringify(report))}catch(e){}
+    window.tgySafeRecovery={inspect:inspectAndRecover,lastReport:report,backup:backup};
+    return report;
+  }
+  // Start immediately, before the normal local-wins cloud bridge.
+  inspectAndRecover().catch(function(e){try{localStorage.setItem('tgy_recovery_error',String(e&&e.message||e))}catch(x){}});
+})();
+</script>
+
 <script id="tgy-admin-authoritative-cloud-bridge">
 (function(){
  "use strict";
@@ -2497,6 +2566,17 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.tgyRenderTermsEditor=render;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(render,50)});else setTimeout(render,50);
 })();
+</script>
+<script>
+window.tgyRunSafeRecoveryNow=async function(){
+  var el=document.getElementById('tgySafeRecoveryMsg'); if(el)el.textContent='चेक हो रहा है…';
+  try{
+    var r=await (window.tgySafeRecovery&&window.tgySafeRecovery.inspect?window.tgySafeRecovery.inspect():null);
+    if(!r){if(el)el.textContent='Recovery module उपलब्ध नहीं है।';return;}
+    if(el)el.textContent='Local Patwari: '+r.localPatwari+' | Cloud Patwari: '+r.cloudPatwari+(r.restored.length?' | '+r.restored[0]:' | कोई बदलाव नहीं किया गया।');
+    if(r.restored.length){try{if(window.mtRenderAll)window.mtRenderAll();if(window.renderAll)window.renderAll();}catch(e){} alert('✅ Patwari tests की cloud copy से recovery की गई। बाकी data को recovery script ने नहीं बदला।');}
+  }catch(e){if(el)el.textContent='चेक असफल: '+(e.message||e)}
+};
 </script>
 </body></html>
 
