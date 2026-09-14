@@ -3395,3 +3395,40 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
   };
 })();
 </script>
+
+
+<script id="tgy-only-final-answer-question-info-fix">
+(function(){
+  const E=window.esc||function(v){
+    return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))
+  };
+  window.tgyShowAnswerDetails=function(){
+    const s=window.state,c=document.getElementById("modalContent");
+    if(!c||!s||!s.t||!Array.isArray(s.t.questions))return;
+    let html=`<div style="padding:20px;max-height:100vh;overflow:auto"><h2>📋 Answer Details</h2>`;
+    s.t.questions.forEach((q,i)=>{
+      const a=s.answers[i];
+      const opts=Array.isArray(q)?(Array.isArray(q[1])?q[1]:[]):(Array.isArray(q.o)?q.o:[]);
+      const correct=Array.isArray(q)?q[2]:(q.answer??q.correct);
+      const explanation=Array.isArray(q)?(q[3]??""):(q.ex??q.explanation??"");
+      const question=Array.isArray(q)?q[0]:(q.q??q.question??"");
+      const ai=(a===null||a===undefined||a==='')?null:Number(a);
+      const ci=(correct===null||correct===undefined||correct==='')?null:Number(correct);
+      const ok=ai!==null&&ci!==null&&ai===ci;
+      const studentText=ai===null?'नहीं दिया':(opts[ai]??'');
+      const correctText=ci===null?'उपलब्ध नहीं':(opts[ci]??'');
+      html+=`<div class="tgy-answer-row">
+        <b>Question ${i+1}</b>
+        <div style="margin:10px 0 8px;font-weight:800">प्रश्न: ${E(question)}</div>
+        <p><b>आपका Answer:</b> ${ai===null?'नहीं दिया':`(${String.fromCharCode(65+ai)}) — ${E(studentText)}`}</p>
+        <p><b>सही Answer:</b> ${ci===null?'उपलब्ध नहीं':`(${String.fromCharCode(65+ci)}) — ${E(correctText)}`}</p>
+        <p style="font-weight:800;color:${ok?'#1f9d55':'#e53935'}">Status: ${ok?'Correct':'Wrong'}</p>
+        <div class="tgy-explanation"><b>📖 जानकारी / Explanation:</b><br>${explanation?E(explanation):'Explanation उपलब्ध नहीं है।'}</div>
+      </div>`;
+    });
+    html+=`<button class="btn orange" onclick="tgyShowExplanations()">📖 सभी Explanation / Solution देखें</button>
+      <button class="btn gray" onclick="tgyBackToFolder()">← Test List पर वापस</button></div>`;
+    c.innerHTML=html;
+  };
+})();
+</script>
