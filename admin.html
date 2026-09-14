@@ -2990,45 +2990,39 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(window.tgyAdm
 <script id="tgy-important-info-only-fix">
 /* ONLY FIX: Admin -> 📢 महत्वपूर्ण जानकारी. Nothing else is changed. */
 (function(){
-  function getItems(){try{return JSON.parse(localStorage.getItem('tgy_news_items')||'[]')}catch(e){return[]}}
-  function saveItems(a){localStorage.setItem('tgy_news_items',JSON.stringify(a)); if(typeof pushToCloud==='function'){try{pushToCloud('tgy_news_items',a)}catch(e){}}}
-  function escI(v){return (window.esc?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])))}
-  function render(){
-    const box=document.getElementById('homeCustomizerArea'); if(!box)return;
+  function getItems(){try{const a=JSON.parse(localStorage.getItem('tgy_news_items')||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
+  function saveItems(a){localStorage.setItem('tgy_news_items',JSON.stringify(a));if(typeof pushToCloud==='function'){try{pushToCloud('tgy_news_items',a)}catch(e){}}}
+  function escI(v){return window.esc?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+  function renderPreview(){
+    const box=document.getElementById('importantInfoPreview');if(!box)return;
     const a=getItems();
-    box.innerHTML='<div class="home-customize-card"><h2>📢 महत्वपूर्ण जानकारी</h2>'+
-      '<p>यहाँ जो जानकारी लिखेंगे वही Student Website में लाल/चलती पट्टी में दिखाई देगी।</p>'+
-      '<div id="newsRows">'+(a.length?a.map((x,i)=>
-        '<div class="news-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">'+
-        '<input id="news_'+i+'" value="'+escI(x.text||'')+'" style="flex:1;min-width:260px">'+
-        '<label><input type="checkbox" id="newsOn_'+i+'" '+(x.enabled!==false?'checked':'')+'> दिखाएँ</label>'+ 
-        '<button class="btn" onclick="saveImportantInfoOnly('+i+')">💾 सेव</button>'+ 
-        '<button class="btn" onclick="deleteImportantInfoOnly('+i+')">🗑️ Delete</button></div>'
-      ).join(''):'<p class="muted">अभी कोई महत्वपूर्ण जानकारी नहीं है।</p>')+'</div>'+
-      '<div class="news-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px">'+
-      '<input id="newNewsText" placeholder="नई महत्वपूर्ण जानकारी लिखें" style="flex:1;min-width:260px">'+
-      '<button class="btn orange" onclick="addImportantInfoOnly()">➕ नई जानकारी जोड़ें</button></div>'+
-      '<div style="margin-top:12px"><button class="btn gray" onclick="location.reload()">बंद करें</button></div></div>';
+    if(!a.length){box.innerHTML='<div class="card" style="margin-top:10px"><b>📢 पहले से कोई महत्वपूर्ण जानकारी उपलब्ध नहीं है।</b></div>';return}
+    box.innerHTML='<div class="card" style="margin-top:10px"><h3 style="margin-top:0">📋 Student Website पर चल रही महत्वपूर्ण जानकारी</h3>'+
+      a.map((x,i)=>'<div class="news-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0;padding:10px;border:1px solid #ddd;border-radius:8px">'+
+      '<input id="news_'+i+'" value="'+escI(x.text||'')+'" style="flex:1;min-width:260px">'+
+      '<label><input type="checkbox" id="newsOn_'+i+'" '+(x.enabled!==false?'checked':'')+'> दिखाएँ</label>'+
+      '<button class="btn" onclick="saveImportantInfoOnly('+i+')">💾 सेव / बदलें</button>'+
+      '<button class="btn danger" onclick="deleteImportantInfoOnly('+i+')">🗑️ Delete</button></div>').join('')+
+      '</div>';
   }
-  window.openNewsManager=render;
+  window.openNewsManager=function(){renderPreview();const b=document.getElementById('importantInfoPreview');if(b)b.scrollIntoView({behavior:'smooth',block:'start'})};
   window.addImportantInfoOnly=function(){
-    const el=document.getElementById('newNewsText'); if(!el)return;
-    const t=el.value.trim(); if(!t){alert('पहले महत्वपूर्ण जानकारी लिखें।');return;}
-    const a=getItems(); a.push({text:t,enabled:true,date:Date.now()}); saveItems(a); render();
+    const el=document.getElementById('newNewsText');if(!el)return;const t=el.value.trim();if(!t){alert('पहले महत्वपूर्ण जानकारी लिखें।');return;}
+    const a=getItems();a.push({text:t,enabled:true,date:Date.now()});saveItems(a);el.value='';renderPreview();
   };
   window.quickAddImportantInfo=function(){
-    const el=document.getElementById('quickImportantInfo'); if(!el)return;
-    const t=el.value.trim(); if(!t){alert('पहले महत्वपूर्ण जानकारी लिखें।');return;}
-    const a=getItems(); a.push({text:t,enabled:true,date:Date.now()}); saveItems(a); el.value=''; render();
+    const el=document.getElementById('quickImportantInfo');if(!el)return;const t=el.value.trim();if(!t){alert('पहले महत्वपूर्ण जानकारी लिखें।');return;}
+    const a=getItems();a.push({text:t,enabled:true,date:Date.now()});saveItems(a);el.value='';renderPreview();
   };
   window.saveImportantInfoOnly=function(i){
-    const a=getItems(), t=document.getElementById('news_'+i), c=document.getElementById('newsOn_'+i);
-    if(!a[i]||!t)return; a[i].text=t.value.trim(); a[i].enabled=!!(c&&c.checked); saveItems(a); render();
+    const a=getItems(),t=document.getElementById('news_'+i),c=document.getElementById('newsOn_'+i);
+    if(!a[i]||!t)return;a[i].text=t.value.trim();a[i].enabled=!!(c&&c.checked);saveItems(a);renderPreview();
   };
   window.deleteImportantInfoOnly=function(i){
-    const a=getItems(); if(!a[i])return;
-    if(!confirm('क्या आप यह महत्वपूर्ण जानकारी Delete करना चाहते हैं?'))return;
-    a.splice(i,1); saveItems(a); render();
+    const a=getItems();if(!a[i])return;if(!confirm('क्या आप यह महत्वपूर्ण जानकारी Delete करना चाहते हैं?'))return;
+    a.splice(i,1);saveItems(a);renderPreview();
   };
+  document.addEventListener('DOMContentLoaded',renderPreview);
+  window.addEventListener('storage',renderPreview);
 })();
 </script>
