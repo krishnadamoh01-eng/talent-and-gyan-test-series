@@ -75,7 +75,7 @@ function checkAdmin(){
 </script>
 <header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
 <button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('pricing',this)">💰 Pricing</button><button onclick="show('offers',this)">🎟️ Offers</button><button onclick="show('examManagement',this)">📋 परीक्षा प्रबंधन</button>
-<button onclick="show('accessPricing',this)">📁 Access Pricing</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
+<button onclick="show('accessPricing',this)">📁 Access Pricing</button><button onclick="show('tgyTermsManager',this)">📄 Terms &amp; Conditions</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 
 <section id="legacyExams" class="sec">
@@ -258,6 +258,19 @@ function saveQuickHeadline(){let c={};try{c=JSON.parse(localStorage.getItem("tgy
   <h3>📋 सभी परीक्षाएँ</h3>
   <p class="muted">यहाँ से केवल परीक्षा का नाम Manage करें। Test/Question/PDF अलग-अलग sections में Manage होंगे।</p>
   <div id="examMasterList"></div>
+</div>
+</section>
+
+<section id="tgyTermsManager" class="sec">
+<h1>📄 Terms &amp; Conditions</h1>
+<div class="card">
+  <h3>✏️ Terms &amp; Conditions Edit करें</h3>
+  <p class="muted">यहाँ जो जानकारी Save करेंगे, वही Student Site के <b>Terms &amp; Conditions</b> में दिखाई जाएगी। केवल Terms &amp; Conditions की जानकारी ही बदलेगी।</p>
+  <div id="tgyTermsEditor"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+    <button class="btn orange" onclick="tgySaveTermsSections()">💾 Terms &amp; Conditions Save करें</button>
+  </div>
+  <p id="tgyTermsSaveMsg" class="muted" style="margin-top:10px"></p>
 </div>
 </section>
 
@@ -1664,7 +1677,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  const KEYS=["tgy_exams","tgy_tests","tgy_pdf_notes","tgy_pdf_folder_meta","tgy_pdf_folder_pricing",
    "tgy_access_pricing","tgy_pricing","tgy_combo_pricing","tgy_users","tgy_payments",
    "tgy_results","tgy_news_items","tgy_help","tgy_home_custom","tgy_home_colors",
-   "tgy_exam_structure","tgy_offers"];
+   "tgy_exam_structure","tgy_offers","tgy_terms_sections"];
  const H={apikey:KEY,Authorization:"Bearer "+KEY,Accept:"application/json"};
  const nativeSet=Storage.prototype.setItem;
  const nativeRemove=Storage.prototype.removeItem;
@@ -2447,6 +2460,42 @@ document.addEventListener("DOMContentLoaded",()=>{
     };
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(window.mtRenderQuestions,50)});else setTimeout(window.mtRenderQuestions,50);
+})();
+</script>
+
+<style id="tgy-terms-editor-only-style">
+.tgy-terms-edit-item{border:1px solid #d9e2ec;border-radius:12px;padding:14px;margin:12px 0;background:#fff}
+.tgy-terms-edit-item h4{margin:0 0 8px;color:#123b68}
+.tgy-terms-edit-item input,.tgy-terms-edit-item textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd7e3;border-radius:8px;font:inherit}
+.tgy-terms-edit-item textarea{min-height:150px;resize:vertical;line-height:1.6}
+</style>
+<script id="tgy-terms-editor-only-fix">
+(function(){
+  "use strict";
+  var KEY="tgy_terms_sections";
+  var defaults=[
+    {title:"सामान्य उपयोग की शर्तें",body:"Welcome. If you continue to browse and use this website, you agree to comply with and be bound by the following Terms & Conditions of Use, which, together with our Privacy Policy, govern Talent And Gyan's relationship with you in relation to this website. The term 'Talent And Gyan', 'us' or 'we' refers to the owner of this website. The term 'you' refers to the user or viewer of this website. The use of this website is subject to the following terms of use:\n\n1. The content of the pages of this website is for your general information and use only. It is subject to change without notice.\n2. Neither we nor any third parties provide any warranty or guarantee as to the accuracy, timeliness, performance, completeness or suitability of the information and materials found or offered on this website for any particular purpose.\n3. You acknowledge that such information and materials may contain inaccuracies or errors, and we expressly exclude liability for any such inaccuracies or errors to the fullest extent permitted by law.\n4. Your use of any information or materials on this website is entirely at your own risk, for which we shall not be liable.\n5. It shall be your own responsibility to ensure that any products, services or information available through this website meet your specific requirements.\n6. Unauthorized use of this website by you may give rise to a claim for damages and/or may constitute a criminal offense. From time to time, this website may also include links to other websites.\n7. These links are provided for your convenience to provide further information. They do not signify that we endorse the website(s). We take no responsibility for the content of the linked website(s).\n8. You may not create a link to this website from another website or document without the prior consent of Talent And Gyan. Your use of this website and any dispute arising out of such use of the website is subject to the applicable laws of India and the jurisdiction of the applicable regulatory authorities."},
+    {title:"बौद्धिक संपदा (Intellectual Property)",body:"1. This website contains material which is owned by or licensed to Talent And Gyan. This material includes, but is not limited to, the design, layout, look, appearance and graphics.\n2. Reproduction is prohibited other than in accordance with the copyright notice, which forms part of these Terms & Conditions.\n3. All trademarks reproduced on this website which are not the property of, or licensed to, the operator are acknowledged on the website."},
+    {title:"शैक्षिक उद्देश्य (Educational Purpose)",body:"1. Educational Purpose Only: This website/app is designed solely for educational purposes to help users develop skills. We do not guarantee any income or financial success from using this website/app.\n2. No Income Assurance: The skills and knowledge provided are for personal growth and learning. We do not promise or imply any job placement, business success or earnings.\n3. User Responsibility: You are responsible for how you use the skills learned from this website/app. The website/app owner and creators are not liable for any outcomes resulting from your use of the information or skills provided."},
+    {title:"भुगतान और Refund Policy (Payments)",body:"1. Payments are accepted only through the UPI and QR payment options provided on the website.\n2. All payments are for digital courses, Test Series or other digital services. Once a purchase is successfully processed, payments are generally non-refundable except in the circumstances specifically mentioned below.\n\nRefund Policy\n\nYou may be eligible for a full refund in the following circumstances:\n1. The purchased course or service has not been assigned to your account within the applicable access/validity period from the date of purchase.\n2. You have been charged twice for the same course or subscription.\n3. Under any other circumstance, refund requests may not be considered because the purchase is for a digital course or digital service.\n\nFor any payment-related issue, please contact the website's support/complaint section with the relevant payment or Transaction/UTR details."}
+  ];
+  function escT(v){return typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+  function load(){try{var a=JSON.parse(localStorage.getItem(KEY)||'');if(Array.isArray(a)&&a.length)return a}catch(e){}return defaults.map(function(x){return {title:x.title,body:x.body}})}
+  function render(){
+    var box=document.getElementById('tgyTermsEditor');if(!box)return;
+    var a=load();
+    box.innerHTML=a.map(function(x,i){return '<div class="tgy-terms-edit-item"><h4>भाग '+(i+1)+'</h4><label>शीर्षक</label><input id="tgyTermTitle_'+i+'" value="'+escT(x.title)+'"><label style="display:block;margin-top:9px">विस्तृत जानकारी</label><textarea id="tgyTermBody_'+i+'">'+escT(x.body)+'</textarea></div>'}).join('');
+  }
+  window.tgySaveTermsSections=function(){
+    var a=load();
+    a=a.map(function(x,i){var t=document.getElementById('tgyTermTitle_'+i),b=document.getElementById('tgyTermBody_'+i);return {title:String(t?t.value:x.title).trim(),body:String(b?b.value:x.body).trim()}}).filter(function(x){return x.title||x.body});
+    if(!a.length)return alert('कम से कम एक Terms & Conditions भाग रखें।');
+    localStorage.setItem(KEY,JSON.stringify(a));
+    try{if(window.tgyCloud&&typeof window.tgyCloud.push==='function')window.tgyCloud.push(KEY)}catch(e){}
+    var m=document.getElementById('tgyTermsSaveMsg');if(m)m.textContent='✅ Terms & Conditions सफलतापूर्वक Save हो गए हैं।';
+  };
+  window.tgyRenderTermsEditor=render;
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(render,50)});else setTimeout(render,50);
 })();
 </script>
 </body></html>

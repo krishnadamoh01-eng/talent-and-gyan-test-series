@@ -241,9 +241,10 @@ header{margin-left:0!important;padding-left:5%!important}
 <div class="container"><div class="ad"><h3>📢 Advertisement</h3><p class="muted">यहाँ आपके Advertisement दिखाए जा सकते हैं।</p></div></div>
 <div class="container" id="results" style="display:none!important"><div id="resultList"></div></div>
 <div class="container" id="help"><div class="title">🛠️ सहायता / शिकायत</div><div class="card"><p>Payment, Login, Test, Result या किसी अन्य समस्या के लिए शिकायत भेजें।</p><label>नाम</label><input id="hname" placeholder="आपका नाम"><label>Email</label><input id="hemail" placeholder="आपकी Email ID"><label>समस्या</label><select id="htype"><option>Payment की समस्या</option><option>Login की समस्या</option><option>Test नहीं खुल रहा</option><option>Timer की समस्या</option><option>Result की समस्या</option><option>Payment किया लेकिन Access नहीं मिला</option><option>अन्य समस्या</option></select><label>Transaction / UTR</label><input id="hutr" placeholder="यदि लागू हो"><label>समस्या का विवरण</label><textarea id="hmsg" rows="4"></textarea><button class="btn" onclick="sendHelp()">शिकायत Submit करें</button></div></div>
-<footer class="tgy-footer-new"><div>© 2026 Talent And Gyan Test Series. All Rights Reserved.</div><div><a href="#">About Us</a><a href="#">Contact Us</a><a href="#">Privacy Policy</a><a href="#">Terms &amp; Conditions</a></div></footer>
+<footer class="tgy-footer-new"><div>© 2026 Talent And Gyan Test Series. All Rights Reserved.</div><div><a href="#" onclick="tgyOpenFooterInfo('about');return false;">About Us</a><a href="#" onclick="tgyOpenFooterInfo('contact');return false;">Contact Us</a><a href="#" onclick="tgyOpenFooterInfo('privacy');return false;">Privacy Policy</a><a href="#" onclick="tgyOpenFooterInfo('terms');return false;">Terms &amp; Conditions</a></div></footer>
 <div class="modal" id="modal"><div class="box" id="modalContent"></div></div>
 
+<script id="tgy-separate-test-price-helper">
 function getSeparateTestPrice(t){
  try{
   const a=JSON.parse(localStorage.getItem("tgy_pricing")||"[]");
@@ -252,6 +253,7 @@ function getSeparateTestPrice(t){
  }catch(e){}
  return {mrp:Number(t.pricing?.oneTest?.mrp)||0,offer:Number(t.pricing?.oneTest?.offer)||0};
 }
+</script>
 
 <script id="tgy-escape-helper">
 function esc(v){
@@ -2018,7 +2020,7 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
  const KEYS=["tgy_exams","tgy_tests","tgy_pdf_notes","tgy_pdf_folder_meta","tgy_pdf_folder_pricing",
    "tgy_access_pricing","tgy_pricing","tgy_combo_pricing","tgy_users","tgy_payments",
    "tgy_results","tgy_news_items","tgy_help","tgy_home_custom","tgy_home_colors",
-   "tgy_exam_structure","tgy_offers"];
+   "tgy_exam_structure","tgy_offers","tgy_terms_sections"];
  const H={apikey:KEY,Authorization:"Bearer "+KEY,Accept:"application/json"};
  const nativeSet=Storage.prototype.setItem;
  async function get(k){
@@ -2435,6 +2437,50 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
 })();
 </script>
 
+
+<style id="tgy-terms-student-only-style">
+.tgy-terms-wrap{display:flex;gap:18px;align-items:stretch;text-align:left}
+.tgy-terms-side{width:250px;min-width:210px;background:#f4f7fb;border:1px solid #d9e2ec;border-radius:14px;padding:10px}
+.tgy-terms-side button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:12px 13px;border-radius:7px;margin:2px 0;font:inherit;cursor:pointer}
+.tgy-terms-side button.active{background:#fde1e1;color:#e01818;font-weight:700;border-left:4px solid #e01818}
+.tgy-terms-main{flex:1;min-width:0;padding:4px 8px}
+.tgy-terms-main h2{margin:0 0 14px}
+.tgy-terms-main .tgy-terms-body{line-height:1.75;font-size:16px}
+@media(max-width:700px){.tgy-terms-wrap{flex-direction:column}.tgy-terms-side{width:auto;min-width:0}.tgy-terms-main{padding:4px 0}}
+</style>
+<script id="tgy-terms-student-only-fix">
+(function(){
+  "use strict";
+  var KEY="tgy_terms_sections";
+  var defaults=[
+    {title:"सामान्य उपयोग की शर्तें",body:"Welcome. If you continue to browse and use this website, you agree to comply with and be bound by the following Terms & Conditions of Use, which, together with our Privacy Policy, govern Talent And Gyan's relationship with you in relation to this website. The term 'Talent And Gyan', 'us' or 'we' refers to the owner of this website. The term 'you' refers to the user or viewer of this website. The use of this website is subject to the following terms of use:\n\n1. The content of the pages of this website is for your general information and use only. It is subject to change without notice.\n2. Neither we nor any third parties provide any warranty or guarantee as to the accuracy, timeliness, performance, completeness or suitability of the information and materials found or offered on this website for any particular purpose.\n3. You acknowledge that such information and materials may contain inaccuracies or errors, and we expressly exclude liability for any such inaccuracies or errors to the fullest extent permitted by law.\n4. Your use of any information or materials on this website is entirely at your own risk, for which we shall not be liable.\n5. It shall be your own responsibility to ensure that any products, services or information available through this website meet your specific requirements.\n6. Unauthorized use of this website by you may give rise to a claim for damages and/or may constitute a criminal offense. From time to time, this website may also include links to other websites.\n7. These links are provided for your convenience to provide further information. They do not signify that we endorse the website(s). We take no responsibility for the content of the linked website(s).\n8. You may not create a link to this website from another website or document without the prior consent of Talent And Gyan. Your use of this website and any dispute arising out of such use of the website is subject to the applicable laws of India and the jurisdiction of the applicable regulatory authorities."},
+    {title:"बौद्धिक संपदा (Intellectual Property)",body:"1. This website contains material which is owned by or licensed to Talent And Gyan. This material includes, but is not limited to, the design, layout, look, appearance and graphics.\n2. Reproduction is prohibited other than in accordance with the copyright notice, which forms part of these Terms & Conditions.\n3. All trademarks reproduced on this website which are not the property of, or licensed to, the operator are acknowledged on the website."},
+    {title:"शैक्षिक उद्देश्य (Educational Purpose)",body:"1. Educational Purpose Only: This website/app is designed solely for educational purposes to help users develop skills. We do not guarantee any income or financial success from using this website/app.\n2. No Income Assurance: The skills and knowledge provided are for personal growth and learning. We do not promise or imply any job placement, business success or earnings.\n3. User Responsibility: You are responsible for how you use the skills learned from this website/app. The website/app owner and creators are not liable for any outcomes resulting from your use of the information or skills provided."},
+    {title:"भुगतान और Refund Policy (Payments)",body:"1. Payments are accepted only through the UPI and QR payment options provided on the website.\n2. All payments are for digital courses, Test Series or other digital services. Once a purchase is successfully processed, payments are generally non-refundable except in the circumstances specifically mentioned below.\n\nRefund Policy\n\nYou may be eligible for a full refund in the following circumstances:\n1. The purchased course or service has not been assigned to your account within the applicable access/validity period from the date of purchase.\n2. You have been charged twice for the same course or subscription.\n3. Under any other circumstance, refund requests may not be considered because the purchase is for a digital course or digital service.\n\nFor any payment-related issue, please contact the website's support/complaint section with the relevant payment or Transaction/UTR details."}
+  ];
+  function escT(v){return String(v??'').replace(/[&<>\"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]})}
+  function getSections(){
+    try{var a=JSON.parse(localStorage.getItem(KEY)||'');if(Array.isArray(a)&&a.length)return a.map(function(x){return {title:String(x.title||''),body:String(x.body||'')}}).filter(function(x){return x.title||x.body})}catch(e){}
+    return defaults;
+  }
+  var oldFooterInfo=window.tgyOpenFooterInfo;
+  window.tgyOpenFooterInfo=function(type){
+    if(type!=='terms'){
+      if(typeof oldFooterInfo==='function')return oldFooterInfo(type);
+      return;
+    }
+    var modal=document.getElementById('modal'),box=document.getElementById('modalContent');
+    if(!modal||!box)return;
+    var a=getSections(),active=0;
+    function draw(){
+      box.innerHTML='<div class="tgy-terms-wrap"><div class="tgy-terms-side">'+a.map(function(x,i){return '<button type="button" class="'+(i===active?'active':'')+'" data-tgy-term="'+i+'">'+escT(x.title)+'</button>'}).join('')+'</div><div class="tgy-terms-main"><h2>'+escT(a[active].title)+'</h2><div class="tgy-terms-body">'+a[active].body.replace(/\n/g,'<br>')+'</div><div style="margin-top:18px;text-align:right"><button class="btn orange" onclick="closeM()">✖ बंद करें</button></div></div></div>';
+      box.querySelectorAll('[data-tgy-term]').forEach(function(btn){btn.addEventListener('click',function(){active=Number(btn.getAttribute('data-tgy-term'));draw()})});
+    }
+    draw();
+    modal.style.display='flex';
+  };
+})();
+</script>
 </body></html>
 <!-- TG&Y PDF + TEST SERIES COMBO PLAN -->
 <script id="tgy-combo-student-v1">
@@ -3429,6 +3475,47 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
     html+=`<button class="btn orange" onclick="tgyShowExplanations()">📖 सभी Explanation / Solution देखें</button>
       <button class="btn gray" onclick="tgyBackToFolder()">← Test List पर वापस</button></div>`;
     c.innerHTML=html;
+  };
+})();
+</script>
+
+
+<script id="tgy-footer-info-only-fix">
+(function(){
+  "use strict";
+  window.tgyOpenFooterInfo=function(type){
+    var modal=document.getElementById("modal"),box=document.getElementById("modalContent");
+    if(!modal||!box)return;
+    var data={
+      about:{title:"ℹ️ About Us",body:
+        "<p><b>Talent And Gyan Test Series</b> एक ऑनलाइन टेस्ट सीरीज़ प्लेटफ़ॉर्म है, जहाँ विद्यार्थियों को विभिन्न प्रतियोगी परीक्षाओं की तैयारी के लिए Mock Tests, Practice Tests और उपलब्ध अध्ययन सामग्री दी जाती है।</p>"+
+        "<p>हमारा उद्देश्य विद्यार्थियों को अभ्यास, टेस्ट देने और अपने परिणाम देखने के लिए सरल एवं उपयोगी ऑनलाइन सुविधा उपलब्ध कराना है।</p>"},
+      contact:{title:"📞 Contact Us",body:
+        "<p>किसी भी <b>Payment, Login, Test, Result</b> या अन्य समस्या के लिए वेबसाइट के <b>सहायता / शिकायत</b> सेक्शन से अपनी शिकायत या समस्या भेजें।</p>"+
+        "<p>शिकायत भेजते समय सही जानकारी और, जहाँ लागू हो, Transaction / UTR विवरण देना सहायता को आसान बनाता है।</p>"},
+      privacy:{title:"🔒 Privacy Policy",body:
+        "<p>Talent And Gyan Test Series आपकी दी गई जानकारी का उपयोग वेबसाइट की सेवाएँ उपलब्ध कराने, Login/Account को संचालित करने, Test/Result और खरीदी गई सुविधाओं से संबंधित कार्य करने तथा सहायता/शिकायत का समाधान करने के लिए करता है।</p>"+
+        "<p>जहाँ आवश्यक हो वहाँ Name, Email, Payment/Transaction विवरण, Test/Result और Support से संबंधित जानकारी वेबसाइट की कार्यप्रणाली के अनुसार उपयोग की जा सकती है।</p>"+
+        "<p>हम व्यक्तिगत जानकारी को अनावश्यक रूप से सार्वजनिक करने या बेचने का उद्देश्य नहीं रखते। फिर भी इंटरनेट पर किसी भी सेवा में पूर्ण सुरक्षा की गारंटी नहीं दी जा सकती।</p>"+
+        "<p>सेवा में बदलाव होने पर इस Privacy Policy को भी आवश्यकतानुसार अपडेट किया जा सकता है।</p>"},
+      terms:{title:"📄 Terms & Conditions",body:
+        "<h3>सामान्य उपयोग की शर्तें</h3>"+
+        "<p>Welcome. If you continue to browse and use this website, you agree to comply with and be bound by the following Terms &amp; Conditions of Use, which, together with our Privacy Policy, govern Talent And Gyan's relationship with you in relation to this website.</p>"+
+        "<p>The term 'Talent And Gyan', 'us' or 'we' refers to the owner of this website. The term 'you' refers to the user or viewer of this website.</p>"+
+        "<ol><li>The content of the pages of this website is for your general information and use only. It is subject to change without notice.</li><li>Neither we nor any third parties provide any warranty or guarantee as to the accuracy, timeliness, performance, completeness or suitability of the information and materials found or offered on this website for any particular purpose.</li><li>You acknowledge that such information and materials may contain inaccuracies or errors, and we expressly exclude liability for any such inaccuracies or errors to the fullest extent permitted by law.</li><li>Your use of any information or materials on this website is entirely at your own risk, for which we shall not be liable.</li><li>It shall be your own responsibility to ensure that any products, services or information available through this website meet your specific requirements.</li><li>Unauthorized use of this website by you may give rise to a claim for damages and/or may constitute a criminal offense. From time to time, this website may also include links to other websites.</li><li>These links are provided for your convenience to provide further information. They do not signify that we endorse the website(s). We take no responsibility for the content of the linked website(s).</li><li>You may not create a link to this website from another website or document without the prior consent of Talent And Gyan. Your use of this website and any dispute arising out of such use of the website is subject to the applicable laws of India and the jurisdiction of the applicable regulatory authorities.</li></ol>"+
+        "<h3>बौद्धिक संपदा (Intellectual Property)</h3>"+
+        "<ol><li>This website contains material which is owned by or licensed to Talent And Gyan. This material includes, but is not limited to, the design, layout, look, appearance and graphics.</li><li>Reproduction is prohibited other than in accordance with the copyright notice, which forms part of these Terms &amp; Conditions.</li><li>All trademarks reproduced on this website which are not the property of, or licensed to, the operator are acknowledged on the website.</li></ol>"+
+        "<h3>शैक्षिक उद्देश्य (Educational Purpose)</h3>"+
+        "<ol><li><b>Educational Purpose Only:</b> This website/app is designed solely for educational purposes to help users develop skills. We do not guarantee any income or financial success from using this website/app.</li><li><b>No Income Assurance:</b> The skills and knowledge provided are for personal growth and learning. We do not promise or imply any job placement, business success or earnings.</li><li><b>User Responsibility:</b> You are responsible for how you use the skills learned from this website/app. The website/app owner and creators are not liable for any outcomes resulting from your use of the information or skills provided.</li></ol>"+
+        "<h3>भुगतान और Refund Policy (Payments)</h3>"+
+        "<ol><li>Payments are accepted only through the UPI and QR payment options provided on the website.</li><li>All payments are for digital courses, Test Series or other digital services. Once a purchase is successfully processed, payments are generally non-refundable except in the circumstances specifically mentioned below.</li></ol>"+
+        "<h4>Refund Policy</h4><p>You may be eligible for a full refund in the following circumstances:</p>"+
+        "<ol><li>The purchased course or service has not been assigned to your account within the applicable access/validity period from the date of purchase.</li><li>You have been charged twice for the same course or subscription.</li><li>Under any other circumstance, refund requests may not be considered because the purchase is for a digital course or digital service.</li></ol>"+
+        "<p>For any payment-related issue, please contact the website's support/complaint section with the relevant payment or Transaction/UTR details.</p>"}
+    }[type];
+    if(!data)return;
+    box.innerHTML='<h2 style="margin-top:0">'+data.title+'</h2><div style="line-height:1.7">'+data.body+'</div><div style="margin-top:18px;text-align:right"><button class="btn orange" onclick="closeM()">✖ बंद करें</button></div>';
+    modal.style.display="flex";
   };
 })();
 </script>
