@@ -3026,3 +3026,107 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(window.tgyAdm
   window.addEventListener('storage',renderPreview);
 })();
 </script>
+
+<script id="tgy-exam-name-edit-popup-only-fix">
+(function(){
+  "use strict";
+  /* ONLY FIX: परीक्षा प्रबंधन में परीक्षा नाम को अलग Popup से Edit करना। */
+  function escX(v){return typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+  function getList(key){try{var a=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
+  function setList(key,a){localStorage.setItem(key,JSON.stringify(a))}
+  function examNameX(x){return String(typeof x==='string'?x:(x&&x.name)||'').trim()}
+
+  window.tgyOpenExamNameEditPopup=function(i){
+    var a=getList('tgy_exams');
+    if(!a[i])return;
+    var oldName=examNameX(a[i]);
+    if(!oldName)return;
+    var modal=document.getElementById('modal'),mb=document.getElementById('mb');
+    if(!modal||!mb)return;
+    mb.innerHTML=`<h2>✏️ परीक्षा का नाम सुधारें</h2>
+      <p><b>वर्तमान नाम:</b> ${escX(oldName)}</p>
+      <label>नया परीक्षा नाम</label>
+      <input id="tgyExamRenameInput" value="${escX(oldName)}" style="width:100%;box-sizing:border-box;padding:10px;margin:8px 0 14px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn orange" onclick="tgySaveExamNameEdit(${i})">💾 नाम Save करें</button>
+        <button class="btn gray" onclick="closeM()">✖ बंद करें</button>
+      </div>`;
+    modal.style.display='flex';
+    setTimeout(function(){var el=document.getElementById('tgyExamRenameInput');if(el){el.focus();el.select()}},30);
+  };
+
+  window.tgySaveExamNameEdit=function(i){
+    var a=getList('tgy_exams'),x=a[i];if(!x)return;
+    var oldName=examNameX(x),inp=document.getElementById('tgyExamRenameInput');
+    var name=String(inp&&inp.value||'').trim();
+    if(!name)return alert('परीक्षा का नया नाम लिखें।');
+    if(name===oldName){closeM();return;}
+    if(a.some(function(v){return examNameX(v)===name}))return alert('यह परीक्षा नाम पहले से मौजूद है।');
+
+    /* Rename only the existing exam references; do not create a new exam. */
+    if(typeof x==='string')a[i]={name:name,visible:true};
+    else x.name=name;
+
+    var tt=getList('tgy_tests');
+    tt.forEach(function(t){if(t.exam===oldName)t.exam=name});
+    setList('tgy_tests',tt);
+
+    try{
+      if(typeof getAdminNotes==='function' && typeof saveAdminNotes==='function'){
+        var nn=getAdminNotes();nn.forEach(function(n){if(n.exam===oldName)n.exam=name});saveAdminNotes(nn);
+      }
+    }catch(e){}
+
+    ['tgy_pricing','tgy_offers','tgy_access_pricing'].forEach(function(key){
+      var arr=getList(key);arr.forEach(function(v){if(v.exam===oldName)v.exam=name});setList(key,arr);
+    });
+
+    try{
+      if(typeof mtStore==='function' && typeof mtSaveStore==='function'){
+        var d=mtStore();
+        if(d.exams&&d.exams[oldName]){
+          if(d.exams[name])return alert('यह परीक्षा नाम Mock Test में पहले से मौजूद है।');
+          d.exams[name]=d.exams[oldName];delete d.exams[oldName];
+          Object.values(d.exams[name].tests||{}).forEach(function(t){t.exam=name});
+          mtSaveStore(d);
+        }
+      }
+    }catch(e){}
+
+    var payments=getList('tgy_payments');
+    payments.forEach(function(v){
+      if(v.exam===oldName)v.exam=name;
+      if(String(v.course||'').startsWith(oldName+' • '))v.course=name+String(v.course).slice(oldName.length);
+    });
+    setList('tgy_payments',payments);
+
+    var users=getList('tgy_users');
+    users.forEach(function(u){(u.seriesAccess||[]).forEach(function(v){if(v.exam===oldName)v.exam=name})});
+    setList('tgy_users',users);
+
+    setList('tgy_exams',a);
+    try{if(typeof refreshAllExamDropdowns==='function')refreshAllExamDropdowns(name)}catch(e){}
+    try{if(typeof renderExamMaster==='function')renderExamMaster()}catch(e){}
+    try{if(typeof mtRenderAll==='function')mtRenderAll()}catch(e){}
+    try{if(typeof renderAccessPricing==='function')renderAccessPricing()}catch(e){}
+    try{if(window.tgyCloud&&typeof window.tgyCloud.push==='function')window.tgyCloud.push('tgy_exams')}catch(e){}
+    closeM();
+    alert('✅ परीक्षा का नाम सफलतापूर्वक सुधार दिया गया है।');
+  };
+
+  var originalRenderExamMaster=window.renderExamMaster;
+  window.renderExamMaster=function(){
+    var b=document.getElementById('examMasterList');if(!b)return;
+    var a=(typeof getExamMaster==='function'?getExamMaster():getList('tgy_exams'));
+    b.innerHTML=a.map(function(x,i){
+      var n=examNameX(x);
+      return `<div class="card" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="min-width:220px">${escX(n)}</b> — ${x.visible===false?'🙈 Hidden':'👁️ Active'}
+      <button class="btn" onclick="tgyOpenExamNameEditPopup(${i})">✏️ नाम सुधारें</button>
+      <button class="btn danger" onclick="deleteExamMaster(${i})">🗑️ Delete</button></div>`;
+    }).join('');
+  };
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(window.renderExamMaster,50)});
+  else setTimeout(window.renderExamMaster,50);
+})();
+</script>
