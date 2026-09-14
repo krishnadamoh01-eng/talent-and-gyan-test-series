@@ -3519,3 +3519,94 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
   };
 })();
 </script>
+
+
+<!-- FINAL TARGETED FIX: Home Exam dedupe + Exam Hub first + Answer-letter normalization. No other systems changed. -->
+<script id="tgy-final-targeted-navigation-answer-fix">
+(function(){
+  "use strict";
+  var E=window.esc||function(v){return String(v??'').replace(/[&<>\"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]})};
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function examName(x){return String(typeof x==='string'?x:(x&&x.name)||'').trim()}
+  function uniqueVisibleExams(){
+    var raw=J('tgy_exams',[]),out=[],seen={};
+    if(!Array.isArray(raw))return out;
+    raw.forEach(function(x){
+      var n=examName(x); if(!n)return;
+      if(typeof x==='object'&&x.visible===false)return;
+      var k=n.toLowerCase(); if(seen[k])return; seen[k]=1; out.push(x);
+    });
+    return out;
+  }
+  function notesFor(ex){
+    var a=J('tgy_pdf_notes',[]); if(!Array.isArray(a))return [];
+    return a.filter(function(n){return String((n&&n.folder)|| (n&&n.exam)||'').trim()===String(ex).trim()});
+  }
+  function examTests(ex){
+    var a=Array.isArray(window.tests)?window.tests:J('tgy_tests',[]); if(!Array.isArray(a))a=[];
+    return a.filter(function(t){return t&&String(t.exam||'').trim()===String(ex).trim()&&t.published!==false&&t.visible!==false});
+  }
+  function renderHome(){
+    var box=document.getElementById('tgyHomeExamGrid'); if(!box)return;
+    var arr=uniqueVisibleExams();
+    if(!arr.length){box.innerHTML='<div class="tgy-exam-card" style="grid-column:1/-1"><div class="tgy-exam-name">अभी कोई परीक्षा उपलब्ध नहीं है</div><div class="tgy-exam-sub">Admin Panel में पहले परीक्षा/Folder बनाइए।</div></div>';return;}
+    box.innerHTML=arr.map(function(x){
+      var n=examName(x),logo=typeof x==='object'&&x.logo?x.logo:'';
+      var logoHtml=logo?'<img class="tgy-exam-logo" src="'+E(logo)+'" alt="">':'<div class="tgy-exam-logo" style="display:flex;align-items:center;justify-content:center;font-size:42px;background:#eef4fb">📚</div>';
+      return '<div class="tgy-exam-card" style="cursor:pointer" onclick="return window.tgyOpenExamFolder('+JSON.stringify(n)+')">'+logoHtml+'<div class="tgy-exam-name">'+E(n)+'</div><div class="tgy-exam-sub">Demo + Online Mock Tests</div><button type="button" class="tgy-view-btn" onclick="return window.tgyOpenExamFolder('+JSON.stringify(n)+')">View Tests</button></div>';
+    }).join('');
+  }
+  window.tgyRenderExamFoldersFinal=renderHome;
+
+  // One authoritative Home -> Exam Hub entry point. It never opens Test Series first.
+  window.tgyOpenExamFolder=function(ex){
+    ex=String(ex||'').trim(); if(!ex)return false;
+    window.__tgyNav=window.__tgyNav||{}; window.__tgyNav.exam=ex; window.__tgyNav.level='hub'; window.__tgyNav.testIndex=null;
+    var box=document.getElementById('examContent'),modal=document.getElementById('examModal'); if(!box||!modal)return false;
+    var tc=examTests(ex).length,pc=notesFor(ex).length;
+    box.innerHTML='<div class="tgy-exam-hub"><div class="tgy-list-head"><div><div class="tgy-kicker">परीक्षा</div><h2>📁 '+E(ex)+'</h2><p class="muted">पहले Test Series या Study Material चुनें।</p></div><button class="btn gray" type="button" onclick="closeExam();return false;">✕ बंद करें</button></div><div class="tgy-hub-grid"><div class="tgy-hub-card"><div class="tgy-hub-icon">📝</div><h3>Test Series</h3><p>'+tc+' Tests उपलब्ध हैं</p><button class="btn orange" type="button" onclick="return window.tgyOpenExamTestSeriesFinal('+JSON.stringify(ex)+')">📚 Test Series खोलें</button></div><div class="tgy-hub-card"><div class="tgy-hub-icon">📚</div><h3>Study Material</h3><p>'+pc+' Study Material उपलब्ध है</p><button class="btn orange" type="button" onclick="return window.tgyOpenNotesFolderFinal('+JSON.stringify(ex)+')">📚 Study Material खोलें</button></div></div></div>';
+    modal.style.display='flex'; return false;
+  };
+  window.tgyOpenExamTestSeriesFinal=function(ex){window.__tgyNav=window.__tgyNav||{};window.__tgyNav.exam=ex;window.__tgyNav.level='series';return typeof window.tgyShowTestList==='function'?window.tgyShowTestList(ex):false};
+
+  // Start must enter the actual test, not another list/folder.
+  window.tgyStartSelectedTest=function(i){
+    var m=document.getElementById('examModal'); if(m)m.style.display='none';
+    if(typeof window.tgyLaunchTestSafe==='function'){window.tgyLaunchTestSafe(i);return false;}
+    if(typeof window.startFinalMockTest==='function'){window.startFinalMockTest(i);return false;}
+    return false;
+  };
+
+  // Normalize A/B/C/D answer keys to 0/1/2/3 without changing question text/options.
+  function answerIndex(v){
+    if(typeof v==='number'&&isFinite(v))return Math.max(0,Math.min(3,v));
+    var s=String(v==null?'':v).trim().toUpperCase();
+    if(/^[ABCD]$/.test(s))return s.charCodeAt(0)-65;
+    var n=Number(s); if(isFinite(n))return Math.max(0,Math.min(3,n));
+    return null;
+  }
+  function normalizeStateAnswers(){
+    var s=window.state; if(!s||!s.t||!Array.isArray(s.t.questions))return;
+    s.t.questions=s.t.questions.map(function(q){
+      if(Array.isArray(q)){
+        var z=q.slice(); var ci=answerIndex(z[2]); if(ci!==null)z[2]=ci; return z;
+      }
+      if(q&&typeof q==='object'){
+        var z=Object.assign({},q),ci=answerIndex(z.answer!=null?z.answer:z.correct); if(ci!==null){z.answer=ci;if(z.correct!=null)z.correct=ci;} return z;
+      }
+      return q;
+    });
+  }
+  var oldLaunch=window.tgyLaunchTestSafe;
+  if(typeof oldLaunch==='function')window.tgyLaunchTestSafe=function(i){var out=oldLaunch.apply(this,arguments);normalizeStateAnswers();return out;};
+  var oldShow=window.tgyShowResultSummary;
+  window.tgyShowResultSummary=function(r){
+    normalizeStateAnswers();
+    if(typeof oldShow==='function')return oldShow(r);
+  };
+
+  // Rebuild only the Home exam cards after data sync; dedupe is visual only and does not delete storage records.
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(renderHome,80);setTimeout(renderHome,700);setTimeout(renderHome,1500);});
+  window.addEventListener('storage',function(e){if(e.key==='tgy_exams'||e.key==='tgy_tests')setTimeout(renderHome,30);});
+})();
+</script>
