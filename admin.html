@@ -75,17 +75,9 @@ function checkAdmin(){
 </script>
 <header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
 <button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('pricing',this)">💰 Pricing</button><button onclick="show('offers',this)">🎟️ Offers</button><button onclick="show('examManagement',this)">📋 परीक्षा प्रबंधन</button>
-<button onclick="show('accessPricing',this)">📁 Access Pricing</button><button onclick="show('tgyTermsManager',this)">📄 Terms &amp; Conditions</button><button onclick="show('support',this)">🛠️ Support</button></aside><main>
+<button onclick="show('accessPricing',this)">📁 Access Pricing</button><button onclick="show('tgyTermsManager',this)">📄 Terms &amp; Conditions</button><button onclick="show('support',this)">🛠️ Support</button><button onclick="show('backupRestore',this)">💾 Backup &amp; Restore</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1>
-<div class="card" style="margin-bottom:14px;border:2px solid #1769aa">
-  <h2 style="margin-top:0">💾 डेटा Backup / Restore</h2>
-  <p class="muted">अपने Admin Panel के सभी <b>tgy_</b> local data का backup अपने PC में JSON file के रूप में रखें। बाद में इसी file से data restore किया जा सकता है।</p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <button class="btn orange" onclick="tgyCreateLocalBackup()">⬇️ Backup File बनाएं</button>
-    <label class="btn gray" style="display:inline-block;cursor:pointer">⬆️ Backup Restore करें<input id="tgyBackupFile" type="file" accept="application/json,.json" style="display:none" onchange="tgyRestoreLocalBackup(this)"></label>
-  </div>
-  <div id="tgyBackupStatus" class="muted" style="margin-top:10px"></div>
-</div><div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
+<div class="grid"><div class="card">Total Tests<div class="stat" id="st">0</div></div><div class="card">Payment Requests<div class="stat" id="sp">0</div></div><div class="card">New Complaints<div class="stat" id="sc">0</div></div><div class="card">Users<div class="stat">Online DB</div></div></div><p><b>Final structure:</b> Test management, PDF import, payments, access, support और results यहीं manage किए जाएँगे।</p></section>
 
 <section id="legacyExams" class="sec">
 <h1>🎓 परीक्षा Management</h1>
@@ -101,12 +93,6 @@ function checkAdmin(){
 </section>
 <section id="tests" class="sec">
   <h1>📝 Mock Test — Test Management</h1>
-  <div id="tgySafeRecoveryCard" class="card" style="border:2px solid #f0ad4e;margin-bottom:14px">
-    <h3>🛡️ सुरक्षित डेटा चेक / Recovery</h3>
-    <p class="muted">यह केवल डेटा की तुलना करता है। Cloud में 20 Patwari Tests की copy मिलने पर ही missing tests को वापस local में रखेगा। बाकी data को इस recovery से नहीं बदला जाएगा। पहले current local data का backup अपने-आप बनता है।</p>
-    <button class="btn orange" onclick="tgyRunSafeRecoveryNow()">🔎 डेटा फिर से चेक करें</button>
-    <span id="tgySafeRecoveryMsg" class="muted" style="margin-left:8px"></span>
-  </div>
   <div class="card">
     <div class="row">
       <div><label>📋 परीक्षा</label><select id="mtExam" onchange="mtLoadTests()"></select></div><div><label>🔓 Test प्रकार</label><select id="mtType" onchange="mtTypeChanged()"><option value="demo">🎁 Demo (Free)</option><option value="test">📝 Test (Paid/Access)</option></select></div>
@@ -143,6 +129,18 @@ function checkAdmin(){
   </div>
 </section>
 
+<section id="backupRestore" class="sec">
+<h1>💾 Backup &amp; Restore</h1>
+<div class="card" style="border:2px solid #1769aa">
+  <h2 style="margin-top:0">💾 डेटा Backup / Restore</h2>
+  <p class="muted">अपने Admin Panel के सभी <b>tgy_</b> local data का backup अपने PC में JSON file के रूप में रखें। Restore Safe Merge के रूप में होगा; Current data को replace नहीं किया जाएगा।</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <button class="btn orange" onclick="tgyCreateLocalBackup()">⬇️ Backup File बनाएं</button>
+    <label class="btn gray" style="display:inline-block;cursor:pointer">⬆️ Backup Restore करें<input id="tgyBackupFile" type="file" accept="application/json,.json" style="display:none" onchange="tgyRestoreLocalBackup(this)"></label>
+  </div>
+  <div id="tgyBackupStatus" class="muted" style="margin-top:10px"></div>
+</div>
+</section>
 <section id="importantInfo" class="sec">
   <h1>📢 महत्वपूर्ण जानकारी</h1>
   <div class="card">
@@ -2516,13 +2514,15 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.mtRenderQuestions=function(){
     const c=getCtx(),box=document.getElementById('mtQuestions'),count=document.getElementById('mtQuestionCount');if(!box)return;
     const qs=c.qs||[];if(count)count.innerHTML='कुल Questions: <b>'+qs.length+'</b>';
-    let lastPassage='';
-    box.innerHTML=qs.length?qs.map(function(x,i){x=x||{};const o=Array.isArray(x.o)?x.o:[],ex=String(x.ex??x.explanation??x.info??'');let h='<div class="qrow" style="margin:8px 0;padding:12px;border:1px solid #ddd;border-radius:7px">';
+    function cleanItems(arr){return (Array.isArray(arr)?arr:[]).map(function(v){return String(v??'').replace(/^\s*(?:[IVX]+|[A-Z]|[अआइईउऊएऐओऔ]|\d+)\s*[.)\-:：]\s*/i,'').trim()}).filter(Boolean)}
+    box.innerHTML=qs.length?qs.map(function(x,i){x=x||{};const o=Array.isArray(x.o)?x.o:[],st=cleanItems(x.statements),co=cleanItems(x.conclusions),structured=x.type==='statement-conclusion'||st.length||co.length,ex=String(x.ex??x.explanation??x.info??'');let h='<div class="qrow" style="margin:8px 0;padding:12px;border:1px solid #ddd;border-radius:7px">';
       if(x.image)h+='<div style="margin-bottom:8px"><img src="'+esc2(x.image)+'" style="display:block;max-width:100%;max-height:240px;object-fit:contain;border:1px solid #ddd;border-radius:6px"></div>';
-      if(x.passage&&x.passage!==lastPassage){h+='<div style="margin-bottom:8px;padding:8px;background:#f7fbff;border-left:4px solid #1d65a6"><b>📖 Passage / निर्देश</b><div style="white-space:pre-wrap;margin-top:5px">'+esc2(x.passage)+'</div></div>';lastPassage=x.passage;}
-      if(x.type==='statement-conclusion')h+='<div><b>प्रश्न:</b> '+esc2(x.intro||x.q).replace(/\n/g,'<br>')+'</div><div style="margin-top:7px"><b>कथन:</b><br>'+((x.statements||[]).map(esc2).join('<br>'))+'<br><b>निष्कर्ष:</b><br>'+((x.conclusions||[]).map(esc2).join('<br>'))+'</div>';else h+='<div><b>प्रश्न '+(i+1)+'.</b> '+esc2(x.q).replace(/\n/g,'<br>')+'</div>';
-      h+='<div style="margin-top:6px">'+o.map(function(v,j){return v!==undefined&&v!==null&&String(v)!==''?'<div>('+String.fromCharCode(65+j)+') '+esc2(v)+'</div>':''}).join('')+'</div><div><b>सही उत्तर:</b> '+esc2(x.answer||'')+'</div>';
-      if(ex)h+='<div style="margin-top:6px;padding:8px;background:#fff8e8;border-left:4px solid #e09b00"><b>📚 जानकारी / Explanation:</b><div style="white-space:pre-wrap;margin-top:4px">'+esc2(ex)+'</div></div>';else h+='<div style="margin-top:6px;color:#888"><b>📚 जानकारी / Explanation:</b> अभी जानकारी नहीं दी गई है।</div>';
+      if(x.passage)h+='<div style="margin-bottom:8px;padding:8px;background:#f7fbff;border-left:4px solid #1d65a6"><b>📖 Passage / निर्देश</b><div style="white-space:pre-wrap;margin-top:5px">'+esc2(x.passage)+'</div></div>';
+      h+='<div><b>प्रश्न '+(x.number||i+1)+'.</b> '+esc2(structured?(x.intro||x.q):x.q).replace(/\n/g,'<br>')+'</div>';
+      if(st.length)h+='<div style="margin-top:7px"><b>कथन:</b>'+st.map(function(v,j){return '<div style="margin:3px 0">'+['I','II','III','IV','V'][j]+'. '+esc2(v)+'</div>'}).join('')+'</div>';
+      if(co.length)h+='<div style="margin-top:7px"><b>निष्कर्ष:</b>'+co.map(function(v,j){return '<div style="margin:3px 0">'+['I','II','III','IV','V'][j]+'. '+esc2(v)+'</div>'}).join('')+'</div>';
+      h+='<div style="margin-top:6px">'+o.map(function(v,j){return v!==undefined&&v!==null&&String(v).trim()!==''?'<div>('+String.fromCharCode(65+j)+') '+esc2(v)+'</div>':''}).join('')+'</div><div><b>सही उत्तर:</b> '+esc2(x.answer||'')+'</div>';
+      if(ex)h+='<div style="margin-top:6px;padding:8px;background:#fff8e8;border-left:4px solid #e09b00"><b>📚 जानकारी / Explanation:</b><div style="white-space:pre-wrap;margin-top:4px">'+esc2(ex)+'</div></div>';
       h+='<div style="margin-top:8px"><button class="btn" onclick="mtEditQuestion('+i+')">✏️ Edit Question / जानकारी</button> <button class="btn danger" onclick="mtDeleteQuestion('+i+')">🗑️ Delete</button></div></div>';return h;}).join(''):'<p>अभी कोई Question Save नहीं है।</p>';
   };
   window.mtEditQuestion=function(i){
@@ -2576,17 +2576,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(render,50)});else setTimeout(render,50);
 })();
 </script>
-<script>
-window.tgyRunSafeRecoveryNow=async function(){
-  var el=document.getElementById('tgySafeRecoveryMsg'); if(el)el.textContent='चेक हो रहा है…';
-  try{
-    var r=await (window.tgySafeRecovery&&window.tgySafeRecovery.inspect?window.tgySafeRecovery.inspect():null);
-    if(!r){if(el)el.textContent='Recovery module उपलब्ध नहीं है।';return;}
-    if(el)el.textContent='Local Patwari: '+r.localPatwari+' | Cloud Patwari: '+r.cloudPatwari+(r.restored.length?' | '+r.restored[0]:' | कोई बदलाव नहीं किया गया।');
-    if(r.restored.length){try{if(window.mtRenderAll)window.mtRenderAll();if(window.renderAll)window.renderAll();}catch(e){} alert('✅ Patwari tests की cloud copy से recovery की गई। बाकी data को recovery script ने नहीं बदला।');}
-  }catch(e){if(el)el.textContent='चेक असफल: '+(e.message||e)}
-};
-</script>
+
 <script id="tgy-local-backup-restore">
 (function(){
   const BACKUP_VERSION=2;
@@ -2651,10 +2641,35 @@ window.tgyRunSafeRecoveryNow=async function(){
         const backupTests=Array.isArray(data.tgy_tests)?data.tgy_tests:[];
         const currentTests=(()=>{try{return JSON.parse(localStorage.getItem('tgy_tests')||'[]')}catch(e){return[]}})();
         const merged=mergeTests(currentTests,backupTests);
-        if(!confirm('⚠️ Safe Restore किया जाएगा।\n\nBackup के पुराने Tests और अभी के नए Tests को मिलाकर रखा जाएगा।\nअभी के नए Tests delete नहीं होंगे।\n\nBackup Tests: '+backupTests.length+'\nअभी के Tests: '+currentTests.length+'\nRestore के बाद Tests: '+merged.tests.length+'\n\nबाकी tgy_ data backup के अनुसार restore होगा।\n\nक्या आप Restore करना चाहते हैं?')){input.value='';return;}
+        if(!confirm('⚠️ Safe Restore किया जाएगा।\n\nBackup के पुराने Tests और अभी के नए Tests को मिलाकर रखा जाएगा।\nअभी के नए Tests delete नहीं होंगे।\n\nBackup Tests: '+backupTests.length+'\nअभी के Tests: '+currentTests.length+'\nRestore के बाद Tests: '+merged.tests.length+'\n\nबाकी tgy_ data भी Safe Merge होगा; Current data को replace नहीं किया जाएगा।\n\nक्या आप Restore करना चाहते हैं?')){input.value='';return;}
+        // Safe Merge: never replace existing current sections wholesale.
+        // For arrays, keep current records and append only records that are not already present.
+        // For objects, keep current keys/values and add only missing backup keys.
         keys.forEach(k=>{
           if(k==='tgy_tests')return;
-          localStorage.setItem(k,typeof data[k]==='string'?data[k]:JSON.stringify(data[k]));
+          let curRaw=localStorage.getItem(k);
+          let cur;
+          try{cur=curRaw===null?undefined:JSON.parse(curRaw)}catch(e){cur=curRaw}
+          const bk=data[k];
+          let out;
+          if(Array.isArray(cur) && Array.isArray(bk)){
+            const keyOf=v=>{
+              if(v&&typeof v==='object'){
+                if(v.id!==undefined&&v.id!==null&&String(v.id).trim())return 'id:'+String(v.id).trim();
+                if(v.key!==undefined&&v.key!==null&&String(v.key).trim())return 'key:'+String(v.key).trim();
+                if(v.name!==undefined||v.exam!==undefined)return 'name:'+String(v.exam||'').trim().toLowerCase()+'|'+String(v.name||'').trim().toLowerCase();
+              }
+              return 'value:'+JSON.stringify(v);
+            };
+            out=cur.map(x=>x); const seen=new Set(out.map(keyOf));
+            bk.forEach(v=>{const kk=keyOf(v);if(!seen.has(kk)){out.push(v);seen.add(kk)}});
+          }else if(cur && typeof cur==='object' && !Array.isArray(cur) && bk && typeof bk==='object' && !Array.isArray(bk)){
+            out={...cur}; Object.keys(bk).forEach(x=>{if(!(x in out))out[x]=bk[x]});
+          }else{
+            // If current section does not exist, safely restore the backup section.
+            if(cur===undefined)out=bk; else out=cur;
+          }
+          localStorage.setItem(k,typeof out==='string'?out:JSON.stringify(out));
         });
         localStorage.setItem('tgy_tests',JSON.stringify(merged.tests));
         setStatus('✅ Safe Restore पूरा हो गया। '+merged.added+' पुराने Tests जोड़े गए और अभी के '+currentTests.length+' Tests सुरक्षित रखे गए। कुल '+merged.tests.length+' Tests हैं।');
@@ -3135,7 +3150,7 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(window.tgyAdm
       const qn=Number(p.number)||i+1;
       let passage=activePassage;
       if(activeRange && (qn<activeRange.from || qn>activeRange.to))passage="";
-      const item={q:p.q,o:p.o,answer:p.answer,ex:p.ex,number:p.number,type:passage?"passage":p.type,passage:passage||""};
+      const item={q:p.q,o:p.o,answer:p.answer,ex:p.ex,number:qn,type:p.type,passage:passage||""};
       if(p.structured){item.intro=p.structured.intro;item.statements=p.structured.statements;item.conclusions=p.structured.conclusions}
       out.push(item);
       if(passage){
@@ -3153,52 +3168,32 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(window.tgyAdm
     const box=document.getElementById("mtPreview"),st=document.getElementById("mtStatus");
     if(st)st.innerHTML=qs.length?"✅ <b>"+qs.length+" Questions मिले — Mixed Format Auto Detect</b>":"❌ कोई Question पहचान में नहीं आया।";
     if(!box)return;
-    let html="",lastPassage="";
-    qs.forEach(function(x,i){
-      if(x.passage && x.passage!==lastPassage){html+='<div class="card" style="margin:10px 0;padding:14px;border:2px solid #1d65a6;background:#f8fbff"><b>📖 Passage / निर्देश</b><div style="margin-top:8px;white-space:pre-wrap">'+esc(x.passage)+'</div></div>';lastPassage=x.passage}
-      const o=x.o||[];
-      html+='<div class="card" style="margin:8px 0;padding:14px"><div style="margin-bottom:7px"><span class="badge">'+esc(window.mtQuestionTypeLabel(x.type))+'</span></div>';
-      if(x.type==="statement-conclusion"){
-        if(x.intro)html+='<div><b>प्रश्न:</b> '+esc(x.intro).replace(/\n/g,"<br>")+'</div>';
-        html+='<div style="margin-top:8px"><b>कथन:</b>';
-        (x.statements||[]).forEach(function(v){html+='<div style="margin:3px 0;white-space:pre-wrap">'+esc(v)+'</div>'});
-        html+='</div><div style="margin-top:8px"><b>निष्कर्ष:</b>';
-        (x.conclusions||[]).forEach(function(v){html+='<div style="margin:3px 0;white-space:pre-wrap">'+esc(v)+'</div>'});
-        html+='</div>';
-      }else html+='<div><b>प्रश्न '+(i+1)+'.</b> '+esc(x.q).replace(/\n/g,"<br>")+'</div>';
-      html+='<div style="margin-top:8px">'+o.map(function(v,j){return v?'<div>('+String.fromCharCode(65+j)+') '+esc(v)+'</div>':""}).join("")+'</div>';
-      html+='<div style="margin-top:6px"><b>सही उत्तर:</b> '+esc(x.answer||"")+'</div>';
-      if(x.ex)html+='<div><b>जानकारी/Explanation:</b> '+esc(x.ex).replace(/\n/g,"<br>")+'</div>';
-      html+='</div>';
-    });
-    box.innerHTML=html;
+    function cleanItems(arr){return (Array.isArray(arr)?arr:[]).map(function(v){return String(v??"").replace(/^\s*(?:[IVX]+|[A-Z]|[अआइईउऊएऐओऔ]|\d+)\s*[.)\-:：]\s*/i,"").trim()}).filter(Boolean)}
+    function optsHtml(arr){return (Array.isArray(arr)?arr:[]).map(function(v,j){return String(v??"").trim()?'<div>('+String.fromCharCode(65+j)+') '+esc(v)+'</div>':""}).join("")}
+    let html="";qs.forEach(function(x,i){x=x||{};const o=Array.isArray(x.o)?x.o:[],stt=cleanItems(x.statements),co=cleanItems(x.conclusions),structured=x.type==="statement-conclusion"||stt.length||co.length;
+      if(x.passage)html+='<div class="card" style="margin:10px 0;padding:14px;border:2px solid #1d65a6;background:#f8fbff"><b>📖 Passage / निर्देश</b><div style="margin-top:8px;white-space:pre-wrap">'+esc(x.passage)+'</div></div>';
+      html+='<div class="card" style="margin:8px 0;padding:14px"><div style="margin-bottom:7px"><span class="badge">'+esc(window.mtQuestionTypeLabel(x.type))+'</span></div><div><b>प्रश्न '+(x.number||i+1)+'.</b> '+esc(structured?(x.intro||x.q):x.q).replace(/\n/g,"<br>")+'</div>';
+      if(stt.length)html+='<div style="margin-top:8px"><b>कथन:</b>'+stt.map(function(v,j){return '<div style="margin:3px 0;white-space:pre-wrap">'+['I','II','III','IV','V'][j]+'. '+esc(v)+'</div>'}).join("")+'</div>';
+      if(co.length)html+='<div style="margin-top:8px"><b>निष्कर्ष:</b>'+co.map(function(v,j){return '<div style="margin:3px 0;white-space:pre-wrap">'+['I','II','III','IV','V'][j]+'. '+esc(v)+'</div>'}).join("")+'</div>';
+      html+='<div style="margin-top:8px">'+optsHtml(o)+'</div><div style="margin-top:6px"><b>सही उत्तर:</b> '+esc(x.answer||"")+'</div>'+(x.ex?'<div><b>जानकारी/Explanation:</b> '+esc(x.ex).replace(/\n/g,"<br>")+'</div>':"")+'</div>';
+    });box.innerHTML=html;
   }
   window.mtTextPreview=function(){
-    const raw=document.getElementById("mtBulkText")?.value||""; if(!raw.trim()){alert("पहले पूरा Question Set Paste करें।");return}
-    const parsed=autoParse(raw); window.mtPreview=parsed.questions||[]; window.mtLastParsed=parsed; render(window.mtPreview);
+    const raw=document.getElementById("mtBulkText")?.value||"";if(!raw.trim()){alert("पहले पूरा Question Set Paste करें।");return}
+    const parsed=typeof mtAutoParse==="function"?mtAutoParse(raw):{questions:(typeof mtParse==="function"?mtParse(raw):[]),type:"normal"};
+    const qs=parsed.questions||[];window.mtPreview=qs;const label=typeof mtQuestionTypeLabel==="function"?mtQuestionTypeLabel(parsed.type):parsed.type;
+    const st=document.getElementById("mtStatus"),box=document.getElementById("mtPreview");if(st)st.innerHTML=qs.length?"✅ <b>"+qs.length+" Questions मिले — "+escv(label)+"</b>":"❌ कोई Question पहचान में नहीं आया।";if(!box)return;
+    function cleanItems(arr){return (Array.isArray(arr)?arr:[]).map(function(v){return String(v??"").replace(/^\s*(?:[IVX]+|[A-Z]|[अआइईउऊएऐओऔ]|\d+)\s*[.)\-:：]\s*/i,"").trim()}).filter(Boolean)}
+    let html="";qs.forEach(function(x,i){x=x||{};const o=Array.isArray(x.o)?x.o:[],stt=cleanItems(x.statements),co=cleanItems(x.conclusions),structured=x.type==="statement-conclusion"||stt.length||co.length;
+      if(x.passage)html+='<div class="card" style="margin:8px 0;padding:12px;border:2px solid #1d65a6;background:#f8fbff"><b>📖 Passage / निर्देश</b><div style="margin-top:8px;white-space:pre-wrap">'+escv(x.passage)+'</div></div>';
+      html+='<div class="card" style="margin:8px 0;padding:12px"><div style="margin-bottom:6px"><span class="badge">'+escv(typeof mtQuestionTypeLabel==="function"?mtQuestionTypeLabel(x.type):label)+'</span></div><b>प्रश्न '+(x.number||i+1)+'.</b> '+escv(structured?(x.intro||x.q):x.q).replace(/\n/g,"<br>");
+      if(stt.length)html+='<div style="margin-top:7px"><b>कथन:</b>'+stt.map(function(v,j){return '<div style="margin:3px 0">'+['I','II','III','IV','V'][j]+'. '+escv(v)+'</div>'}).join('')+'</div>';
+      if(co.length)html+='<div style="margin-top:7px"><b>निष्कर्ष:</b>'+co.map(function(v,j){return '<div style="margin:3px 0">'+['I','II','III','IV','V'][j]+'. '+escv(v)+'</div>'}).join('')+'</div>';
+      o.forEach(function(v,j){if(String(v??"").trim())html+='<div>('+String.fromCharCode(65+j)+') '+escv(v)+'</div>'});
+      html+='<div style="margin-top:6px"><b>सही उत्तर:</b> '+escv(x.answer||"")+'</div>'+(x.ex?'<br><b>जानकारी/Explanation:</b> '+escv(x.ex):"")+'</div>';
+    });box.innerHTML=html;
   };
-  window.mtFinalSave=function(){
-    const pending=Array.isArray(window.mtPreview)?window.mtPreview.map(function(x){const z={q:x.q,o:x.o,answer:x.answer,ex:x.ex,type:x.type};if(x.passage)z.passage=x.passage;if(x.intro)z.intro=x.intro;if(x.statements)z.statements=x.statements;if(x.conclusions)z.conclusions=x.conclusions;return z}):[];
-    if(!pending.length){alert("पहले Questions का Preview बनाएं।");return}
-    if(typeof appendToCurrentTest!=="function"){alert("Save system उपलब्ध नहीं है।");return}
-    if(appendToCurrentTest(pending)){window.mtPreview=[];window.mtLastParsed=null;const tx=document.getElementById("mtBulkText");if(tx)tx.value="";const box=document.getElementById("mtPreview");if(box)box.innerHTML="";const st=document.getElementById("mtStatus");if(st)st.innerHTML="✅ <b>"+pending.length+" Questions Save हो गए।</b>"}
-  };
-  window.mtImageGroupPreview=async function(){
-    const raw=document.getElementById("mtGroupText")?.value||"";if(!raw.trim()){alert("पहले Image Group के Questions लिखें।");return}
-    const parsed=autoParse(raw),qs=parsed.questions||[];if(!qs.length){alert("कोई Question पहचान में नहीं आया।");return}
-    const f=document.getElementById("mtGroupImage")?.files?.[0];if(!f){alert("पहले एक Image/Diagram चुनें।");return}
-    const st=document.getElementById("mtStatus");if(st)st.textContent="⏳ Image तैयार की जा रही है...";
-    try{const r=await new Promise(function(resolve,reject){const fr=new FileReader();fr.onerror=reject;fr.onload=function(){const im=new Image();im.onerror=reject;im.onload=function(){const max=900,sc=Math.min(1,max/Math.max(im.naturalWidth||im.width,im.naturalHeight||im.height)),w=Math.max(1,Math.round((im.naturalWidth||im.width)*sc)),h=Math.max(1,Math.round((im.naturalHeight||im.height)*sc)),c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,0,w,h);resolve(c.toDataURL("image/jpeg",.82))};im.src=fr.result};fr.readAsDataURL(f)});window.mtImageGroupPreviewData={image:r,questions:qs};render(qs);if(st)st.innerHTML="✅ <b>Image Group: "+qs.length+" Questions तैयार हैं</b>"}catch(e){alert("Image तैयार करने में समस्या हुई।")}
-  };
-  window.mtRenderQuestions=function(){
-    const e=document.getElementById("mtExam")?.value,t=(document.getElementById("mtName")?.value||"").trim(),box=document.getElementById("mtQuestions"),count=document.getElementById("mtQuestionCount");if(!box)return;
-    const raw=typeof mtStore==="function"?(mtStore().exams?.[e]?.tests?.[t]?.questions||[]):[];if(count)count.innerHTML="कुल Questions: <b>"+raw.length+"</b>";
-    let lastPassage="";
-    box.innerHTML=raw.length?raw.map(function(x,i){const o=x.o||[];let h="<div class=\"qrow\" style=\"margin:8px 0;padding:12px;border:1px solid #ddd;border-radius:7px\">";if(x.passage&&x.passage!==lastPassage){h+='<div style="margin-bottom:8px;padding:8px;background:#f7fbff;border-left:4px solid #1d65a6"><b>📖 Passage / निर्देश</b><div style="white-space:pre-wrap;margin-top:5px">'+esc(x.passage)+'</div></div>';lastPassage=x.passage}if(x.type==="statement-conclusion"){h+='<div><b>प्रश्न:</b> '+esc(x.intro||x.q).replace(/\n/g,"<br>")+'</div><div style="margin-top:7px"><b>कथन:</b><br>'+(x.statements||[]).map(esc).join('<br>')+'<br><b>निष्कर्ष:</b><br>'+(x.conclusions||[]).map(esc).join('<br>')+'</div>'}else h+='<div><b>प्रश्न '+(i+1)+'.</b> '+esc(x.q).replace(/\n/g,"<br>")+'</div>';h+='<div style="margin-top:6px">'+o.map(function(v,j){return v?'<div>('+String.fromCharCode(65+j)+') '+esc(v)+'</div>':""}).join("")+'</div><div><b>सही उत्तर:</b> '+esc(x.answer||"")+'</div>'+(x.ex?'<div><b>जानकारी/Explanation:</b> '+esc(x.ex).replace(/\n/g,"<br>")+'</div>':'')+'<button class="btn" onclick="mtEditQuestion('+i+')">✏️ Edit</button> <button class="btn danger" onclick="mtDeleteQuestion('+i+')">🗑️ Delete</button></div>';return h}).join(""):"<p>अभी कोई Question Save नहीं है।</p>";
-  };
-  window.mtEditQuestion=function(i){
-    const e=document.getElementById("mtExam").value,t=(document.getElementById("mtName").value||"").trim(),d=mtStore(),qs=d.exams?.[e]?.tests?.[t]?.questions||[];if(!qs[i])return;const x=qs[i],q=prompt("Question / प्रश्न:",x.q||"");if(q===null)return;const old=x.o||[];const o=[prompt("Option A:",old[0]||""),prompt("Option B:",old[1]||""),prompt("Option C:",old[2]||""),prompt("Option D:",old[3]||"")];if(o.some(function(v){return v===null}))return;if(old[4]){const ev=prompt("Option E:",old[4]);if(ev===null)return;o.push(ev)}const ans=(prompt("सही उत्तर A/B/C/D/E:",x.answer||"")||x.answer||"").toUpperCase(),ex=prompt("जानकारी / Explanation:",x.ex||"");qs[i]={...x,q:q.trim(),o:o.map(function(v){return String(v).trim()}),answer:ans,ex:ex===null?(x.ex||""):ex,number:x.number||i+1};d.exams[e].tests[t].questions=qs;mtSaveStore(d);mtRenderQuestions();mtRenderAll();
-  };
+
   const style=document.createElement("style");style.textContent="#mtBulkText{min-height:500px !important;height:500px !important;resize:vertical !important;}#mtGroupText{min-height:360px !important;}";document.head.appendChild(style);
 })();
 </script>
