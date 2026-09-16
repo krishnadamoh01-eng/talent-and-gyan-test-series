@@ -2455,7 +2455,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.appendToCurrentTest=appendToCurrentTest;
 
   window.mtFinalSave=function(){
-    const pending=Array.isArray(window.mtPreview)?window.mtPreview.map(function(x){const z={q:x.q,o:x.o,answer:x.answer,ex:x.ex};if(x.image)z.image=x.image;return z}):[];
+    const pending=Array.isArray(window.mtPreview)?window.mtPreview.map(function(x){return Object.assign({},x)}):[];
     if(!pending.length){alert("पहले Questions का Preview बनाएं।");return}
     if(appendToCurrentTest(pending)){
       window.mtPreview=[];
@@ -3183,15 +3183,15 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(window.tgyAdm
     const raw=document.getElementById("mtBulkText")?.value||"";if(!raw.trim()){alert("पहले पूरा Question Set Paste करें।");return}
     const parsed=typeof mtAutoParse==="function"?mtAutoParse(raw):{questions:(typeof mtParse==="function"?mtParse(raw):[]),type:"normal"};
     const qs=parsed.questions||[];window.mtPreview=qs;const label=typeof mtQuestionTypeLabel==="function"?mtQuestionTypeLabel(parsed.type):parsed.type;
-    const st=document.getElementById("mtStatus"),box=document.getElementById("mtPreview");if(st)st.innerHTML=qs.length?"✅ <b>"+qs.length+" Questions मिले — "+escv(label)+"</b>":"❌ कोई Question पहचान में नहीं आया।";if(!box)return;
+    const st=document.getElementById("mtStatus"),box=document.getElementById("mtPreview");if(st)st.innerHTML=qs.length?"✅ <b>"+qs.length+" Questions मिले — "+esc(label)+"</b>":"❌ कोई Question पहचान में नहीं आया।";if(!box)return;
     function cleanItems(arr){return (Array.isArray(arr)?arr:[]).map(function(v){return String(v??"").replace(/^\s*(?:[IVX]+|[A-Z]|[अआइईउऊएऐओऔ]|\d+)\s*[.)\-:：]\s*/i,"").trim()}).filter(Boolean)}
     let html="";qs.forEach(function(x,i){x=x||{};const o=Array.isArray(x.o)?x.o:[],stt=cleanItems(x.statements),co=cleanItems(x.conclusions),structured=x.type==="statement-conclusion"||stt.length||co.length;
-      if(x.passage)html+='<div class="card" style="margin:8px 0;padding:12px;border:2px solid #1d65a6;background:#f8fbff"><b>📖 Passage / निर्देश</b><div style="margin-top:8px;white-space:pre-wrap">'+escv(x.passage)+'</div></div>';
-      html+='<div class="card" style="margin:8px 0;padding:12px"><div style="margin-bottom:6px"><span class="badge">'+escv(typeof mtQuestionTypeLabel==="function"?mtQuestionTypeLabel(x.type):label)+'</span></div><b>प्रश्न '+(x.number||i+1)+'.</b> '+escv(structured?(x.intro||x.q):x.q).replace(/\n/g,"<br>");
-      if(stt.length)html+='<div style="margin-top:7px"><b>कथन:</b>'+stt.map(function(v,j){return '<div style="margin:3px 0">'+['I','II','III','IV','V'][j]+'. '+escv(v)+'</div>'}).join('')+'</div>';
-      if(co.length)html+='<div style="margin-top:7px"><b>निष्कर्ष:</b>'+co.map(function(v,j){return '<div style="margin:3px 0">'+['I','II','III','IV','V'][j]+'. '+escv(v)+'</div>'}).join('')+'</div>';
-      o.forEach(function(v,j){if(String(v??"").trim())html+='<div>('+String.fromCharCode(65+j)+') '+escv(v)+'</div>'});
-      html+='<div style="margin-top:6px"><b>सही उत्तर:</b> '+escv(x.answer||"")+'</div>'+(x.ex?'<br><b>जानकारी/Explanation:</b> '+escv(x.ex):"")+'</div>';
+      if(x.passage)html+='<div class="card" style="margin:8px 0;padding:12px;border:2px solid #1d65a6;background:#f8fbff"><b>📖 Passage / निर्देश</b><div style="margin-top:8px;white-space:pre-wrap">'+esc(x.passage)+'</div></div>';
+      html+='<div class="card" style="margin:8px 0;padding:12px"><div style="margin-bottom:6px"><span class="badge">'+esc(typeof mtQuestionTypeLabel==="function"?mtQuestionTypeLabel(x.type):label)+'</span></div><b>प्रश्न '+(x.number||i+1)+'.</b> '+esc(structured?(x.intro||x.q):x.q).replace(/\n/g,"<br>");
+      if(stt.length)html+='<div style="margin-top:7px"><b>कथन:</b>'+stt.map(function(v,j){return '<div style="margin:3px 0">'+['I','II','III','IV','V'][j]+'. '+esc(v)+'</div>'}).join('')+'</div>';
+      if(co.length)html+='<div style="margin-top:7px"><b>निष्कर्ष:</b>'+co.map(function(v,j){return '<div style="margin:3px 0">'+['I','II','III','IV','V'][j]+'. '+esc(v)+'</div>'}).join('')+'</div>';
+      o.forEach(function(v,j){if(String(v??"").trim())html+='<div>('+String.fromCharCode(65+j)+') '+esc(v)+'</div>'});
+      html+='<div style="margin-top:6px"><b>सही उत्तर:</b> '+esc(x.answer||"")+'</div>'+(x.ex?'<br><b>जानकारी/Explanation:</b> '+esc(x.ex):"")+'</div>';
     });box.innerHTML=html;
   };
 
