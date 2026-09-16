@@ -53,12 +53,73 @@ function setAdminAuth(on){
   const l=document.getElementById('adminLogin');
   if(l) l.style.display=on?'none':'flex';
 }
-function adminLogin(){
+const TGY_ADMIN_SALT='tgy_admin_2026_salt';
+const TGY_ADMIN_HASH='f49d7df77cafa9571e6c35e1d977bbd52f140d453757f7bed74a0f4839016a5e';
+async function tgyHashCred(email,pass){
+ const enc=new TextEncoder().encode(TGY_ADMIN_SALT+':'+email+':'+pass);
+ const buf=await crypto.subtle.digest('SHA-256',enc);
+ return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+/* --- Supabase Auth session (Step A). Safe/optional: if the Supabase Auth
+   user hasn't been created yet (Step B, done later from the Supabase site),
+   this simply fails quietly and everything keeps working exactly as before. --- */
+const TGY_SUPA_URL='https://eivysalhillsvillmake.supabase.co';
+const TGY_SUPA_ANON='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U';
+window.tgyAdminSession=null;
+try{
+  const savedSess=JSON.parse(sessionStorage.getItem('tgy_admin_supabase_session')||'null');
+  if(savedSess&&savedSess.access_token) window.tgyAdminSession=savedSess;
+}catch(e){}
+async function tgySupabaseAdminLogin(email,pass){
+  try{
+    const r=await fetch(TGY_SUPA_URL+'/auth/v1/token?grant_type=password',{
+      method:'POST',
+      headers:{'apikey':TGY_SUPA_ANON,'Content-Type':'application/json'},
+      body:JSON.stringify({email:email,password:pass})
+    });
+    if(!r.ok){ tgyUpdateSecureBadge(false); return false; }
+    const d=await r.json();
+    if(d&&d.access_token){
+      window.tgyAdminSession=d;
+      try{sessionStorage.setItem('tgy_admin_supabase_session',JSON.stringify(d));}catch(e){}
+      tgyUpdateSecureBadge(true);
+      return true;
+    }
+    tgyUpdateSecureBadge(false);
+  }catch(e){ tgyUpdateSecureBadge(false); }
+  return false;
+}
+function tgyUpdateSecureBadge(on){
+  const b=document.getElementById('tgySecureBadge'); if(!b) return;
+  if(on){ b.textContent='🔒 Secure Session Active'; b.style.background='#e6f4ea'; b.style.color='#1e7e34'; }
+  else { b.textContent='⚠️ Secure Session अभी सेट नहीं (सब पहले जैसा काम कर रहा है)'; b.style.background='#fff3cd'; b.style.color='#8a6500'; }
+}
+(function(){
+  const origFetch=window.fetch.bind(window);
+  window.fetch=function(input,init){
+    try{
+      const url=typeof input==='string'?input:(input&&input.url)||'';
+      if(url.indexOf('eivysalhillsvillmake.supabase.co')!==-1 && init && init.headers){
+        const method=(init.method||'GET').toUpperCase();
+        const isWrite=method==='POST'||method==='PATCH'||method==='PUT'||method==='DELETE';
+        if(isWrite && window.tgyAdminSession && window.tgyAdminSession.access_token){
+          const h=init.headers;
+          if(h instanceof Headers){ if(h.has('Authorization')) h.set('Authorization','Bearer '+window.tgyAdminSession.access_token); }
+          else if(h && typeof h==='object'){ if(h.Authorization) h.Authorization='Bearer '+window.tgyAdminSession.access_token; }
+        }
+      }
+    }catch(e){}
+    return origFetch(input,init);
+  };
+})();
+async function adminLogin(){
  const e=document.getElementById('adminEmail').value.trim().toLowerCase();
  const p=document.getElementById('adminPass').value;
- if(e==='krishna.damoh01@gmail.com' && p==='Admintg@123'){
+ const hash=await tgyHashCred(e,p);
+ if(hash===TGY_ADMIN_HASH){
    sessionStorage.setItem('tgy_admin_logged','1');
    setAdminAuth(true);
+   tgySupabaseAdminLogin(e,p); /* optional; no effect until Step B is done on Supabase's site */
    if(typeof renderAll==='function') renderAll();
  } else {
    document.getElementById('adminLoginMsg').textContent='Admin Email या Password गलत है।';
@@ -66,14 +127,17 @@ function adminLogin(){
 }
 function adminLogout(){
  sessionStorage.removeItem('tgy_admin_logged');
+ sessionStorage.removeItem('tgy_admin_supabase_session');
+ window.tgyAdminSession=null;
  setAdminAuth(false);
  const p=document.getElementById('adminPass'); if(p)p.value='';
 }
 function checkAdmin(){
  setAdminAuth(sessionStorage.getItem('tgy_admin_logged')==='1');
+ tgyUpdateSecureBadge(!!(window.tgyAdminSession&&window.tgyAdminSession.access_token));
 }
 </script>
-<header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
+<header><b>Talent And Gyan Test Series — Admin Panel</b><span>Admin</span><span id="tgySecureBadge" style="font-size:12px;margin-left:10px;padding:3px 10px;border-radius:12px;background:#eee;color:#888">⏳ Secure Session जांच रहे हैं...</span><button class="btn admin-logout" onclick="adminLogout()">🚪 Logout</button></header><div class="layout"><aside>
 <button class="active" onclick="show('dash',this)">🏠 Dashboard</button><button onclick="show('tests',this)">📝 Mock Tests</button><button onclick="show('users',this)">👥 Users</button><button onclick="show('payments',this)">💰 Payments</button><button onclick="show('notes',this)">📄 PDF Notes</button><button onclick="show('importantInfo',this)">📢 महत्वपूर्ण जानकारी</button><button onclick="show('ads',this)">📢 Ads</button><button onclick="show('pricing',this)">💰 Pricing</button><button onclick="show('offers',this)">🎟️ Offers</button><button onclick="show('examManagement',this)">📋 परीक्षा प्रबंधन</button>
 <button onclick="show('accessPricing',this)">📁 Access Pricing</button><button onclick="show('tgyTermsManager',this)">📄 Terms &amp; Conditions</button><button onclick="show('support',this)">🛠️ Support</button><button onclick="show('backupRestore',this)">💾 Backup &amp; Restore</button></aside><main>
 <section id="dash" class="sec show"><h1>Dashboard</h1>
@@ -1681,69 +1745,6 @@ document.addEventListener("DOMContentLoaded",()=>{
 </script>
 
 
-<script id="tgy-safe-data-recovery-before-cloud-boot">
-(function(){
-  "use strict";
-  const SUPA="https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store";
-  const KEY="sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U";
-  const H={apikey:KEY,Authorization:"Bearer "+KEY,Accept:"application/json"};
-  const KEYS=["tgy_exams","tgy_tests","tgy_pdf_notes","tgy_pdf_folder_meta","tgy_pdf_folder_pricing","tgy_access_pricing","tgy_pricing","tgy_combo_pricing","tgy_users","tgy_payments","tgy_results","tgy_news_items","tgy_help","tgy_home_custom","tgy_home_colors","tgy_exam_structure","tgy_offers","tgy_terms_sections"];
-  const J=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k)||"null");return v==null?d:v}catch(e){return d}};
-  const S=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-  const arr=v=>Array.isArray(v)?v:[];
-  function isPatwari(t){return /patwari/i.test(String((t&&t.exam)||"")+" "+String((t&&t.name)||""));}
-  function count(v){return Array.isArray(v)?v.length:(v&&typeof v==='object'?Object.keys(v).length:(v==null?0:1));}
-  async function row(k){
-    const r=await fetch(SUPA+"?select=key,value,updated_at&key=eq."+encodeURIComponent(k),{headers:H});
-    if(!r.ok)throw new Error("Supabase "+r.status);
-    const a=await r.json(); return a&&a[0]?a[0]:null;
-  }
-  function backupAll(){
-    const snap={savedAt:new Date().toISOString(),keys:{}};
-    KEYS.forEach(k=>{try{const raw=localStorage.getItem(k);if(raw!==null)snap.keys[k]=JSON.parse(raw)}catch(e){}});
-    try{localStorage.setItem('tgy_recovery_precheck_backup',JSON.stringify(snap))}catch(e){}
-    return snap;
-  }
-  async function inspectAndRecover(){
-    const backup=backupAll();
-    const report={savedAt:backup.savedAt,local:{},cloud:{},restored:[],warnings:[]};
-
-    // CRITICAL: check/restore tgy_tests FIRST, before the normal 450ms cloud boot can run.
-    const localTests=arr(J('tgy_tests',[]));
-    let cloudTests=[];
-    try{const r=await row('tgy_tests'); cloudTests=arr(r&&r.value);}catch(e){report.warnings.push('tgy_tests: '+e.message)}
-    const lp=localTests.filter(isPatwari), cp=cloudTests.filter(isPatwari);
-    report.localPatwari=lp.length; report.cloudPatwari=cp.length;
-    if(cp.length>=20 && lp.length<20){
-      S('tgy_tests',cloudTests);
-      report.restored.push('tgy_tests restored from cloud: '+cp.length+' Patwari tests found; local had '+lp.length+'.');
-      report.local.tgy_tests=cloudTests.length; report.cloud.tgy_tests=cloudTests.length;
-      try{localStorage.setItem('tgy_recovery_report',JSON.stringify(report))}catch(e){}
-      setTimeout(function(){try{if(window.mtRenderAll)window.mtRenderAll();if(window.renderAll)window.renderAll();if(window.refreshAllExamDropdowns)window.refreshAllExamDropdowns('');}catch(e){}},20);
-    }else{
-      report.local.tgy_tests=localTests.length; report.cloud.tgy_tests=cloudTests.length;
-      if(cp.length<20)report.warnings.push('Cloud tgy_tests does not currently contain 20 Patwari tests; no automatic overwrite was performed.');
-      else report.warnings.push('Local tgy_tests already contains 20 or more Patwari tests; no overwrite was performed.');
-    }
-
-    // Non-destructive audit of the other shared stores. This section NEVER writes them.
-    for(const k of KEYS){
-      if(k==='tgy_tests')continue;
-      try{
-        const lv=J(k,null), r=await row(k), cv=r?r.value:null;
-        report.local[k]=count(lv); report.cloud[k]=count(cv);
-        if(count(cv)>count(lv))report.warnings.push(k+': cloud has more records/items ('+count(cv)+' vs local '+count(lv)+'). No automatic change was made.');
-      }catch(e){report.warnings.push(k+': '+e.message)}
-    }
-    try{localStorage.setItem('tgy_recovery_report',JSON.stringify(report))}catch(e){}
-    window.tgySafeRecovery={inspect:inspectAndRecover,lastReport:report,backup:backup};
-    return report;
-  }
-  // Start immediately, before the normal local-wins cloud bridge.
-  inspectAndRecover().catch(function(e){try{localStorage.setItem('tgy_recovery_error',String(e&&e.message||e))}catch(x){}});
-})();
-</script>
-
 <script id="tgy-admin-authoritative-cloud-bridge">
 (function(){
  "use strict";
@@ -3344,7 +3345,8 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(window.tgyAdm
     var a=(typeof getExamMaster==='function'?getExamMaster():getList('tgy_exams'));
     b.innerHTML=a.map(function(x,i){
       var n=examNameX(x);
-      return `<div class="card" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="min-width:220px">${escX(n)}</b> — ${x.visible===false?'🙈 Hidden':'👁️ Active'}
+      var logo=(x&&typeof x==='object'&&x.logo)?x.logo:'talent-and-gyan-logo.png';
+      return `<div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><img src="${escX(logo)}" style="width:52px;height:52px;object-fit:contain;border-radius:8px;border:1px solid #ddd"><b style="min-width:180px">${escX(n)}</b> — ${x.visible===false?'🙈 Hidden':'👁️ Active'}
       <button class="btn" onclick="tgyOpenExamNameEditPopup(${i})">✏️ नाम सुधारें</button>
       <button class="btn danger" onclick="deleteExamMaster(${i})">🗑️ Delete</button></div>`;
     }).join('');

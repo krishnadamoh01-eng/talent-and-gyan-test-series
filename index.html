@@ -244,15 +244,6 @@ header{margin-left:0!important;padding-left:5%!important}
 <footer class="tgy-footer-new"><div>© 2026 Talent And Gyan Test Series. All Rights Reserved.</div><div><a href="#">About Us</a><a href="#">Contact Us</a><a href="#">Privacy Policy</a><a href="#">Terms &amp; Conditions</a></div></footer>
 <div class="modal" id="modal"><div class="box" id="modalContent"></div></div>
 
-function getSeparateTestPrice(t){
- try{
-  const a=JSON.parse(localStorage.getItem("tgy_pricing")||"[]");
-  const x=a.find(p=>(p.exam||"")==(t.exam||"") && (p.test||p.name||"")===(t.name||""));
-  if(x)return {mrp:Number(x.mrp)||0,offer:Number(x.offer)||0};
- }catch(e){}
- return {mrp:Number(t.pricing?.oneTest?.mrp)||0,offer:Number(t.pricing?.oneTest?.offer)||0};
-}
-
 <script id="tgy-escape-helper">
 function esc(v){
   return String(v ?? "").replace(/[&<>"']/g, function(ch){
