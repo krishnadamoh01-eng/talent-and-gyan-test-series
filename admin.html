@@ -2463,6 +2463,9 @@ document.addEventListener("DOMContentLoaded",()=>{
         catch(e){data[k]=localStorage.getItem(k);}
       }
     }
+    if(typeof window.tgyGetAllTestsFlat==='function'){
+      try{data.tgy_tests=window.tgyGetAllTestsFlat();}catch(e){}
+    }
     return data;
   }
   function setStatus(msg,ok=true){
@@ -2505,7 +2508,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.tgyRestoreLocalBackup=function(input){
     const file=input&&input.files&&input.files[0];if(!file)return;
     const r=new FileReader();
-    r.onload=function(){
+    r.onload=async function(){
       try{
         const payload=JSON.parse(r.result);
         if(!payload||payload.backupType!=='Talent And Gyan Admin Local Backup'||!payload.data||typeof payload.data!=='object')throw new Error('यह Talent And Gyan का valid backup file नहीं है।');
@@ -2513,7 +2516,7 @@ document.addEventListener("DOMContentLoaded",()=>{
         const keys=Object.keys(data).filter(k=>k.indexOf('tgy_')===0);
         if(!keys.length)throw new Error('Backup में कोई tgy_ data नहीं मिला।');
         const backupTests=Array.isArray(data.tgy_tests)?data.tgy_tests:[];
-        const currentTests=(()=>{try{return JSON.parse(localStorage.getItem('tgy_tests')||'[]')}catch(e){return[]}})();
+        const currentTests=typeof window.tgyGetAllTestsFlat==='function'?window.tgyGetAllTestsFlat():(()=>{try{return JSON.parse(localStorage.getItem('tgy_tests')||'[]')}catch(e){return[]}})();
         const merged=mergeTests(currentTests,backupTests);
         if(!confirm('⚠️ Safe Restore किया जाएगा।\n\nBackup के पुराने Tests और अभी के नए Tests को मिलाकर रखा जाएगा।\nअभी के नए Tests delete नहीं होंगे।\n\nBackup Tests: '+backupTests.length+'\nअभी के Tests: '+currentTests.length+'\nRestore के बाद Tests: '+merged.tests.length+'\n\nबाकी tgy_ data भी Safe Merge होगा; Current data को replace नहीं किया जाएगा।\n\nक्या आप Restore करना चाहते हैं?')){input.value='';return;}
         // Safe Merge: never replace existing current sections wholesale.
@@ -2545,7 +2548,11 @@ document.addEventListener("DOMContentLoaded",()=>{
           }
           localStorage.setItem(k,typeof out==='string'?out:JSON.stringify(out));
         });
-        localStorage.setItem('tgy_tests',JSON.stringify(merged.tests));
+        if(typeof window.tgySetAllTestsFlat==='function'){
+          await window.tgySetAllTestsFlat(merged.tests);
+        }else{
+          localStorage.setItem('tgy_tests',JSON.stringify(merged.tests));
+        }
         setStatus('✅ Safe Restore पूरा हो गया। '+merged.added+' पुराने Tests जोड़े गए और अभी के '+currentTests.length+' Tests सुरक्षित रखे गए। कुल '+merged.tests.length+' Tests हैं।');
         setTimeout(()=>location.reload(),700);
       }catch(e){console.error(e);setStatus('❌ Restore नहीं हुआ: '+e.message,false);alert('Restore नहीं हुआ।\n\n'+e.message);}
@@ -2611,7 +2618,21 @@ document.addEventListener("DOMContentLoaded",()=>{
   readyPromise=load().catch(function(e){cache=flatToStore(legacy());console.warn("[TGY Mock Storage]",e)});
   function ensure(){if(!cache)cache=flatToStore(legacy());return cache}
   window.tgyMockStorageReady=readyPromise;
-  /* The legacy tgy_tests blob is read only for one-way compatibility/import. It is never written by the new Mock Test editor. */
+  window.tgyGetAllTestsFlat=function(){return storeToFlat(ensure())};
+  window.tgySetAllTestsFlat=async function(flatArr){
+    const d=flatToStore(Array.isArray(flatArr)?flatArr:[]);
+    cache=d;
+    const flat=storeToFlat(d);
+    await writeAll(flat);
+    flat.forEach(function(t){cloudUpsert(idFor(t),t)});
+    await cloudUpsert("tgy_mock_tests_index",flat.map(function(t){return {id:idFor(t),name:t.name,exam:t.exam,time:t.time,published:t.published!==false}}));
+    await cloudUpsert("tgy_tests",flat);
+    return flat;
+  };
+  /* The legacy tgy_tests blob is read only for one-way compatibility/import on the Admin's own browser.
+     It is never written locally by the new Mock Test editor. The CLOUD copy of tgy_tests, however, is
+     still kept up to date below — the Student Site reads tests from that single cloud key, so every
+     save also publishes a consolidated flat copy there in addition to the new scalable per-test records. */
   window.mtStore=function(){return clone(ensure())};
   window.save=function(){try{tests=storeToFlat(ensure());document.getElementById("st").textContent=tests.length;mtSaveStore(ensure())}catch(e){console.warn("[TGY Mock Storage] save",e)}};
   window.renderTests=function(){const box=document.getElementById("tt");if(!box)return;const flat=storeToFlat(ensure());box.innerHTML=flat.map(function(t,i){return '<tr><td>'+esc(t.name||'')+'</td><td>'+((t.questions||[]).length)+'</td><td>'+(t.time||60)+' min</td><td><button class="btn" onclick="mtOpenTestEditor(\''+encodeURIComponent(t.exam||'')+'\',\''+encodeURIComponent(t.name||'')+'\')">Edit</button> <button class="btn gray" onclick="mtTogglePublish(\''+encodeURIComponent(t.exam||'')+'\',\''+encodeURIComponent(t.name||'')+'\')">'+(t.published===false?'Publish':'Unpublish')+'</button></td></tr>'}).join('');document.getElementById("st").textContent=flat.length};
@@ -2620,6 +2641,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     writeAll(flat).catch(function(e){console.error(e);alert("❌ Mock Test Save नहीं हुआ। Browser database में समस्या है। पुराना data सुरक्षित रखा गया है।")});
     flat.forEach(function(t){cloudUpsert(idFor(t),t)});
     cloudUpsert("tgy_mock_tests_index",flat.map(function(t){return {id:idFor(t),name:t.name,exam:t.exam,time:t.time,published:t.published!==false}}));
+    cloudUpsert("tgy_tests",flat);
   };
   window.appendToCurrentTest=async function(additions){
     const e=document.getElementById("mtExam")?.value; const n=(document.getElementById("mtName")?.value||"").trim()||(document.getElementById("mtType")?.value==="demo"?"Demo Test":"");
@@ -2629,7 +2651,12 @@ document.addEventListener("DOMContentLoaded",()=>{
     const old=tests[n]||{name:n,exam:e,questions:[],published:true,visible:true}; const existing=Array.isArray(old.questions)?old.questions.slice():[], base=existing.length;
     const add=(Array.isArray(additions)?additions:[]).map(function(x,i){const z=clone(x);delete z.image;delete z.imageData;z.number=base+i+1;return z});
     const updated=Object.assign({},old,{name:n,exam:e,time:time,demo:document.getElementById("mtType")?.value==="demo",negativeMarking:negative,negativeMarks:negativeMarks,questions:existing.concat(add),published:old.published!==false,visible:old.visible!==false});
-    try{tests[n]=updated;cache=d;await putTest(updated);await cloudUpsert(idFor(updated),updated);await cloudUpsert("tgy_mock_tests_index",storeToFlat(d).map(function(t){return {id:idFor(t),name:t.name,exam:t.exam,time:t.time,published:t.published!==false}}));}
+    try{
+      tests[n]=updated;cache=d;await putTest(updated);await cloudUpsert(idFor(updated),updated);
+      const flatNow=storeToFlat(d);
+      await cloudUpsert("tgy_mock_tests_index",flatNow.map(function(t){return {id:idFor(t),name:t.name,exam:t.exam,time:t.time,published:t.published!==false}}));
+      await cloudUpsert("tgy_tests",flatNow);
+    }
     catch(err){alert("❌ Test Save नहीं हुआ। नया data सुरक्षित रूप से save नहीं हो सका। पुराना data नहीं मिटाया गया।");return false}
     if(typeof mtRenderAll==="function")mtRenderAll(); const qb=document.getElementById("mtQuestions"),qc=document.getElementById("mtQuestionCount");if(qb)qb.innerHTML="";if(qc)qc.innerHTML="";return true;
   };
@@ -2641,7 +2668,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.tgyResetMockTestData=async function(){
     if(!confirm("⚠️ केवल Mock Test और उसके Questions हटेंगे। Users, Payments, Pricing, PDF Notes और बाकी data नहीं हटेगा।\n\nक्या आप जारी रखना चाहते हैं?"))return;
     if(!confirm("आखिरी पुष्टि: सभी Mock Tests/Questions का local test storage reset किया जाएगा। यह action वापस नहीं होगा।\n\nक्या Reset करें?"))return;
-    await readyPromise; const old=storeToFlat(ensure()); try{await deleteAll();cache={exams:{}};localStorage.removeItem("tgy_tests");for(const t of old)await cloudDelete(idFor(t));await cloudDelete("tgy_mock_tests_index");if(typeof mtRenderAll==="function")mtRenderAll();if(typeof mtLoadTests==="function")mtLoadTests();alert("✅ केवल Mock Test / Questions data reset हो गया। बाकी data को नहीं छुआ गया।");}catch(e){alert("❌ Reset पूरा नहीं हुआ। पुराने data को यथासंभव सुरक्षित रखा गया है।");}
+    await readyPromise; const old=storeToFlat(ensure()); try{await deleteAll();cache={exams:{}};localStorage.removeItem("tgy_tests");for(const t of old)await cloudDelete(idFor(t));await cloudDelete("tgy_mock_tests_index");await cloudUpsert("tgy_tests",[]);if(typeof mtRenderAll==="function")mtRenderAll();if(typeof mtLoadTests==="function")mtLoadTests();alert("✅ केवल Mock Test / Questions data reset हो गया। बाकी data को नहीं छुआ गया।");}catch(e){alert("❌ Reset पूरा नहीं हुआ। पुराने data को यथासंभव सुरक्षित रखा गया है।");}
   };
 })();
 </script>
