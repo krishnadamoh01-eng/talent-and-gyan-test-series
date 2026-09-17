@@ -172,18 +172,16 @@ function checkAdmin(){
 
   <div class="card">
     <h2>Questions जोड़ें</h2>
-    <div class="row">
-      <div><label>📝 Bulk Questions</label><textarea id="mtBulkText" rows="18" style="min-height:360px;resize:vertical" placeholder="प्रश्न 1. ...&#10;(A) ...&#10;(B) ...&#10;(C) ...&#10;(D) ...&#10;सही उत्तर: (A)&#10;जानकारी: ..."></textarea><button class="btn" style="margin-top:7px" onclick="mtTextPreview()">📝 Bulk Preview</button><small class="muted" style="display:block;margin-top:7px">🔄 Auto Detect: Normal, कथन–निष्कर्ष और Passage/Caselet को उसके format के आधार पर पहचानने की कोशिश करेगा।</small></div>
-      <div><label>📝 Bulk Questions</label><p class="muted" style="margin-top:8px">Questions केवल Text के रूप में जोड़ें। Image/Diagram Question system इस version में नहीं है।</p><div class="card" style="background:#f7f9fc"><b>Storage:</b> Questions अब अलग scalable storage में save होंगे; पूरे Test का बड़ा JSON localStorage में दोबारा नहीं लिखा जाएगा।</div></div>
+    <div class="row" style="align-items:start">
+      <div><label>📝 Bulk Questions</label><textarea id="mtBulkText" rows="18" style="min-height:420px;resize:vertical" placeholder="प्रश्न 1. ...&#10;(A) ...&#10;(B) ...&#10;(C) ...&#10;(D) ...&#10;सही उत्तर: (A)&#10;जानकारी: ..."></textarea><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="mtTextPreview()">📝 Bulk Preview</button><button class="btn" onclick="mtManualAdd()">✏️ Manual Question</button><button class="btn gray" onclick="mtClearPreview()">🗑️ Preview साफ करें</button></div><small class="muted" style="display:block;margin-top:7px">🔄 Auto Detect: Normal, कथन–निष्कर्ष और Passage/Caselet को उसके format के आधार पर पहचानने की कोशिश करेगा। Questions केवल Text के रूप में जुड़ते हैं (Image system इस version में नहीं है)।</small></div>
+      <div><label>👁️ Preview</label><div id="mtStatus" class="muted" style="margin:6px 0"></div><div id="mtPreview" style="height:420px;overflow:auto;border:1px solid #cbd6e2;border-radius:8px;padding:10px;background:#fafcff"></div></div>
     </div>
-    <div style="margin-top:12px"><button class="btn" onclick="mtManualAdd()">✏️ Manual Question</button><button class="btn gray" onclick="mtClearPreview()">🗑️ Preview साफ करें</button></div>
-    <div id="mtStatus" class="muted" style="margin-top:12px"></div><div id="mtPreview" style="margin-top:12px;max-height:520px;overflow:auto"></div>
+    <div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn orange" onclick="mtFinalSave()">✅ पूरा Test Save करें</button><button class="btn danger" onclick="tgyResetMockTestData()">🗑️ Mock Test / Questions Reset</button></div>
   </div>
 
   <div class="card">
-    <h2>Preview / Questions</h2>
+    <h2>Saved Questions (इस Test में)</h2>
     <div id="mtQuestionCount" class="muted"></div><div id="mtQuestions"></div>
-    <div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn orange" onclick="mtFinalSave()">✅ पूरा Test Save करें</button><button class="btn danger" onclick="tgyResetMockTestData()">🗑️ Mock Test / Questions Reset</button></div>
   </div>
 
   <div class="card">
@@ -2566,109 +2564,143 @@ document.addEventListener("DOMContentLoaded",()=>{
 <script id="tgy-mock-test-scalable-storage-final">
 (function(){
   "use strict";
+  /* FINAL MOCK-TEST STORAGE: IndexedDB is the active local source of truth.
+     localStorage tgy_tests is read-only legacy compatibility/import only.
+     Each Test is stored independently; no full tgy_tests blob is rewritten on normal saves. */
   const DB_NAME="tgy_mock_tests_db_v2", DB_VERSION=1, STORE="tests";
   let dbPromise=null, cache=null, readyPromise=null;
-  function legacy(){try{const v=JSON.parse(localStorage.getItem("tgy_tests")||"[]");return Array.isArray(v)?v:[]}catch(e){return[]}}
-  function openDb(){
-    if(dbPromise)return dbPromise;
-    dbPromise=new Promise(function(resolve,reject){
-      if(!window.indexedDB){reject(new Error("IndexedDB उपलब्ध नहीं है।"));return}
-      const r=indexedDB.open(DB_NAME,DB_VERSION);
-      r.onupgradeneeded=function(){if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE,{keyPath:"id"})};
-      r.onsuccess=function(){resolve(r.result)}; r.onerror=function(){reject(r.error||new Error("Database open failed"))};
-    });
-    return dbPromise;
-  }
-  function clone(v){return JSON.parse(JSON.stringify(v))}
-  function idFor(t){return "test:"+encodeURIComponent(String(t.exam||""))+":"+encodeURIComponent(String(t.name||""))}
+  const clone=v=>JSON.parse(JSON.stringify(v));
+  const legacy=()=>{try{const v=JSON.parse(localStorage.getItem("tgy_tests")||"[]");return Array.isArray(v)?v:[]}catch(e){return[]}};
+  const idFor=t=>"test:"+encodeURIComponent(String(t&&t.exam||""))+":"+encodeURIComponent(String(t&&t.name||""));
   function flatToStore(flat){
     const out={exams:{}};
     (Array.isArray(flat)?flat:[]).forEach(function(t,i){
-      if(!t||typeof t!=="object")return; const exam=t.exam||"MP पटवारी", name=t.name||("Test "+(i+1));
+      if(!t||typeof t!=="object")return;
+      const exam=String(t.exam||"").trim(); if(!exam)return;
+      const name=String(t.name||("Test "+(i+1))).trim(); if(!name)return;
       out.exams[exam]=out.exams[exam]||{tests:{}};
-      out.exams[exam].tests[name]=Object.assign({},t,{name:name,exam:exam,questions:Array.isArray(t.questions)?t.questions:[],time:t.time||60,published:t.published!==false});
+      out.exams[exam].tests[name]=Object.assign({},clone(t),{name,exam,questions:Array.isArray(t.questions)?t.questions:[],time:Number(t.time)||60,published:t.published!==false,visible:t.visible!==false});
     });
     return out;
   }
   function storeToFlat(d){
-    const flat=[]; Object.entries((d&&d.exams)||{}).forEach(function(pair){const exam=pair[0],v=pair[1]||{};Object.entries(v.tests||{}).forEach(function(q){const t=q[1]||{};flat.push(Object.assign({},t,{name:t.name||q[0],exam:t.exam||exam,questions:Array.isArray(t.questions)?t.questions:[],time:t.time||60,published:t.published!==false}));});}); return flat;
+    const flat=[];
+    Object.entries((d&&d.exams)||{}).forEach(function(pair){
+      const exam=pair[0],v=pair[1]||{};
+      Object.entries(v.tests||{}).forEach(function(q){
+        const t=q[1]||{};
+        flat.push(Object.assign({},clone(t),{name:t.name||q[0],exam:t.exam||exam,questions:Array.isArray(t.questions)?t.questions:[],time:Number(t.time)||60,published:t.published!==false,visible:t.visible!==false}));
+      });
+    });
+    return flat;
+  }
+  function openDb(){
+    if(dbPromise)return dbPromise;
+    dbPromise=new Promise(function(resolve,reject){
+      if(!window.indexedDB){reject(new Error("IndexedDB उपलब्ध नहीं है।"));return;}
+      const r=indexedDB.open(DB_NAME,DB_VERSION);
+      r.onupgradeneeded=function(){if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE,{keyPath:"id"})};
+      r.onsuccess=function(){resolve(r.result)};
+      r.onerror=function(){reject(r.error||new Error("Database open failed"))};
+    });
+    return dbPromise;
   }
   async function readAll(){
-    const db=await openDb(); return new Promise(function(resolve,reject){const tx=db.transaction(STORE,"readonly"),os=tx.objectStore(STORE),r=os.getAll();r.onsuccess=function(){resolve(r.result||[])};r.onerror=function(){reject(r.error)}});
-  }
-  async function writeAll(flat){
-    const db=await openDb(); const rows=(Array.isArray(flat)?flat:[]).map(function(t){return Object.assign({},clone(t),{id:idFor(t)})});
-    return new Promise(function(resolve,reject){const tx=db.transaction(STORE,"readwrite"),os=tx.objectStore(STORE);os.clear();rows.forEach(function(x){os.put(x)});tx.oncomplete=resolve;tx.onerror=function(){reject(tx.error||new Error("Database save failed"))};});
+    const db=await openDb();
+    return new Promise(function(resolve,reject){const tx=db.transaction(STORE,"readonly"),r=tx.objectStore(STORE).getAll();r.onsuccess=()=>resolve(r.result||[]);r.onerror=()=>reject(r.error||new Error("Database read failed"));});
   }
   async function putTest(t){
-    const db=await openDb(), row=Object.assign({},clone(t),{id:idFor(t)});
-    return new Promise(function(resolve,reject){const tx=db.transaction(STORE,"readwrite");tx.objectStore(STORE).put(row);tx.oncomplete=resolve;tx.onerror=function(){reject(tx.error||new Error("Question save failed"))}});
+    const db=await openDb(),row=Object.assign({},clone(t),{id:idFor(t)});
+    return new Promise(function(resolve,reject){const tx=db.transaction(STORE,"readwrite");tx.objectStore(STORE).put(row);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error("Test save failed"));});
   }
-  async function deleteAll(){const db=await openDb();return new Promise(function(resolve,reject){const tx=db.transaction(STORE,"readwrite");tx.objectStore(STORE).clear();tx.oncomplete=resolve;tx.onerror=function(){reject(tx.error)}})}
+  async function deleteTestById(id){
+    const db=await openDb();
+    return new Promise(function(resolve,reject){const tx=db.transaction(STORE,"readwrite");tx.objectStore(STORE).delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error("Test delete failed"));});
+  }
+  async function writeAll(flat){
+    /* Used only for explicit restore/import. Normal Test editing never calls this. */
+    const db=await openDb(),rows=(Array.isArray(flat)?flat:[]).map(t=>Object.assign({},clone(t),{id:idFor(t)}));
+    return new Promise(function(resolve,reject){const tx=db.transaction(STORE,"readwrite"),os=tx.objectStore(STORE);os.clear();rows.forEach(x=>os.put(x));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error("Database restore failed"));});
+  }
+  async function deleteAll(){const db=await openDb();return new Promise(function(resolve,reject){const tx=db.transaction(STORE,"readwrite");tx.objectStore(STORE).clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error("Database reset failed"));});}
+  function cloudConfig(){return {url:window.TGY_SUPA_URL||"https://eivysalhillsvillmake.supabase.co",key:window.TGY_SUPA_ANON||"sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U"};}
   async function cloudUpsert(key,value){
-    try{const url=window.TGY_SUPA_URL||"https://eivysalhillsvillmake.supabase.co";const keyApi=window.TGY_SUPA_ANON||"sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U";await fetch(url+"/rest/v1/tgy_store?on_conflict=key",{method:"POST",headers:{apikey:keyApi,Authorization:"Bearer "+keyApi,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({key:key,value:value,updated_at:new Date().toISOString()})});}catch(e){console.warn("[TGY Mock Cloud]",e)}
+    try{const c=cloudConfig();const r=await fetch(c.url+"/rest/v1/tgy_store?on_conflict=key",{method:"POST",headers:{apikey:c.key,Authorization:"Bearer "+c.key,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({key,value,updated_at:new Date().toISOString()})});if(!r.ok)throw new Error("Cloud HTTP "+r.status);return true}catch(e){console.warn("[TGY Mock Cloud]",e);return false}
   }
-  async function cloudDelete(key){try{const url=window.TGY_SUPA_URL||"https://eivysalhillsvillmake.supabase.co";const keyApi=window.TGY_SUPA_ANON||"sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U";await fetch(url+"/rest/v1/tgy_store?key=eq."+encodeURIComponent(key),{method:"DELETE",headers:{apikey:keyApi,Authorization:"Bearer "+keyApi,Prefer:"return=minimal"}})}catch(e){}}
+  async function cloudDelete(key){try{const c=cloudConfig();const r=await fetch(c.url+"/rest/v1/tgy_store?key=eq."+encodeURIComponent(key),{method:"DELETE",headers:{apikey:c.key,Authorization:"Bearer "+c.key,Prefer:"return=minimal"}});return r.ok}catch(e){console.warn("[TGY Mock Cloud] delete",e);return false}}
+  async function cloudFetchTests(){
+    try{const c=cloudConfig();
+      const idx=await fetch(c.url+"/rest/v1/tgy_store?select=value&key=eq.tgy_mock_tests_index",{headers:{apikey:c.key,Authorization:"Bearer "+c.key,Accept:"application/json"}});
+      if(idx.ok){const rows=await idx.json(),list=rows&&rows[0]&&rows[0].value;if(Array.isArray(list)&&list.length){
+        const out=[];
+        for(const item of list){if(!item||!item.id)continue;const r=await fetch(c.url+"/rest/v1/tgy_store?select=value&key=eq."+encodeURIComponent(item.id),{headers:{apikey:c.key,Authorization:"Bearer "+c.key,Accept:"application/json"}});if(!r.ok)continue;const rr=await r.json(),v=rr&&rr[0]&&rr[0].value;if(v&&typeof v==="object")out.push(v)}
+        if(out.length)return out;
+      }}}catch(e){console.warn("[TGY Mock Storage] cloud per-test recovery failed",e)}
+    try{const c=cloudConfig();const r=await fetch(c.url+"/rest/v1/tgy_store?select=value&key=eq.tgy_tests",{headers:{apikey:c.key,Authorization:"Bearer "+c.key,Accept:"application/json"}});if(!r.ok)return[];const rows=await r.json(),v=rows&&rows[0]&&rows[0].value;return Array.isArray(v)?v:[]}catch(e){console.warn("[TGY Mock Storage] legacy cloud recovery failed",e);return[]}
+  }
+  async function publishIndex(d){
+    const flat=storeToFlat(d);
+    const index=flat.map(t=>({id:idFor(t),name:t.name,exam:t.exam,time:t.time,published:t.published!==false,visible:t.visible!==false,demo:t.demo===true}));
+    return cloudUpsert("tgy_mock_tests_index",index);
+  }
+  async function publishChanged(oldD,newD){
+    const oldFlat=storeToFlat(oldD),newFlat=storeToFlat(newD),oldMap=new Map(oldFlat.map(t=>[idFor(t),t])),newMap=new Map(newFlat.map(t=>[idFor(t),t]));
+    const jobs=[];
+    newMap.forEach((t,id)=>{const old=oldMap.get(id);if(!old||JSON.stringify(old)!==JSON.stringify(t))jobs.push(cloudUpsert(id,t));});
+    oldMap.forEach((t,id)=>{if(!newMap.has(id))jobs.push(cloudDelete(id));});
+    await Promise.all(jobs); await publishIndex(newD);
+  }
   async function load(){
-    const rows=await readAll();
-    if(rows.length){cache=flatToStore(rows);return}
-    const old=legacy(); cache=flatToStore(old);
-    if(old.length){try{await writeAll(old)}catch(e){console.warn("[TGY Mock Storage] legacy import failed",e)}}
+    try{const rows=await readAll();if(rows.length){cache=flatToStore(rows);return;}}
+    catch(e){console.warn("[TGY Mock Storage] IndexedDB read failed",e)}
+    const old=legacy();
+    if(old.length){cache=flatToStore(old);try{await writeAll(old)}catch(e){console.warn("[TGY Mock Storage] legacy import failed",e)}return;}
+    const cloudTests=await cloudFetchTests();cache=flatToStore(cloudTests);if(cloudTests.length){try{await writeAll(cloudTests)}catch(e){console.warn("[TGY Mock Storage] cloud import failed",e)}}
   }
   readyPromise=load().catch(function(e){cache=flatToStore(legacy());console.warn("[TGY Mock Storage]",e)});
   function ensure(){if(!cache)cache=flatToStore(legacy());return cache}
   window.tgyMockStorageReady=readyPromise;
   window.tgyGetAllTestsFlat=function(){return storeToFlat(ensure())};
   window.tgySetAllTestsFlat=async function(flatArr){
-    const d=flatToStore(Array.isArray(flatArr)?flatArr:[]);
-    cache=d;
-    const flat=storeToFlat(d);
-    await writeAll(flat);
-    flat.forEach(function(t){cloudUpsert(idFor(t),t)});
-    await cloudUpsert("tgy_mock_tests_index",flat.map(function(t){return {id:idFor(t),name:t.name,exam:t.exam,time:t.time,published:t.published!==false}}));
-    await cloudUpsert("tgy_tests",flat);
-    return flat;
+    await readyPromise;const old=clone(ensure()),next=flatToStore(Array.isArray(flatArr)?flatArr:[]);cache=next;
+    await writeAll(storeToFlat(next));await publishChanged(old,next);return storeToFlat(next);
   };
-  /* The legacy tgy_tests blob is read only for one-way compatibility/import on the Admin's own browser.
-     It is never written locally by the new Mock Test editor. The CLOUD copy of tgy_tests, however, is
-     still kept up to date below — the Student Site reads tests from that single cloud key, so every
-     save also publishes a consolidated flat copy there in addition to the new scalable per-test records. */
   window.mtStore=function(){return clone(ensure())};
-  window.save=function(){try{tests=storeToFlat(ensure());document.getElementById("st").textContent=tests.length;mtSaveStore(ensure())}catch(e){console.warn("[TGY Mock Storage] save",e)}};
-  window.renderTests=function(){const box=document.getElementById("tt");if(!box)return;const flat=storeToFlat(ensure());box.innerHTML=flat.map(function(t,i){return '<tr><td>'+esc(t.name||'')+'</td><td>'+((t.questions||[]).length)+'</td><td>'+(t.time||60)+' min</td><td><button class="btn" onclick="mtOpenTestEditor(\''+encodeURIComponent(t.exam||'')+'\',\''+encodeURIComponent(t.name||'')+'\')">Edit</button> <button class="btn gray" onclick="mtTogglePublish(\''+encodeURIComponent(t.exam||'')+'\',\''+encodeURIComponent(t.name||'')+'\')">'+(t.published===false?'Publish':'Unpublish')+'</button></td></tr>'}).join('');document.getElementById("st").textContent=flat.length};
-  window.mtSaveStore=function(x){
-    cache=clone(x||{exams:{}}); const flat=storeToFlat(cache);
-    writeAll(flat).catch(function(e){console.error(e);alert("❌ Mock Test Save नहीं हुआ। Browser database में समस्या है। पुराना data सुरक्षित रखा गया है।")});
-    flat.forEach(function(t){cloudUpsert(idFor(t),t)});
-    cloudUpsert("tgy_mock_tests_index",flat.map(function(t){return {id:idFor(t),name:t.name,exam:t.exam,time:t.time,published:t.published!==false}}));
-    cloudUpsert("tgy_tests",flat);
+  window.save=function(){try{tests=storeToFlat(ensure());const el=document.getElementById("st");if(el)el.textContent=tests.length}catch(e){console.warn("[TGY Mock Storage] save",e)}};
+  window.renderTests=function(){const box=document.getElementById("tt");if(!box)return;const flat=storeToFlat(ensure());box.innerHTML=flat.map(function(t){return '<tr><td>'+esc(t.name||'')+'</td><td>'+((t.questions||[]).length)+'</td><td>'+(t.time||60)+' min</td><td><button class="btn" onclick="mtOpenTestEditor(\''+encodeURIComponent(t.exam||'')+'\',\''+encodeURIComponent(t.name||'')+'\')">Edit</button> <button class="btn gray" onclick="mtTogglePublish(\''+encodeURIComponent(t.exam||'')+'\',\''+encodeURIComponent(t.name||'')+'\')">'+(t.published===false?'Publish':'Unpublish')+'</button></td></tr>'}).join('');const st=document.getElementById("st");if(st)st.textContent=flat.length};
+  window.mtSaveStore=async function(x){
+    await readyPromise;const old=clone(ensure()),next=clone(x||{exams:{}});cache=next;
+    try{
+      const oldFlat=storeToFlat(old),newFlat=storeToFlat(next),oldMap=new Map(oldFlat.map(t=>[idFor(t),t])),newMap=new Map(newFlat.map(t=>[idFor(t),t]));
+      const localJobs=[];
+      newMap.forEach((t,id)=>{const o=oldMap.get(id);if(!o||JSON.stringify(o)!==JSON.stringify(t))localJobs.push(putTest(t));});
+      oldMap.forEach((t,id)=>{if(!newMap.has(id))localJobs.push(deleteTestById(id));});
+      await Promise.all(localJobs);await publishChanged(old,next);
+      return true;
+    }catch(e){cache=old;console.error("[TGY Mock Storage] save",e);alert("❌ Mock Test Save नहीं हुआ। नया data सुरक्षित नहीं हो सका। पुराना data सुरक्षित रखा गया है।");return false}
   };
   window.appendToCurrentTest=async function(additions){
-    const e=document.getElementById("mtExam")?.value; const n=(document.getElementById("mtName")?.value||"").trim()||(document.getElementById("mtType")?.value==="demo"?"Demo Test":"");
-    const time=Number(document.getElementById("mtTime")?.value)||60, negative=document.getElementById("mtNegative")?.value==="yes", negativeMarks=negative?Number(document.getElementById("mtNegativeValue")?.value)||0:0;
-    if(!e){alert("पहले परीक्षा चुनें।");return false} if(!n){alert("Test का नाम लिखें।");return false} if(negative&&negativeMarks<=0){alert("Negative Marks की value डालें।");return false}
-    await readyPromise; const d=ensure(), exams=d.exams||(d.exams={}), tests=(exams[e]||(exams[e]={tests:{}})).tests||(exams[e].tests={});
-    const old=tests[n]||{name:n,exam:e,questions:[],published:true,visible:true}; const existing=Array.isArray(old.questions)?old.questions.slice():[], base=existing.length;
-    const add=(Array.isArray(additions)?additions:[]).map(function(x,i){const z=clone(x);delete z.image;delete z.imageData;z.number=base+i+1;return z});
+    const e=document.getElementById("mtExam")?.value,n=(document.getElementById("mtName")?.value||"").trim()||(document.getElementById("mtType")?.value==="demo"?"Demo Test":"");
+    const time=Number(document.getElementById("mtTime")?.value)||60,negative=document.getElementById("mtNegative")?.value==="yes",negativeMarks=negative?Number(document.getElementById("mtNegativeValue")?.value)||0:0;
+    if(!e){alert("पहले परीक्षा चुनें।");return false}if(!n){alert("Test का नाम लिखें।");return false}if(negative&&negativeMarks<=0){alert("Negative Marks की value डालें।");return false}
+    await readyPromise;const d=ensure(),exams=d.exams||(d.exams={}),tests=(exams[e]||(exams[e]={tests:{}})).tests||(exams[e].tests={});
+    const old=tests[n]||{name:n,exam:e,questions:[],published:true,visible:true},existing=Array.isArray(old.questions)?old.questions.slice():[],base=existing.length;
+    const add=(Array.isArray(additions)?additions:[]).map(function(x,i){const z=clone(x);/* preserve existing non-storage metadata, including image fields if supplied by an existing question system */z.number=base+i+1;return z});
     const updated=Object.assign({},old,{name:n,exam:e,time:time,demo:document.getElementById("mtType")?.value==="demo",negativeMarking:negative,negativeMarks:negativeMarks,questions:existing.concat(add),published:old.published!==false,visible:old.visible!==false});
-    try{
-      tests[n]=updated;cache=d;await putTest(updated);await cloudUpsert(idFor(updated),updated);
-      const flatNow=storeToFlat(d);
-      await cloudUpsert("tgy_mock_tests_index",flatNow.map(function(t){return {id:idFor(t),name:t.name,exam:t.exam,time:t.time,published:t.published!==false}}));
-      await cloudUpsert("tgy_tests",flatNow);
-    }
-    catch(err){alert("❌ Test Save नहीं हुआ। नया data सुरक्षित रूप से save नहीं हो सका। पुराना data नहीं मिटाया गया।");return false}
-    if(typeof mtRenderAll==="function")mtRenderAll(); const qb=document.getElementById("mtQuestions"),qc=document.getElementById("mtQuestionCount");if(qb)qb.innerHTML="";if(qc)qc.innerHTML="";return true;
+    const next=clone(d);tests[n]=updated;
+    const ok=await window.mtSaveStore(next);if(!ok)return false;
+    if(typeof mtRenderAll==="function")mtRenderAll();const qb=document.getElementById("mtQuestions"),qc=document.getElementById("mtQuestionCount");if(qb)qb.innerHTML="";if(qc)qc.innerHTML="";return true;
   };
   window.mtFinalSave=async function(){
-    const pending=Array.isArray(window.mtPreview)?window.mtPreview.map(function(x){const z=clone(x);delete z.image;delete z.imageData;return z}):[];
-    if(!pending.length){alert("पहले Questions का Preview बनाएं।");return} if(await window.appendToCurrentTest(pending)){window.mtPreview=[];const tx=document.getElementById("mtBulkText"),box=document.getElementById("mtPreview"),st=document.getElementById("mtStatus");if(tx)tx.value="";if(box)box.innerHTML="";if(st)st.innerHTML="✅ <b>"+pending.length+" Questions Save हो गए।</b>";}
+    const pending=Array.isArray(window.mtPreview)?window.mtPreview.map(x=>clone(x)):[];
+    if(!pending.length){alert("पहले Questions का Preview बनाएं।");return}
+    if(await window.appendToCurrentTest(pending)){window.mtPreview=[];const tx=document.getElementById("mtBulkText"),box=document.getElementById("mtPreview"),st=document.getElementById("mtStatus");if(tx)tx.value="";if(box)box.innerHTML="";if(st)st.innerHTML="✅ <b>"+pending.length+" Questions Save हो गए।</b>";}
   };
-  window.mtInit=async function(){await readyPromise;const e=document.getElementById("mtExam");if(e){populateExamSelect("mtExam");e.onchange=function(){mtLoadTests()};}mtLoadTests();if(typeof mtRenderAll==="function")mtRenderAll();};
+  window.mtInit=async function(){await readyPromise;const e=document.getElementById("mtExam");if(e){populateExamSelect("mtExam");e.onchange=function(){mtLoadTests()}}mtLoadTests();if(typeof mtRenderAll==="function")mtRenderAll()};
   window.tgyResetMockTestData=async function(){
     if(!confirm("⚠️ केवल Mock Test और उसके Questions हटेंगे। Users, Payments, Pricing, PDF Notes और बाकी data नहीं हटेगा।\n\nक्या आप जारी रखना चाहते हैं?"))return;
     if(!confirm("आखिरी पुष्टि: सभी Mock Tests/Questions का local test storage reset किया जाएगा। यह action वापस नहीं होगा।\n\nक्या Reset करें?"))return;
-    await readyPromise; const old=storeToFlat(ensure()); try{await deleteAll();cache={exams:{}};localStorage.removeItem("tgy_tests");for(const t of old)await cloudDelete(idFor(t));await cloudDelete("tgy_mock_tests_index");await cloudUpsert("tgy_tests",[]);if(typeof mtRenderAll==="function")mtRenderAll();if(typeof mtLoadTests==="function")mtLoadTests();alert("✅ केवल Mock Test / Questions data reset हो गया। बाकी data को नहीं छुआ गया।");}catch(e){alert("❌ Reset पूरा नहीं हुआ। पुराने data को यथासंभव सुरक्षित रखा गया है।");}
+    await readyPromise;const old=storeToFlat(ensure());try{await deleteAll();cache={exams:{}};localStorage.removeItem("tgy_tests");await Promise.all(old.map(t=>cloudDelete(idFor(t))));await cloudDelete("tgy_mock_tests_index");if(typeof mtRenderAll==="function")mtRenderAll();if(typeof mtLoadTests==="function")mtLoadTests();alert("✅ केवल Mock Test / Questions data reset हो गया। बाकी data को नहीं छुआ गया।")}catch(e){alert("❌ Reset पूरा नहीं हुआ। पुराने data को यथासंभव सुरक्षित रखा गया है।")}
   };
 })();
 </script>
