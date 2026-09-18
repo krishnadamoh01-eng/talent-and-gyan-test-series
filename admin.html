@@ -1308,6 +1308,7 @@ function renderExamMaster() {
       </div>
       <button type="button" class="btn" onclick="tgyOpenExamNameEditPopup(${i})">✏️ नाम व Logo सुधारें</button>
       <button type="button" class="btn danger" onclick="deleteExamMaster(${i})">🗑️ Delete</button>
+      <button type="button" class="btn danger" onclick="deleteExamMasterCompletely(${i})">🧹 पूरी तरह हटाएँ</button>
     </div>
   `).join('');
 }
@@ -1321,6 +1322,73 @@ window.deleteExamMaster = function(i) {
   refreshAllExamDropdowns("");
   renderExamMaster();
   mtRenderAll();
+};
+
+/* Directly related cleanup: remove an exam from Admin and also remove its
+   Mock Tests / exam-linked pricing / PDF-note records so the deleted exam
+   cannot reappear on Student through another directly related data source. */
+window.deleteExamMasterCompletely = async function(i) {
+  const a = getExamMaster();
+  const x = a[i]; if (!x) return;
+  const examName = String(x.name || '').trim();
+  if (!examName) return;
+  if (!confirm(`परीक्षा "${examName}" को पूरी तरह हटाना है?\n\nइससे इस परीक्षा के Mock Tests और परीक्षा से जुड़े Pricing/PDF Notes रिकॉर्ड भी हटेंगे।\nयह कार्रवाई वापस नहीं की जा सकती।`)) return;
+
+  const d = ensureStore();
+  const relatedTests = storeToFlat(d).filter(t => String(t?.exam || '').trim() === examName);
+
+  // Remove the exam master entry first.
+  const nextExams = a.filter((item, idx) => idx !== i);
+  saveExamMasterList(nextExams);
+
+  // Remove every directly related Mock Test from IndexedDB and cloud.
+  for (const t of relatedTests) {
+    try { await idbDelete(t); } catch (e) {}
+    try { await cloudDelete(testId(t)); } catch (e) {}
+  }
+  if (d.exams?.[examName]) delete d.exams[examName];
+  testCache = d;
+
+  // Remove legacy local Test records for this exam without clearing other data.
+  try {
+    const legacy = JSON.parse(localStorage.getItem('tgy_tests') || '[]');
+    if (Array.isArray(legacy)) {
+      const filtered = legacy.filter(t => String(t?.exam || '').trim() !== examName);
+      localStorage.setItem('tgy_tests', JSON.stringify(filtered));
+    }
+  } catch (e) {}
+
+  // Remove exam-linked access/pricing records only; keep unrelated records.
+  for (const key of ['tgy_access_pricing']) {
+    try {
+      const rows = JSON.parse(localStorage.getItem(key) || '[]');
+      if (Array.isArray(rows)) {
+        const filtered = rows.filter(r => String(r?.exam || '').trim() !== examName);
+        localStorage.setItem(key, JSON.stringify(filtered));
+        await cloudUpsert(key, filtered);
+      }
+    } catch (e) {}
+  }
+
+  // Remove PDF Notes belonging to this exam/folder, without touching others.
+  try {
+    const notes = JSON.parse(localStorage.getItem('tgy_pdf_notes') || '[]');
+    if (Array.isArray(notes)) {
+      const filtered = notes.filter(n => {
+        const folder = String(n?.folder || n?.exam || '').trim();
+        return folder !== examName;
+      });
+      localStorage.setItem('tgy_pdf_notes', JSON.stringify(filtered));
+      await cloudUpsert('tgy_pdf_notes', filtered);
+    }
+  } catch (e) {}
+
+  await mtRefreshCloudIndex();
+  refreshAllExamDropdowns('');
+  renderExamMaster();
+  mtRenderAll();
+  mtRenderQuestions();
+  alert(`✅ "${examName}" परीक्षा पूरी तरह हटा दी गई है।`);
 };
 
 window.tgyOpenExamNameEditPopupByName = function(examName) {
