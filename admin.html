@@ -854,32 +854,40 @@ window.mtDeleteTest = async function(e, t) {
     localStorage.setItem("tgy_tests", JSON.stringify(localFlat));
   } catch(err) {}
 
-  // 4. Permanently delete from Supabase Cloud & Mock index
-  try {
-    await cloudDelete(tid);
-    const flat = storeToFlat(d);
-    await cloudUpsert("tgy_tests", flat);
-    await cloudUpsert("tgy_mock_tests_index", flat.map(x => ({
-      id: testId(x), name: x.name, exam: x.exam, time: x.time, published: x.published !== false
-    })));
-  } catch(err) {}
+  // 4. Permanently delete only this Test from Supabase, then refresh the compact index.
+  try { await cloudDelete(tid); } catch(err) {}
+  await mtRefreshCloudIndex();
 
   mtRenderAll();
   mtRenderQuestions();
   alert("✅ टेस्ट को सफलता पूर्वक परमानेंट डिलीट कर दिया गया है।");
 };
 
-window.mtSaveStore = async function(d) {
+async function mtPersistTest(testObj) {
+  if (!testObj || !testObj.exam || !testObj.name) return false;
+  try { await idbPut(testObj); } catch(e) { return false; }
+  try { await cloudUpsert(testId(testObj), clone(testObj)); } catch(e) {}
+  await mtRefreshCloudIndex();
+  return true;
+}
+
+async function mtRefreshCloudIndex() {
+  const flat = storeToFlat(ensureStore());
+  const index = flat.map(x => ({
+    id: testId(x), name: x.name, exam: x.exam, time: x.time,
+    published: x.published !== false, visible: x.visible !== false, demo: x.demo === true
+  }));
+  try { await cloudUpsert("tgy_mock_tests_index", index); } catch(e) {}
+  return index;
+}
+
+/* Compatibility only: never writes the legacy giant tgy_tests blob.
+   The actual Mock Test source of truth is IndexedDB + per-test cloud rows. */
+window.mtSaveStore = async function(d, changedTest) {
   testCache = d;
-  const flat = storeToFlat(d);
-  localStorage.setItem("tgy_tests", JSON.stringify(flat));
-  for (const t of flat) {
-    try { await idbPut(t); } catch(e) {}
-    try { cloudUpsert(testId(t), t); } catch(e) {}
-  }
-  try {
-    cloudUpsert("tgy_tests", flat);
-  } catch(e) {}
+  if (changedTest) return mtPersistTest(changedTest);
+  await mtRefreshCloudIndex();
+  return true;
 };
 
 window.mtFinalSave = async function() {
@@ -917,14 +925,10 @@ window.mtFinalSave = async function() {
   });
 
   d.exams[e].tests[n] = updatedTest;
-  try {
-    await idbPut(updatedTest);
-    const flat = storeToFlat(d);
-    localStorage.setItem("tgy_tests", JSON.stringify(flat));
-    cloudUpsert(testId(updatedTest), updatedTest);
-    cloudUpsert("tgy_tests", flat);
-  } catch(err) {
-    console.warn("Storage sync:", err);
+  const saved = await mtPersistTest(updatedTest);
+  if (!saved) {
+    alert("❌ Test Save नहीं हो पाया। पुराना local data सुरक्षित रखा गया है।");
+    return;
   }
 
   window.mtPreview = [];
@@ -1158,7 +1162,7 @@ function mtRenderQuestions() {
   `).join('');
 }
 
-window.mtEditQuestion = function(i) {
+window.mtEditQuestion = async function(i) {
   const e = document.getElementById("mtExam")?.value;
   const t = (document.getElementById("mtName")?.value || "").trim();
   const d = ensureStore();
@@ -1174,11 +1178,11 @@ window.mtEditQuestion = function(i) {
   const ans = (prompt("सही उत्तर A/B/C/D:", x.answer || 'A') || 'A').toUpperCase();
   const ex = prompt("जानकारी / Explanation:", x.ex || "");
   qs[i] = Object.assign({}, x, { q: q.trim(), o: o.map(v => String(v || '').trim()), answer: ans, ex: ex || '' });
-  mtSaveStore(d);
+  await mtSaveStore(d, d.exams?.[e]?.tests?.[t]);
   mtRenderQuestions();
 };
 
-window.mtDeleteQuestion = function(i) {
+window.mtDeleteQuestion = async function(i) {
   const e = document.getElementById("mtExam")?.value;
   const t = (document.getElementById("mtName")?.value || "").trim();
   if (!confirm("क्या आप यह प्रश्न हटाना चाहते हैं?")) return;
@@ -1186,7 +1190,7 @@ window.mtDeleteQuestion = function(i) {
   const qs = d.exams?.[e]?.tests?.[t]?.questions || [];
   qs.splice(i, 1);
   qs.forEach((q, n) => q.number = n + 1);
-  mtSaveStore(d);
+  await mtSaveStore(d, d.exams?.[e]?.tests?.[t]);
   mtRenderQuestions();
 };
 
@@ -1389,8 +1393,15 @@ window.tgySaveExamFullEdit = async function(i) {
       if (d.exams[oldName]) {
         d.exams[newName] = d.exams[oldName];
         delete d.exams[oldName];
+        const renamedTests = Object.values(d.exams[newName].tests || {});
         Object.values(d.exams[newName].tests || {}).forEach(t => t.exam = newName);
-        mtSaveStore(d);
+        (async () => {
+          for (const t of renamedTests) {
+            await idbDelete({ exam: oldName, name: t.name });
+            await mtPersistTest(t);
+          }
+          await mtRefreshCloudIndex();
+        })();
       }
     }
 
@@ -1513,7 +1524,7 @@ window.mtTogglePublish = async function(e, t) {
   const obj = d.exams?.[e]?.tests?.[t];
   if (obj) {
     obj.published = obj.published === false;
-    await mtSaveStore(d);
+    await mtSaveStore(d, obj);
     mtRenderAll();
   }
 };
@@ -1537,8 +1548,19 @@ window.mtRenameTest = async function(e, t) {
   tests[name] = tests[t];
   tests[name].name = name;
   delete tests[t];
+  const renamed = tests[name];
+  const oldId = testId({ exam: e, name: t });
   await idbDelete({ exam: e, name: t });
-  await mtSaveStore(d);
+  try { await cloudDelete(oldId); } catch(err) {}
+  const saved = await mtPersistTest(renamed);
+  if (!saved) {
+    // Restore the in-memory name if the new record could not be persisted.
+    delete tests[name];
+    tests[t] = renamed;
+    renamed.name = t;
+    alert("❌ Test rename save नहीं हो पाया।");
+    return;
+  }
   mtRenderAll();
   alert("✅ Test का नाम बदल दिया गया।");
 };
@@ -2322,6 +2344,7 @@ window.tgyResetMockTestData = async function() {
     const tx = db.transaction(STORE, "readwrite");
     tx.objectStore(STORE).clear();
     localStorage.removeItem("tgy_tests");
+    try { await cloudUpsert("tgy_mock_tests_index", []); } catch(e) {}
     testCache = { exams: {} };
     mtRenderAll();
     mtRenderQuestions();
