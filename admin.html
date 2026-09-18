@@ -1201,12 +1201,9 @@ window.mtDeleteQuestion = async function(i) {
 function getExamMaster() {
   let a = [];
   try { a = JSON.parse(localStorage.getItem("tgy_exams") || "[]"); } catch(e) {}
-  if (!Array.isArray(a) || !a.length) {
-    a = ["MP पटवारी", "MPPSC", "MP पुलिस", "ग्रुप 4", "Hospital Assistant"].map(name => ({
-      name, visible: true, logo: ""
-    }));
-    localStorage.setItem("tgy_exams", JSON.stringify(a));
-  }
+  if (!Array.isArray(a)) a = [];
+  // Exam Management is the only source for exam folders.
+  // Never create fallback/default exams automatically.
   return a.map(x => {
     if (typeof x === "string") return { name: x, visible: true, logo: "" };
     // If the logo was an old hardcoded placeholder, clear it so user can add their own
