@@ -2712,9 +2712,9 @@ html,body{max-width:100%;overflow-x:hidden}
   function examNames(){
     var out=[], seen={};
     function add(x){var n=typeof x==='string'?x:(x&&x.name);n=String(n||'').trim();if(n&&seen[n]!==1){seen[n]=1;out.push(n)}}
-    J('tgy_exams',[]).forEach(function(x){if(!x||typeof x==='string'||x.visible!==false)add(x)});
-    (Array.isArray(window.tests)?window.tests:[]).forEach(function(t){if(t&&t.exam&&t.visible!==false&&t.published!==false)add(t.exam)});
-    J('tgy_pdf_notes',[]).forEach(function(n){if(n&&n.visible!==false&&n.published!==false)add(n.folder||n.exam)});
+    // Student परीक्षा सूची का source केवल Admin में मौजूद tgy_exams है.
+    // Tests/PDF में exam name मिलने से कोई नया exam अपने-आप Student site पर नहीं बनेगा.
+    J('tgy_exams',[]).forEach(function(x){if(x&& (typeof x==='string'||x.name) && x.visible!==false)add(x)});
     return out;
   }
   function ec(){return document.getElementById('examContent')}
