@@ -1342,7 +1342,7 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
  }
  function normalizedTest(t){const c={...t};c.questions=(t?.questions||[]).map(normalizeQ);return c}
  window.startFinalMockTest=function(i){
-   const raw=tests[i];if(!raw)return;
+   const raw=(Array.isArray(window.tests)?window.tests:tests)[i];if(!raw)return;
    if(!requireStudentLogin({type:'test',index:i,exam:raw.exam})){return}
    if(raw.demo!==true && !hasPurchasedTest(raw)){
      const pricing=getSeriesPricing(raw.exam||''); if(pricing.length)return buySeriesAccess(raw.exam,0); alert('इस Test के लिए Access उपलब्ध नहीं है।');return;
@@ -3519,7 +3519,7 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
     if(window.state&&window.state.t&&window.state.t.questions){window.tgySubmitExam(false)}
   };
   window.startFinalMockTest=function(i){
-    const raw=tests[i];if(!raw)return;
+    const raw=(Array.isArray(window.tests)?window.tests:tests)[i];if(!raw)return;
     if(!requireStudentLogin({type:'test',index:i,exam:raw.exam}))return;
     if(raw.demo!==true&&!hasPurchasedTest(raw)){
       const pricing=getSeriesPricing(raw.exam||'');if(pricing.length)return buySeriesAccess(raw.exam,0);
@@ -3603,6 +3603,7 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
         if(!t||typeof t!=='object')throw new Error('Test data not found');
         const full=Object.assign({},t,{exam:String(t.exam||meta.exam).trim(),name:String(t.name||meta.name).trim(),time:Number(t.time)||meta.time||60,questions:Array.isArray(t.questions)?t.questions:[],demo:t.demo===true,published:t.published!==false,visible:t.visible!==false});
         arr[Number(i)]=full;
+        window.tests=arr;
         return full;
       }finally{delete loading[k]}
     })();

@@ -1739,7 +1739,7 @@ window.activatePayment = async function(i) {
     activatedAt: new Date().toISOString(),
     expiresAt: exp
   });
-  u.access = `Active • ${days} दिन • ${new Date(exp).toLocaleDateString()}`;
+  u.access = `Active • ${u.seriesAccess.length} Course${u.seriesAccess.length > 1 ? 's' : ''}`;
 
   p.status = "Access Activated";
   p.adminConfirmed = true;
@@ -1777,20 +1777,30 @@ function renderUsers() {
     tb.innerHTML = "<tr><td colspan='6' style='text-align:center;color:#667085'>अभी कोई User Register नहीं है।</td></tr>";
     return;
   }
-  tb.innerHTML = users.map((u, i) => `
+  tb.innerHTML = users.map((u, i) => {
+    const accesses = Array.isArray(u.seriesAccess) ? u.seriesAccess.filter(x => x && x.exam) : [];
+    const accessHtml = accesses.length ? accesses.map((x, ai) => {
+      const exp = x.expiresAt ? new Date(x.expiresAt).toLocaleDateString('hi-IN') : 'Unlimited';
+      const title = x.count >= 999999 ? 'Full Series' : `${Number(x.count)||0} Tests`;
+      return `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:3px 0">
+        <span class="badge" style="background:#e6f4ea;color:#1e7e34">${esc(x.exam)} • ${title} • ${exp}</span>
+        <button type="button" class="btn gray" style="padding:2px 6px;font-size:11px" onclick="removeUserCourseAccess(${i},${ai})">❌</button>
+      </div>`;
+    }).join('') : 'No Access';
+    return `
     <tr>
       <td>${u.deviceType === 'mobile' ? '📱' : '💻'} <b>${esc(u.name || '-')}</b></td>
       <td>${esc(u.email || '-')}</td>
       <td>${esc(u.mobile || '-')}</td>
       <td>${esc(u.created || '-')}</td>
-      <td>${u.access ? `<span class="badge" style="background:#e6f4ea;color:#1e7e34">${esc(u.access)}</span>` : 'No Access'}</td>
+      <td>${accessHtml}</td>
       <td>
         <button type="button" class="btn orange" style="padding:4px 8px;font-size:12px" onclick="tgyDirectAccess(${i})">🎓 Give Access</button>
-        ${u.access ? `<button type="button" class="btn gray" style="padding:4px 8px;font-size:12px" onclick="removeUserAccess(${i})">❌ Lock Access</button>` : ''}
+        ${accesses.length ? `<button type="button" class="btn gray" style="padding:4px 8px;font-size:12px" onclick="removeUserAccess(${i})">❌ All Access Lock</button>` : ''}
         <button type="button" class="btn danger" style="padding:4px 8px;font-size:12px" onclick="tgyDeleteUserPermanently(${i})">🗑️ Delete</button>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
   const su = document.getElementById("su");
   if (su) su.textContent = users.length;
 }
@@ -1844,7 +1854,7 @@ window.saveDirectAccessAction = async function() {
   u.seriesAccess.push({
     exam, count, amount: 0, activatedAt: new Date().toISOString(), expiresAt: exp, source: "admin-direct"
   });
-  u.access = `Active • ${count >= 999999 ? 'Full Series' : count + ' Tests'} • ${exam} • ${days} दिन`;
+  u.access = `Active • ${u.seriesAccess.length} Course${u.seriesAccess.length > 1 ? 's' : ''}`;
 
   localStorage.setItem("tgy_users", JSON.stringify(users));
   await cloudUpsert("tgy_users", users);
@@ -1853,12 +1863,31 @@ window.saveDirectAccessAction = async function() {
   alert("✅ Student को Direct Access सफलतापूर्वक दे दिया गया।");
 };
 
+window.removeUserCourseAccess = async function(userIndex, accessIndex) {
+  const users = getUsers();
+  const u = users[userIndex];
+  if (!u) return;
+  const arr = Array.isArray(u.seriesAccess) ? u.seriesAccess : [];
+  const item = arr[accessIndex];
+  if (!item) return;
+  if (!confirm(`क्या केवल ${item.exam || 'इस Course'} का Access बंद करना चाहते हैं?
+बाकी Courses का Access चलता रहेगा।`)) return;
+  arr.splice(accessIndex, 1);
+  u.seriesAccess = arr;
+  u.access = arr.length ? `Active • ${arr.length} Course${arr.length > 1 ? 's' : ''}` : null;
+  localStorage.setItem("tgy_users", JSON.stringify(users));
+  await cloudUpsert("tgy_users", users);
+  renderUsers();
+};
+
 window.removeUserAccess = async function(i) {
-  if (!confirm("क्या इस User का Access समाप्त करना चाहते हैं?")) return;
+  if (!confirm("क्या इस User के सभी Course/Exam Access समाप्त करना चाहते हैं?")) return;
   const users = getUsers();
   if (users[i]) {
     users[i].access = null;
     users[i].seriesAccess = [];
+    users[i].accessExam = null;
+    users[i].accessExpiresAt = null;
     localStorage.setItem("tgy_users", JSON.stringify(users));
     await cloudUpsert("tgy_users", users);
     renderUsers();
@@ -2382,167 +2411,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   tgySyncUsersFromCloud(false);
 });
 </script>
-
-<script id="tgy-instruction-passage-autodetect-fix">
-(function(){
-  "use strict";
-  function mtNorm(v){return String(v==null?"":v).replace(/[\u200b\u200c\u200d\ufeff]/g,"").replace(/\u00a0/g," ").replace(/\r\n?/g,"\n").replace(/[ \t]+/g," ").trim();}
-
-  function mtContextHeader(line){
-    const x=mtNorm(line);
-    if(!x) return false;
-    const strong=/^(?:निर्देश|दिशा(?:-निर्देश)?|दिशानिर्देश|गद्यांश|पद्यांश|काव्यांश|कथ्यांश|पैसेज|पासेज|प्रसंग|केसलेट|अनुच्छेद|संदर्भ|कविता|Instructions?|Directions?|Direction|Passage|Prose\s+Passage|Poem|Poetry|Poetry\s+Passage|Verse|Stanza|Extract|Context|Caselet|Section|Part|Text)(?:\s*[:：ः.\-–—(]|\s*$)/i;
-    const short=/^(?:पद|अंश|पाठ|भाग)\b/i;
-    if(strong.test(x)) return true;
-    if(short.test(x)) return /^(?:पद|अंश|पाठ|भाग)(?:\s*(?:[:：ः.\-–—]|\(|[A-Ea-e]|[0-9०-९]+)|\s*$)/i.test(x);
-    return false;
-  }
-  function mtContextText(text){
-    const lines=String(text||"").replace(/\r\n?/g,"\n").split("\n");
-    let idx=-1;
-    for(let i=0;i<lines.length;i++) if(mtContextHeader(lines[i])) idx=i;
-    return idx>=0?lines.slice(idx).join("\n").trim():"";
-  }
-  function mtContextLooksUseful(text){return mtNorm(text).length>=8 && /(?:निर्देश|दिशा(?:-निर्देश)?|दिशानिर्देश|गद्यांश|पद्यांश|काव्यांश|कथ्यांश|पैसेज|पासेज|प्रसंग|कविता|पद|अंश|पाठ|Instructions?|Directions?|Direction|Passage|Prose\s+Passage|Poem|Poetry|Poetry\s+Passage|Verse|Stanza|Extract|Caselet|Section|Part|भाग)/i.test(mtNorm(text));}
-
-  function mtFingerprint(x){return [x.type||"normal",x.passage||"",x.q||"",Array.isArray(x.o)?x.o.join("|"):"",x.answer||"",Array.isArray(x.statements)?x.statements.join("|"):x.statements||"",Array.isArray(x.conclusions)?x.conclusions.join("|"):x.conclusions||""].map(mtNorm).join("\u241E").toLowerCase();}
-
-  function mtQuestionStartRe(){
-    return /^(?:\s*(?:प्रश्न|Question|question|क्वेश्चन)\s*(?:No\.?|क्रमांक|क्रम)?\s*(\d{1,4})\s*[\.\)\-:\/|]?\s*|\s*Q\s*\.?\s*(\d{1,4})\s*[\.\)\-:\/|]?\s*)/gim;
-  }
-  function mtFindStarts(text){
-    const starts=[]; let m, re=mtQuestionStartRe();
-    while((m=re.exec(text))!==null){
-      const lineStart=text.lastIndexOf("\n",m.index)+1;
-      const prefix=text.slice(lineStart,m.index).trim();
-      // Do not mistake "निर्देश: (प्रश्न 113...)" for the actual question start.
-      if(mtContextHeader(prefix)) continue;
-      starts.push({pos:m.index,end:re.lastIndex,num:m[1]||m[2]||""});
-    }
-    if(!starts.length){
-      const n=/^\s*(\d{1,4})\s*[\.\)\-:\/|]\s+/gm;
-      while((m=n.exec(text))!==null){
-        const lineStart=text.lastIndexOf("\n",m.index)+1;
-        const prefix=text.slice(lineStart,m.index).trim();
-        if(mtContextHeader(prefix)) continue;
-        starts.push({pos:m.index,end:n.lastIndex,num:m[1]||""});
-      }
-    }
-    return starts;
-  }
-
-  function mtSplitStatements(lines){
-    const arr=[];
-    let cur="";
-    const flush=()=>{if(mtNorm(cur))arr.push(mtNorm(cur));cur="";};
-    lines.forEach(function(raw){
-      const line=mtNorm(raw); if(!line)return;
-      const marker=line.match(/^\(?\s*(I{1,3}|IV|V|VI|VII|VIII|IX|X|[1-9]\d?|[A-Ea-e])\s*[\.\)\-:：]\s*(.*)$/i);
-      if(marker){flush();cur=marker[2]||"";} else cur+=(cur?" ":"")+line;
-    });
-    flush();
-    return arr;
-  }
-  function mtFindLabel(lines, re, from){
-    for(let i=from||0;i<lines.length;i++) if(re.test(lines[i])) return i;
-    return -1;
-  }
-  function mtParseStatementBlock(qLines){
-    const lines=qLines.map(mtNorm).filter(Boolean);
-    const sRe=/^(?:कथन|कथ्य|Statements?|Statement)\s*(?:[:：\-–—]|\s)\s*(.*)$/i;
-    const cRe=/^(?:निष्कर्ष|Conclusions?|Conclusion)\s*(?:[:：\-–—]|\s)\s*(.*)$/i;
-    const si=mtFindLabel(lines,sRe,0);
-    const ci=si>=0?mtFindLabel(lines,cRe,si+1):-1;
-    if(si<0 || ci<0) return null;
-    const intro=lines.slice(0,si).join("\n").trim();
-    const s0=lines[si].match(sRe), c0=lines[ci].match(cRe);
-    const sLines=[]; if(s0&&mtNorm(s0[1]))sLines.push(s0[1]); sLines.push(...lines.slice(si+1,ci));
-    const cLines=[]; if(c0&&mtNorm(c0[1]))cLines.push(c0[1]); cLines.push(...lines.slice(ci+1));
-    return {intro,statements:mtSplitStatements(sLines),conclusions:mtSplitStatements(cLines)};
-  }
-
-  function mtContextRange(text){
-    const x=mtNorm(text);
-    const m=x.match(/(?:प्रश्न|Questions?|Q)\s*(?:No\.?|क्रमांक|क्रम)?\s*(\d{1,4})\s*(?:-|से|to|तक)\s*(\d{1,4})/i);
-    return m?{from:Number(m[1]),to:Number(m[2])}:null;
-  }
-
-  window.mtAutoParse=function(raw){
-    let text=mtNorm(raw); if(!text)return {questions:[],type:"normal"}; text=text.replace(/[‐‑‒–—―]/g,"-");
-    const starts=mtFindStarts(text); if(!starts.length)return {questions:[],type:"normal"};
-    let pendingContext=mtContextText(text.slice(0,starts[0].pos));
-    let pendingRange=mtContextRange(pendingContext);
-    const optRe=/^\s*\(?([A-Ea-e])\)?[\.\)\-:\/]\s*(.*)$/;
-    const infoRe=/^\s*(?:जानकारी|व्याख्या|विवरण|Explanation|Description|Solution|समाधान|नोट|Note|कारण|स्पष्टीकरण)\s*[:ः=\-]\s*(.*)$/i;
-    const ansRe=/^\s*(?:Right\s*Answer|Right\s*Ans\.?|Correct\s*Answer|Answer|Ans\.?|सही\s*उत्तर|सही\s*विकल्प|उत्तर|Correct)\s*[:ः=\-]\s*(.*)$/i;
-    const idx={A:0,B:1,C:2,D:3,E:4}; const out=[];
-    for(let i=0;i<starts.length;i++){
-      let block=text.slice(starts[i].end,i+1<starts.length?starts[i+1].pos:text.length).trim(); if(!block)continue;
-      let lines=block.split("\n").map(mtNorm).filter(x=>x&&!/^[-_]{5,}$/.test(x));
-      let firstOpt=-1; for(let j=0;j<lines.length;j++){if(optRe.test(lines[j])){firstOpt=j;break;}}
-      if(firstOpt<0)continue;
-      let before=lines.slice(0,firstOpt);
-      // A context heading before the options is not part of the question text.
-      let localContext=mtContextText(before.join("\n"));
-      if(localContext){const ci=before.findIndex(mtContextHeader);if(ci>=0)before=before.slice(0,ci);}
-      const opts=["","","",""]; let answer="",ex="",current=-1; let nextContext="";
-      for(let j=firstOpt;j<lines.length;j++){
-        const line=lines[j];
-        if(mtContextHeader(line)){nextContext=lines.slice(j).join("\n").trim();break;}
-        const im=line.match(infoRe);
-        if(im){
-          ex=im[1].trim(); let k=j+1;
-          for(;k<lines.length;k++){
-            if(mtContextHeader(lines[k]))break;
-            ex+=(ex?"\n":"")+lines[k];
-          }
-          if(k<lines.length)nextContext=lines.slice(k).join("\n").trim();
-          break;
-        }
-        const am=line.match(ansRe);
-        if(am){const a=am[1].trim(),lm=a.match(/^\(?\s*([A-Ea-e])\s*\)?/);answer=lm?lm[1].toUpperCase():(a.split(/\s+/)[0]||"");current=-1;continue;}
-        const om=line.match(optRe);
-        if(om){current=idx[om[1].toUpperCase()]??-1;if(current>=0)opts[current]=(om[2]||"").trim();continue;}
-        if(current>=0)opts[current]+=(opts[current]?" ":"")+line;
-      }
-      if(!before.length || opts.filter(Boolean).length<2)continue;
-      const q=before.join("\n").trim(); if(!q)continue;
-      const sc=mtParseStatementBlock(before);
-      let passage=pendingContext||localContext||"";
-      let range=pendingRange||mtContextRange(passage);
-      const qNum=Number(starts[i].num)||out.length+1;
-      // If a carried context has an explicit question range, only attach it inside that range.
-      if(range && (qNum<range.from || qNum>range.to)) passage="";
-      out.push({q:sc?sc.intro:q,o:opts,answer,ex,number:starts[i].num||(i+1),type:sc?"statement-conclusion":(passage?"passage":"normal"),passage,range:range||undefined,statements:sc?sc.statements:[],conclusions:sc?sc.conclusions:[],intro:sc?sc.intro:""});
-      // Context found after the previous question belongs to the following question(s).
-      if(nextContext){pendingContext=nextContext;pendingRange=mtContextRange(nextContext);} 
-      else if(range && qNum>=range.to){pendingContext="";pendingRange=null;}
-      else if(!range){pendingContext="";pendingRange=null;}
-    }
-    return {questions:out,type:out.some(x=>x.type==="passage")?"Mixed / Passage":(out.some(x=>x.type==="statement-conclusion")?"कथन–निष्कर्ष":"Normal")};
-  };
-
-  function mtRenderPreview(){
-    const box=document.getElementById("mtPreview");if(!box)return;const arr=Array.isArray(window.mtPreview)?window.mtPreview:[];
-    box.innerHTML=arr.map(function(x,i){let h='<div class="card" style="margin:8px 0;padding:12px;border:1px solid #c8ddf4;background:#fff">';
-      h+='<div style="margin-bottom:6px"><span class="badge">'+(x.type==='statement-conclusion'?'📋 कथन–निष्कर्ष':(x.type==='passage'?'📖 निर्देश / Passage':'📝 सामान्य प्रश्न'))+'</span></div>';
-      if(x.passage)h+='<div style="margin-bottom:8px;padding:8px;background:#f0f7ff;border-left:3px solid #1769aa;font-size:13px"><b>📖 निर्देश / गद्यांश / पद्यांश / Passage:</b><div style="white-space:pre-wrap">'+esc(x.passage)+'</div></div>';
-      h+='<div><b>प्रश्न '+(x.number||(i+1))+'.</b> '+esc(x.intro||x.q).replace(/\n/g,'<br>')+'</div>';
-      if(x.statements&&x.statements.length)h+='<div style="margin:6px 0;font-size:13px"><b>कथन:</b>'+x.statements.map((s,si)=>'<div>'+(['I','II','III','IV','V','VI'][si]||si+1)+'. '+esc(s)+'</div>').join('')+'</div>';
-      if(x.conclusions&&x.conclusions.length)h+='<div style="margin:6px 0;font-size:13px"><b>निष्कर्ष:</b>'+x.conclusions.map((c,ci)=>'<div>'+(['I','II','III','IV','V','VI'][ci]||ci+1)+'. '+esc(c)+'</div>').join('')+'</div>';
-      h+='<div style="margin:6px 0">'+x.o.map((opt,oi)=>opt?'<div>('+String.fromCharCode(65+oi)+') '+esc(opt)+'</div>':'').join('')+'</div>';
-      h+='<div style="margin-top:4px"><b>सही उत्तर:</b> '+esc(x.answer||'-')+'</div>';if(x.ex)h+='<div style="margin-top:4px;color:#875100;font-size:13px"><b>जानकारी/Explanation:</b> '+esc(x.ex)+'</div>';h+='</div>';return h;}).join('');
-  }
-  window.mtTextPreview=function(){
-    const raw=document.getElementById("mtBulkText")?.value||"";if(!raw.trim()){alert("पहले पूरा Question Set Paste करें।");return;}
-    const parsed=window.mtAutoParse(raw),incoming=parsed.questions||[];if(!incoming.length){const st=document.getElementById("mtStatus");if(st)st.innerHTML="❌ कोई Question पहचान में नहीं आया। कृपया फ़ॉर्मेट जाँचें।";return;}
-    const previous=Array.isArray(window.mtPreview)?window.mtPreview:[],seen=new Set(previous.map(mtFingerprint));let added=0;
-    incoming.forEach(function(x){const k=mtFingerprint(x);if(!seen.has(k)){seen.add(k);previous.push(x);added++;}});
-    window.mtPreview=previous.map((x,i)=>Object.assign({},x,{number:i+1}));const st=document.getElementById("mtStatus");if(st)st.innerHTML='✅ <b>'+window.mtPreview.length+' Questions तैयार हैं</b> — इस Preview में '+added+' नए Questions जुड़े। दोबारा वही Bulk देने पर duplicate नहीं जुड़ेंगे।';mtRenderPreview();
-  };
-})();
-
-</script>
-
 </body>
 </html>
