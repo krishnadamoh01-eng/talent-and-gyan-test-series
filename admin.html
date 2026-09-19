@@ -965,14 +965,51 @@ function looksLikePassage(t) {
 
 function splitStatementBlock(full) {
   const lines = full.split('\n').map(x => x.trim()).filter(Boolean);
-  let si = lines.findIndex(x => /^(?:कथन|Statements?|Statement)\s*[:：]?/i.test(x));
-  let ci = si >= 0 ? lines.findIndex((x, j) => j > si && /^(?:निष्कर्ष|Conclusions?|Conclusion)\s*[:：]?/i.test(x)) : -1;
+  const stmtHeadRe = /^(?:कथन|Statements?|Statement)\s*(?:[IVX]+|\d+)?\s*[:：\.\-]?\s*(.*)$/i;
+  const conclHeadRe = /^(?:निष्कर्ष|Conclusions?|Conclusion)\s*(?:[IVX]+|\d+)?\s*[:：\.\-]?\s*(.*)$/i;
+  const si = lines.findIndex(x => stmtHeadRe.test(x));
+  const ci = si >= 0 ? lines.findIndex((x, j) => j > si && conclHeadRe.test(x)) : -1;
   if (si < 0 || ci < 0) return null;
+
+  const statements = [];
+  for (const line of lines.slice(si, ci)) {
+    const m = line.match(stmtHeadRe);
+    if (m) {
+      if (m[1]) statements.push(m[1].trim());
+    } else if (line) {
+      statements.push(line);
+    }
+  }
+
+  const conclusions = [];
+  for (const line of lines.slice(ci)) {
+    const m = line.match(conclHeadRe);
+    if (m) {
+      if (m[1]) conclusions.push(m[1].trim());
+    } else if (line) {
+      conclusions.push(line);
+    }
+  }
+
   return {
     intro: lines.slice(0, si).join('\n').trim(),
-    statements: lines.slice(si + 1, ci),
-    conclusions: lines.slice(ci + 1)
+    statements: statements.filter(Boolean),
+    conclusions: conclusions.filter(Boolean)
   };
+}
+
+function mtContextMarker(line) {
+  const x = String(line || '').trim();
+  return /^(?:[-*•]+\s*)?(?:निर्देश|दिशा|दिशा-निर्देश|गद्यांश|पद्यांश|काव्यांश|कथ्यांश|कथनांश|पैसेज|केसलेट|अनुच्छेद|संदर्भ|प्रसंग|भाग|पाठ|Instructions?|Directions?|Passage|Prose\s+Passage|Poetry\s+Passage|Poem|Poetry|Verse|Stanza|Extract|Context|Caselet|Section|Part|Text|Reading\s+Passage)\s*(?:[:：ः\-]|\(|$)/i.test(x);
+}
+
+function mtContextTarget(text) {
+  const x = String(text || '');
+  let m = x.match(/(?:प्रश्न|Question|Questions?|Q\.)\s*(\d{1,4})\s*(?:से|to|[-–—])\s*(\d{1,4})/i);
+  if (m) return { from: Number(m[1]), to: Number(m[2]) };
+  m = x.match(/(?:प्रश्न|Question|Q\.)\s*(\d{1,4})/i);
+  if (m) return { from: Number(m[1]), to: Number(m[1]) };
+  return null;
 }
 
 function mtAutoParse(raw) {
@@ -994,38 +1031,47 @@ function mtAutoParse(raw) {
   }
   if (!starts.length) return { questions: [], type: "normal" };
 
-  const preamble = cleanText(text.slice(0, starts[0].pos));
-  let activePassage = looksLikePassage(preamble) ? preamble : "";
-
   const optRe = /^\s*\(?([A-Ea-e])\)?[\.\)\-:\/]\s*(.*)$/;
   const infoRe = /^\s*(?:जानकारी|व्याख्या|विवरण|Explanation|Description|Solution|समाधान|नोट|Note|कारण|स्पष्टीकरण)\s*[:=\-]\s*(.*)$/i;
   const ansRe = /^\s*(?:Right\s*Answer|Right\s*Ans\.?|Correct\s*Answer|Answer|Ans\.?|सही\s*उत्तर|सही\s*विकल्प|उत्तर|Correct)\s*[:=\-]\s*(.*)$/i;
   const idxMap = { A: 0, B: 1, C: 2, D: 3, E: 4 };
-
   const out = [];
+  const contexts = [];
+
+  const preamble = cleanText(text.slice(0, starts[0].pos));
+  if (looksLikePassage(preamble)) {
+    contexts.push({ text: preamble, target: mtContextTarget(preamble), fallbackIndex: 0 });
+  }
+
   for (let i = 0; i < starts.length; i++) {
     const block = text.slice(starts[i].end, i + 1 < starts.length ? starts[i + 1].pos : text.length).trim();
     if (!block) continue;
-    const lines = block.split('\n').map(x => x.trim()).filter(x => x && !/^[-_]{5,}$/.test(x));
+    const allLines = block.split('\n').map(x => x.trim()).filter(x => x && !/^[-_]{5,}$/.test(x));
 
     let firstOpt = -1;
-    for (let j = 0; j < lines.length; j++) {
-      if (optRe.test(lines[j])) { firstOpt = j; break; }
+    for (let j = 0; j < allLines.length; j++) {
+      if (optRe.test(allLines[j])) { firstOpt = j; break; }
     }
     if (firstOpt < 0) continue;
 
-    const before = lines.slice(0, firstOpt);
+    // A passage/instruction appearing after the previous question's explanation
+    // belongs to the following question(s), never to the previous explanation.
+    let ctxAt = -1;
+    for (let j = firstOpt; j < allLines.length; j++) {
+      if (mtContextMarker(allLines[j])) { ctxAt = j; break; }
+    }
+    const questionLines = ctxAt >= 0 ? allLines.slice(0, ctxAt) : allLines;
+    if (ctxAt >= 0) {
+      const ctxText = allLines.slice(ctxAt).join('\n').trim();
+      contexts.push({ text: ctxText, target: mtContextTarget(ctxText), fallbackIndex: i + 1 });
+    }
+
+    const before = questionLines.slice(0, firstOpt);
     const opts = ["", "", "", "", ""];
     let answer = "", ex = "", current = -1;
 
-    for (let j = firstOpt; j < lines.length; j++) {
-      const line = lines[j];
-      const im = line.match(infoRe);
-      if (im) {
-        ex = im[1].trim();
-        if (j + 1 < lines.length) ex += (ex ? "\n" : "") + lines.slice(j + 1).join("\n");
-        break;
-      }
+    for (let j = firstOpt; j < questionLines.length; j++) {
+      const line = questionLines[j];
       const am = line.match(ansRe);
       if (am) {
         const a = am[1].trim();
@@ -1033,6 +1079,12 @@ function mtAutoParse(raw) {
         answer = lm ? lm[1].toUpperCase() : (a.split(/\s+/)[0] || "");
         current = -1;
         continue;
+      }
+      const im = line.match(infoRe);
+      if (im) {
+        ex = im[1].trim();
+        if (j + 1 < questionLines.length) ex += (ex ? "\n" : "") + questionLines.slice(j + 1).join("\n");
+        break;
       }
       const om = line.match(optRe);
       if (om) {
@@ -1046,20 +1098,33 @@ function mtAutoParse(raw) {
     if (!before.length || opts.filter(Boolean).length < 2) continue;
     const q = before.join("\n").trim();
     const sc = splitStatementBlock(q);
-
     out.push({
       q: q,
       o: opts,
       answer: answer,
       ex: ex,
       number: starts[i].num || (i + 1),
-      type: sc ? "statement-conclusion" : (activePassage ? "passage" : "normal"),
-      passage: activePassage,
+      type: sc ? "statement-conclusion" : "normal",
+      passage: "",
       statements: sc ? sc.statements : [],
       conclusions: sc ? sc.conclusions : [],
       intro: sc ? sc.intro : ""
     });
   }
+
+  // Attach each context only to the question number(s) it explicitly targets.
+  // If there is no explicit target, attach it to the immediate next parsed question.
+  out.forEach((q, idx) => {
+    const qn = Number(q.number);
+    const hit = contexts.find(c => {
+      if (c.target && Number.isFinite(qn)) return qn >= c.target.from && qn <= c.target.to;
+      return c.fallbackIndex === idx;
+    });
+    if (hit) {
+      q.passage = hit.text;
+      q.type = q.type === "statement-conclusion" ? q.type : "passage";
+    }
+  });
 
   return {
     questions: out,
