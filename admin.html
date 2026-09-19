@@ -2391,10 +2391,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   function mtContextHeader(line){
     const x=mtNorm(line);
     if(!x) return false;
-    const strong=/^(?:निर्देश|दिशा(?:-निर्देश)?|दिशानिर्देश|गद्यांश|पद्यांश|काव्यांश|कथ्यांश|पैसेज|पासेज|प्रसंग|कविता|Instructions?|Directions?|Direction|Passage|Prose\s+Passage|Poem|Poetry|Poetry\s+Passage|Verse|Stanza|Extract|Caselet|Section|Part)(?:\s*[:：.\-–—(]|\s*$)/i;
+    const strong=/^(?:निर्देश|दिशा(?:-निर्देश)?|दिशानिर्देश|गद्यांश|पद्यांश|काव्यांश|कथ्यांश|पैसेज|पासेज|प्रसंग|केसलेट|अनुच्छेद|संदर्भ|कविता|Instructions?|Directions?|Direction|Passage|Prose\s+Passage|Poem|Poetry|Poetry\s+Passage|Verse|Stanza|Extract|Context|Caselet|Section|Part|Text)(?:\s*[:：ः.\-–—(]|\s*$)/i;
     const short=/^(?:पद|अंश|पाठ|भाग)\b/i;
     if(strong.test(x)) return true;
-    if(short.test(x)) return /^(?:पद|अंश|पाठ|भाग)(?:\s*(?:[:：.\-–—]|\(|[A-Ea-e]|[0-9०-९]+)|\s*$)/i.test(x);
+    if(short.test(x)) return /^(?:पद|अंश|पाठ|भाग)(?:\s*(?:[:：ः.\-–—]|\(|[A-Ea-e]|[0-9०-९]+)|\s*$)/i.test(x);
     return false;
   }
   function mtContextText(text){
@@ -2473,8 +2473,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     let pendingContext=mtContextText(text.slice(0,starts[0].pos));
     let pendingRange=mtContextRange(pendingContext);
     const optRe=/^\s*\(?([A-Ea-e])\)?[\.\)\-:\/]\s*(.*)$/;
-    const infoRe=/^\s*(?:जानकारी|व्याख्या|विवरण|Explanation|Description|Solution|समाधान|नोट|Note|कारण|स्पष्टीकरण)\s*[:=\-]\s*(.*)$/i;
-    const ansRe=/^\s*(?:Right\s*Answer|Right\s*Ans\.?|Correct\s*Answer|Answer|Ans\.?|सही\s*उत्तर|सही\s*विकल्प|उत्तर|Correct)\s*[:=\-]\s*(.*)$/i;
+    const infoRe=/^\s*(?:जानकारी|व्याख्या|विवरण|Explanation|Description|Solution|समाधान|नोट|Note|कारण|स्पष्टीकरण)\s*[:ः=\-]\s*(.*)$/i;
+    const ansRe=/^\s*(?:Right\s*Answer|Right\s*Ans\.?|Correct\s*Answer|Answer|Ans\.?|सही\s*उत्तर|सही\s*विकल्प|उत्तर|Correct)\s*[:ः=\-]\s*(.*)$/i;
     const idx={A:0,B:1,C:2,D:3,E:4}; const out=[];
     for(let i=0;i<starts.length;i++){
       let block=text.slice(starts[i].end,i+1<starts.length?starts[i+1].pos:text.length).trim(); if(!block)continue;
