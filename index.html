@@ -3182,7 +3182,11 @@ html,body{max-width:100%;overflow-x:hidden}
     S('tgy_user',u);
     var users=Array.isArray(cloud)?cloud.slice():[];var ix=users.findIndex(function(x){return same(x,u)});if(ix>=0)users[ix]=u;else users.push(u);S('tgy_users',users);
     try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests()}catch(e){}
-    try{if(typeof window.tgyShowTestList==='function'&&window.__tgyNav&&window.__tgyNav.exam)window.tgyShowTestList(window.__tgyNav.exam)}catch(e){}
+    try{
+      var activeTest=!!(window.state&&window.state.t&&Array.isArray(window.state.t.questions));
+      var activeLevel=window.__tgyNav&&window.__tgyNav.level==='active-test';
+      if(!activeTest&&!activeLevel&&typeof window.tgyShowTestList==='function'&&window.__tgyNav&&window.__tgyNav.exam) window.tgyShowTestList(window.__tgyNav.exam);
+    }catch(e){}
     return u;
   };
   document.addEventListener('DOMContentLoaded',function(){setTimeout(window.tgyResolveCurrentStudentAccess,600);setTimeout(window.tgyResolveCurrentStudentAccess,1800);setInterval(window.tgyResolveCurrentStudentAccess,4000)},{once:true});
@@ -3203,7 +3207,11 @@ html,body{max-width:100%;overflow-x:hidden}
   function score(a,b){if(!a||!b)return -1;var e1=em(a.email),e2=em(b.email),m1=mo(a.mobile),m2=mo(b.mobile),s=-1;if(e1&&e2&&e1===e2)s=4;if(m1&&m2&&m1.length>=8&&m1===m2)s=Math.max(s,6);if(e1&&e2&&e1===e2&&m1&&m2&&m1===m2)s=10;return s}
   function best(arr,cur){var a=Array.isArray(arr)?arr:[],b=null,bs=-1;a.forEach(function(x){var s=score(x,cur);if(s>bs){bs=s;b=x}});return bs>=0?b:null}
   async function cloudUsers(){try{var r=await fetch(SUPA+'?select=key,value&key=eq.tgy_users',{headers:H});if(!r.ok)return[];var a=await r.json();return a&&a[0]&&Array.isArray(a[0].value)?a[0].value:[]}catch(e){return[]}}
-  async function resolve(){var cur=J('tgy_user',null);if(!cur)return null;var cloud=await cloudUsers(),cu=best(cloud,cur);if(!cu)return cur;var u=Object.assign({},cur,cu);S('tgy_user',u);var users=Array.isArray(cloud)?cloud.slice():[],ix=users.indexOf(cu);if(ix>=0)users[ix]=u;S('tgy_users',users);try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests()}catch(e){}try{if(typeof window.tgyShowTestList==='function'&&window.__tgyNav&&window.__tgyNav.exam)window.tgyShowTestList(window.__tgyNav.exam)}catch(e){}return u}
+  async function resolve(){var cur=J('tgy_user',null);if(!cur)return null;var cloud=await cloudUsers(),cu=best(cloud,cur);if(!cu)return cur;var u=Object.assign({},cur,cu);S('tgy_user',u);var users=Array.isArray(cloud)?cloud.slice():[],ix=users.indexOf(cu);if(ix>=0)users[ix]=u;S('tgy_users',users);try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests()}catch(e){}try{
+      var activeTest=!!(window.state&&window.state.t&&Array.isArray(window.state.t.questions));
+      var activeLevel=window.__tgyNav&&window.__tgyNav.level==='active-test';
+      if(!activeTest&&!activeLevel&&typeof window.tgyShowTestList==='function'&&window.__tgyNav&&window.__tgyNav.exam) window.tgyShowTestList(window.__tgyNav.exam);
+    }catch(e){}return u}
   window.tgyResolveCurrentStudentAccess=resolve;
   window.tgyRefreshCurrentUserAccess=resolve;
   window.tgyHasSeriesAccess=function(exam){var u=J('tgy_user',null),ex=String(exam||'').trim().replace(/\s+/g,' ').toLowerCase(),now=Date.now();return !!u&&(Array.isArray(u.seriesAccess)?u.seriesAccess:[]).some(function(x){return x&&String(x.exam||'').trim().replace(/\s+/g,' ').toLowerCase()===ex&&(!x.expiresAt||new Date(x.expiresAt).getTime()>now)})};
@@ -3527,6 +3535,7 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
     }
     const t=normalizedTest(raw),qs=t.questions;if(!qs.length){alert('इस Test में अभी कोई Question नहीं है।');return;}
     window.activeTestExam=t.exam||window.activeTestExam||null;window.openedTestFromSeries=true;
+    window.__tgyNav=window.__tgyNav||{};window.__tgyNav.exam=t.exam||window.__tgyNav.exam;window.__tgyNav.level='active-test';window.__tgyNav.testIndex=i;
     window.state={t,idx:0,answers:Array(qs.length).fill(null),review:Array(qs.length).fill(false),startedAt:Date.now()};
     const modal=document.getElementById('modal'),content=document.getElementById('modalContent');if(!modal||!content)return;
     modal.style.display='flex';modal.style.padding='0';content.style.cssText='padding:0;max-width:none;width:100%;height:100vh;border-radius:0;background:#f4f7fb';

@@ -1077,12 +1077,35 @@ window.mtTextPreview = function() {
     if (st0) st0.innerHTML = "❌ कोई Question पहचान में नहीं आया। कृपया फ़ॉर्मेट जाँचें।";
     return;
   }
+
+  // Pending Preview is temporary. Append only genuinely new Questions;
+  // the same Bulk batch pasted/previewed repeatedly must not duplicate.
+  const norm = (v) => cleanText(v).replace(/\s+/g, " ").toLowerCase();
+  const keyOf = (x) => [
+    norm(x.q),
+    ...(Array.isArray(x.o) ? x.o.map(norm) : []),
+    norm(x.answer),
+    norm(x.ex),
+    norm(x.passage),
+    ...(Array.isArray(x.statements) ? x.statements.map(norm) : []),
+    ...(Array.isArray(x.conclusions) ? x.conclusions.map(norm) : [])
+  ].join("\u001f");
+
   const previous = Array.isArray(window.mtPreview) ? window.mtPreview : [];
-  window.mtPreview = previous.concat(incoming).map((x, i) => Object.assign({}, x, { number: i + 1 }));
+  const seen = new Set(previous.map(keyOf));
+  const added = [];
+  incoming.forEach((x) => {
+    const k = keyOf(x);
+    if (!seen.has(k)) {
+      seen.add(k);
+      added.push(x);
+    }
+  });
+  window.mtPreview = previous.concat(added).map((x, i) => Object.assign({}, x, { number: i + 1 }));
 
   const st = document.getElementById("mtStatus");
   const box = document.getElementById("mtPreview");
-  if (st) st.innerHTML = `✅ <b>${window.mtPreview.length} Questions मिले — (${parsed.type})</b>`;
+  if (st) st.innerHTML = `✅ <b>${window.mtPreview.length} Questions मिले — ${added.length} नए Questions जोड़े गए (${parsed.type})</b>`;
   if (!box) return;
 
   box.innerHTML = window.mtPreview.map((x, i) => {
