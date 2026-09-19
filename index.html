@@ -2430,325 +2430,6 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
 })();
 </script>
 
-
-<script id="tgy-canonical-navigation-final-20260919">
-(function(){
-  'use strict';
-  // FINAL navigation authority. Older compatibility code may exist above,
-  // but no older handler is allowed to control the final Test Series flow.
-  function arr(){ return Array.isArray(window.tests) ? window.tests : []; }
-  function getTest(i){ return arr()[Number(i)] || null; }
-  function modal(){ return document.getElementById('examModal'); }
-  function content(){ return document.getElementById('examContent'); }
-  function esc(v){
-    return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){
-      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
-    });
-  }
-  function showModal(){
-    var m=modal(); if(m){m.style.display='flex';}
-  }
-  function hideModal(){
-    var m=modal(); if(m){m.style.display='none';}
-  }
-  function canAccess(t){
-    try { return t && (t.demo===true || (typeof hasPurchasedTest==='function' && hasPurchasedTest(t))); }
-    catch(e){ return !!(t && t.demo===true); }
-  }
-  function listForExam(exam){
-    return arr().map(function(t,i){return {t:t,i:i};}).filter(function(x){
-      var t=x.t;
-      return t && t.exam===exam && t.published!==false && t.visible!==false &&
-        (typeof tgyDateValid!=='function' || tgyDateValid(t.availableUntil));
-    });
-  }
-
-  window.tgyShowTestList=function(exam,returnTo){
-    var box=content(), m=modal(); if(!box||!m)return false;
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=exam||window.__tgyNav.exam||'';
-    window.__tgyNav.level='tests';
-    window.__tgyNav.testIndex=null;
-    window.__tgyNav.returnTo=returnTo||window.__tgyNav.returnTo||'series';
-    var rows=listForExam(window.__tgyNav.exam), h='';
-    h+='<div class="tgy-list-head"><div><div class="tgy-kicker">Test Series</div>';
-    h+='<h2>🎯 '+esc(window.__tgyNav.exam)+' — Test List</h2>';
-    h+='<p class="muted">कुल '+rows.length+' Tests</p></div>';
-    h+='<button class="btn gray" type="button" onclick="return tgyOpenExamHubFinal('+JSON.stringify(window.__tgyNav.exam)+')">← परीक्षा पर वापस</button></div>';
-    if(!rows.length){
-      h+='<div class="card"><h3>📭 कोई Test उपलब्ध नहीं है</h3></div>';
-    }else{
-      h+='<div id="tgyTestGrid" class="tgy-test-grid">';
-      rows.forEach(function(x,pos){
-        var t=x.t, can=canAccess(t), action=can?'tgyOpenTestPreview('+x.i+')':'tgyOpenLockedPurchase('+JSON.stringify(t.exam||'')+')';
-        h+='<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div>';
-        h+='<div class="tgy-test-card-body"><h3>'+esc(t.name||'Test')+'</h3>';
-        h+='<p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>';
-        h+=(t.demo===true?'<span class="tgy-status free">FREE DEMO</span>':can?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>');
-        h+='</div><button type="button" class="btn '+(can?'':'orange')+'" onclick="return '+action+'">'+(can?'▶️ Test खोलें':'🔒 Access लें')+'</button></div>';
-      });
-      h+='</div>';
-    }
-    box.innerHTML=h;
-    showModal();
-    return false;
-  };
-
-  window.tgyOpenTestPreview=function(i){
-    var n=Number(i), t=getTest(n), box=content(), m=modal();
-    if(!t||!box||!m)return false;
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=t.exam||window.__tgyNav.exam||'';
-    window.__tgyNav.level='preview';
-    window.__tgyNav.testIndex=n;
-    window.__tgyNav.returnTo=window.__tgyNav.returnTo||'series';
-    if(!canAccess(t)){
-      if(typeof window.tgyOpenLockedPurchase==='function') return window.tgyOpenLockedPurchase(t.exam||'');
-      return false;
-    }
-    var start='<button type="button" class="btn orange tgy-start-btn" onclick="return tgyStartSelectedTest('+n+')">▶️ शुरू करें</button>';
-    box.innerHTML='<div class="tgy-test-preview">'+
-      '<div class="tgy-test-preview-head"><div><div class="tgy-kicker">'+esc(t.exam||'Test Series')+'</div><h2>📝 '+esc(t.name||'Test')+'</h2></div>'+
-      '<button type="button" class="btn gray" onclick="return tgyShowTestList('+JSON.stringify(t.exam||'')+')">← Test List</button></div>'+ 
-      '<div class="tgy-test-info-grid"><div><b>📋 Questions</b><span>'+((t.questions||[]).length)+'</span></div>'+ 
-      '<div><b>⏱️ समय</b><span>'+Number(t.time||60)+' मिनट</span></div>'+ 
-      '<div><b>🔐 Access</b><span>'+(t.demo===true?'FREE Demo':'Access Active')+'</span></div></div>'+ 
-      '<div class="tgy-start-card"><h3>🚀 Test शुरू करने के लिए तैयार?</h3>'+ 
-      '<p class="muted">नीचे <b>शुरू करें</b> दबाने पर ही टेस्ट शुरू होगा और Timer चलेगा।</p>'+start+'</div></div>';
-    showModal();
-    return false;
-  };
-
-  window.tgyStartSelectedTest=function(i){
-    var n=Number(i), t=getTest(n);
-    if(!t)return false;
-    if(window.__tgyStartLock)return false;
-    window.__tgyStartLock=true;
-    window.activeTestExam=t.exam||window.activeTestExam||null;
-    window.openedTestFromSeries=true;
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=t.exam||window.__tgyNav.exam||'';
-    window.__tgyNav.level='active-test';
-    window.__tgyNav.testIndex=n;
-    hideModal();
-    try{
-      if(typeof window.startFinalMockTest==='function'){
-        window.startFinalMockTest(n);
-      }else if(typeof window.openTest==='function'){
-        window.openTest(n);
-      }else{
-        window.__tgyStartLock=false;
-        return false;
-      }
-    }catch(e){
-      console.error('[TGY] Test start failed',e);
-      window.__tgyStartLock=false;
-      return false;
-    }
-    setTimeout(function(){window.__tgyStartLock=false;},500);
-    return false;
-  };
-
-  // Test-list buttons must never bypass Preview.
-  window.tgyOpenTestFromFolder=function(i){ return window.tgyOpenTestPreview(Number(i)); };
-  window.openTestFromSeries=window.tgyOpenTestFromFolder;
-
-  // Only an explicit Back/Exit returns to the Test List.
-  window.tgyBackToFolder=function(){
-    var ex=window.activeTestExam||(window.__tgyNav&&window.__tgyNav.exam);
-    var m=modal(); if(m)m.style.display='none';
-    window.state=null;
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.level='tests';
-    window.__tgyNav.testIndex=null;
-    if(ex){ window.__tgyNav.exam=ex; return window.tgyShowTestList(ex); }
-    return false;
-  };
-
-  // During an actual attempt, background sync/access refresh is not allowed
-  // to repaint or navigate the active test.
-  var oldResolve=window.tgyResolveCurrentStudentAccess;
-  if(typeof oldResolve==='function'&&!oldResolve.__tgyCanonicalGuard){
-    var guarded=async function(){
-      if(window.__tgyNav&&window.__tgyNav.level==='active-test') return window.JUST_KEEP_ACTIVE||null;
-      return oldResolve.apply(this,arguments);
-    };
-    guarded.__tgyCanonicalGuard=true;
-    window.tgyResolveCurrentStudentAccess=guarded;
-  }
-})();
-</script>
-<script id="tgy-authoritative-navigation-controller-20260919">
-(function(){
-  'use strict';
-  var T=window.tests;
-  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
-  function tests(){return Array.isArray(window.tests)?window.tests:[]}
-  function em(){return document.getElementById('examModal')}
-  function ec(){return document.getElementById('examContent')}
-  function mm(){return document.getElementById('modal')}
-  function mc(){return document.getElementById('modalContent')}
-  function nav(){window.__tgyNav=window.__tgyNav||{};return window.__tgyNav}
-  function setNav(ex,level,index){var n=nav();if(ex!=null&&ex!=='')n.exam=ex;if(level)n.level=level;n.testIndex=index==null?null:index}
-  function suppress(ms){window.__tgySuppressLegacyOpenUntil=Date.now()+(ms||1200)}
-  function suppressed(){return Number(window.__tgySuppressLegacyOpenUntil||0)>Date.now()}
-  function visibleTests(ex){
-    return tests().map(function(t,i){return {t:t,i:i}}).filter(function(x){
-      var t=x.t;return t&&String(t.exam||'')===String(ex||'')&&t.published!==false&&t.visible!==false&&(!t.availableUntil||typeof window.tgyDateValid!=='function'||window.tgyDateValid(t.availableUntil));
-    });
-  }
-  function showExam(){var m=em();if(m)m.style.display='flex'}
-  function hideExam(){var m=em();if(m)m.style.display='none'}
-
-  /* Explicit Home -> Exam. It never opens the Test List directly. */
-  window.tgyOpenExamHubFinal=function(ex){
-    if(!ex)return false;
-    if(typeof window.getFolderVisibilityStudent==='function'&&!window.getFolderVisibilityStudent(ex))return false;
-    setNav(ex,'hub',null);
-    var box=ec(),m=em();if(!box||!m)return false;
-    var arr=visibleTests(ex),notes=[];
-    try{if(typeof window.getNotes==='function')notes=window.getNotes().filter(function(n){return String(n.exam||n.folder||'').trim()===String(ex).trim()})}catch(e){notes=[]}
-    box.innerHTML='<div class="tgy-exam-hub"><div class="tgy-list-head"><div><div class="tgy-kicker">परीक्षा</div><h2>📁 '+esc(ex)+'</h2><p class="muted">पहले नीचे से Test Series या Study Material चुनें।</p></div><button type="button" class="btn gray" onclick="return closeExam();">✕ बंद करें</button></div><div class="tgy-hub-grid"><div class="tgy-hub-card"><div class="tgy-hub-icon">📝</div><h3>Test Series</h3><p>'+arr.length+' Tests उपलब्ध हैं</p><button type="button" class="btn orange" onclick="return tgyOpenTestSeriesFinal('+JSON.stringify(ex)+');">📚 Test Series खोलें</button></div><div class="tgy-hub-card"><div class="tgy-hub-icon">📄</div><h3>Notes / Study Material</h3><p>'+notes.length+' Notes उपलब्ध हैं</p><button type="button" class="btn orange" onclick="return tgyOpenNotesFolderFinal('+JSON.stringify(ex)+');">📂 Notes खोलें</button></div></div></div>';
-    showExam();return false;
-  };
-
-  /* Explicit Test Series button only. */
-  window.tgyOpenTestSeriesFinal=function(ex){return window.tgyShowTestListFinal(ex)};
-  window.tgyOpenSeriesInside=function(ex){return window.tgyShowTestListFinal(ex)};
-  window.tgyOpenExamTestSeries=function(ex){return window.tgyShowTestListFinal(ex)};
-
-  window.tgyShowTestListFinal=function(ex){
-    if(!ex)return false;
-    setNav(ex,'series',null);
-    var box=ec(),m=em();if(!box||!m)return false;
-    var arr=visibleTests(ex);
-    var h='<div class="tgy-list-head"><div><div class="tgy-kicker">Test Series</div><h2>🎯 '+esc(ex)+' — Test List</h2><p class="muted">कुल '+arr.length+' Tests</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn gray" type="button" onclick="return tgyOpenExamHubFinal('+JSON.stringify(ex)+');">← परीक्षा पर वापस</button><button class="btn gray" type="button" onclick="return closeExam();">✕ बंद करें</button></div></div>';
-    if(!arr.length){h+='<div class="card"><h3>📭 कोई Test उपलब्ध नहीं है</h3></div>'}
-    else{
-      h+='<div id="tgyTestGrid" class="tgy-test-grid">';
-      arr.forEach(function(x,pos){
-        var t=x.t,free=t.demo===true,owned=false;
-        try{owned=typeof window.hasPurchasedTest==='function'&&window.hasPurchasedTest(t)}catch(e){}
-        var can=free||owned;
-        h+='<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+esc(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>'+(free?'<span class="tgy-status free">FREE DEMO</span>':owned?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>')+'</div><button type="button" class="btn '+(can?'':'orange')+'" onclick="return '+(can?'tgyOpenTestPreviewFinal('+x.i+')':'buySeriesAccess('+JSON.stringify(ex)+',0)')+'">'+(can?'▶️ Test खोलें':'🔒 Access लें')+'</button></div>';
-      });
-      h+='</div>';
-    }
-    box.innerHTML=h;showExam();return false;
-  };
-
-  /* Legacy calls without the explicit final entry point are ignored unless they are clearly a direct preview/back action. */
-  window.tgyShowTestList=function(ex){
-    /* Legacy callers are intentionally blocked. The final UI uses the explicit
-       *Final entry points below, so an old timer cannot reopen Test List. */
-    if(window.__tgyAllowLegacyListOnce){window.__tgyAllowLegacyListOnce=false;return window.tgyShowTestListFinal(ex)}
-    return false;
-  };
-
-  async function loadFullIfNeeded(i){
-    var t=tests()[Number(i)];
-    if(t&&(!Array.isArray(t.questions)||t.questions.length===0)&&typeof window.tgyLoadSelectedTestFromCloud==='function'){
-      try{var full=await window.tgyLoadSelectedTestFromCloud(Number(i));if(full) t=full}catch(e){}
-    }
-    return t;
-  }
-
-  window.tgyOpenTestPreviewFinal=async function(i){
-    var t=await loadFullIfNeeded(i);if(!t)return false;
-    var n=nav();n.exam=t.exam||n.exam;n.level='preview';n.testIndex=Number(i);
-    var box=ec(),m=em();if(!box||!m)return false;
-    var access=false;try{access=t.demo===true||(typeof window.hasPurchasedTest==='function'&&window.hasPurchasedTest(t))}catch(e){access=t.demo===true}
-    var start=access?'<button type="button" class="btn orange tgy-start-btn" onclick="return tgyStartSelectedTestFinal('+Number(i)+');">▶️ शुरू करें</button>':'<button type="button" class="btn orange tgy-start-btn" onclick="return buySeriesAccess('+JSON.stringify(t.exam||'')+',0);">🔒 Access लें</button>';
-    box.innerHTML='<div class="tgy-test-preview"><div class="tgy-test-preview-head"><div><div class="tgy-kicker">'+esc(t.exam||'Test Series')+'</div><h2>📝 '+esc(t.name||'Test')+'</h2></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn gray" onclick="return tgyShowTestListFinal('+JSON.stringify(t.exam||'')+');">← Test List</button><button type="button" class="btn gray" onclick="return closeExam();">✕ बंद करें</button></div></div><div class="tgy-test-info-grid"><div><b>📋 Questions</b><span>'+((t.questions||[]).length)+'</span></div><div><b>⏱️ समय</b><span>'+Number(t.time||60)+' मिनट</span></div><div><b>🔐 Access</b><span>'+(access?(t.demo===true?'FREE Demo':'Access Active'):'Access Required')+'</span></div></div><div class="tgy-start-card"><h3>🚀 Test शुरू करने के लिए तैयार?</h3><p class="muted">नीचे <b>शुरू करें</b> दबाने पर ही Test और Timer शुरू होगा।</p>'+start+'</div></div>';
-    showExam();return false;
-  };
-  window.tgyOpenTestPreview=window.tgyOpenTestPreviewFinal;
-
-  window.tgyStartSelectedTestFinal=function(i){
-    var n=Number(i),t=tests()[n];if(!t)return false;
-    setNav(t.exam||'', 'active-test', n);window.activeTestExam=t.exam||null;window.openedTestFromSeries=true;
-    hideExam();
-    if(typeof window.startFinalMockTest==='function')window.startFinalMockTest(n);
-    return false;
-  };
-  window.tgyStartSelectedTest=window.tgyStartSelectedTestFinal;
-
-  /* Explicit close: never reopen anything. */
-  window.closeExam=function(){
-    hideExam();suppress(1500);
-    var n=nav();n.level='closed';n.testIndex=null;
-    return false;
-  };
-  window.closeExamHub=window.closeExam;
-
-  /* Active Test exit/back is explicit, so it may return to Test List. */
-  window.tgyBackToFolder=function(){
-    clearInterval(window.timer);var s=window.state,ex=(s&&s.t&&s.t.exam)||window.activeTestExam||(nav().exam||'');
-    var m=mm(),c=mc();if(m)m.style.display='none';if(c)c.style.cssText='';window.state=null;
-    if(ex){suppress(1200);return window.tgyShowTestListFinal(ex)}
-    return false;
-  };
-  window.tgyExitExam=function(){
-    if(!confirm('क्या आप Test से बाहर निकलना चाहते हैं? आपका वर्तमान प्रयास Submit नहीं होगा।'))return false;
-    return window.tgyBackToFolder();
-  };
-  window.closeTestModal=window.tgyExitExam;
-
-  /* Result close/back is explicit and returns to Test List without any delayed reopen. */
-  window.tgyCloseResultAndReturnToSeries=function(){
-    clearInterval(window.timer);var s=window.state,ex=(s&&s.t&&s.t.exam)||window.activeTestExam||(nav().exam||'');
-    var m=mm(),c=mc();if(m)m.style.display='none';if(c)c.style.cssText='';window.state=null;
-    if(ex){suppress(1200);return window.tgyShowTestListFinal(ex)}
-    return false;
-  };
-
-  /* Prevent legacy delayed openExam/tgyOpenSeriesInside calls from undoing a user's Close/Back. */
-  window.openExam=function(ex){
-    if(suppressed())return false;
-    return window.tgyOpenExamHubFinal(ex);
-  };
-  window.tgyOpenExamHub=window.tgyOpenExamHubFinal;
-  window.tgyOpenExamHubFinal=window.tgyOpenExamHubFinal;
-
-  /* Old code frequently does: openExam(ex); setTimeout(tgyOpenSeriesInside,40).
-     That second call is a legacy auto-jump, not a separate user click. */
-  var lastOpenAt=0;
-  var hubOpen=window.tgyOpenExamHubFinal;
-  window.tgyOpenExamHubFinal=function(ex){lastOpenAt=Date.now();return hubOpen(ex)};
-  window.tgyOpenSeriesInside=function(ex){
-    if(nav().level==='hub' && Date.now()-lastOpenAt<700)return false;
-    return window.tgyShowTestListFinal(ex);
-  };
-  window.tgyOpenExamTestSeries=window.tgyOpenSeriesInside;
-
-  /* Patch result renderer once, preserving its existing result/answer content. */
-  var oldResult=window.tgyShowResultSummary;
-  if(typeof oldResult==='function'&&!oldResult.__tgyAuthoritativeClose){
-    var patched=function(r){
-      oldResult.call(this,r);
-      var c=mc();if(!c)return;
-      var root=c.firstElementChild||c;
-      if(root.querySelector&&root.querySelector('.tgy-authoritative-result-close'))return;
-      var row=document.createElement('div');row.className='tgy-authoritative-result-close';row.style.cssText='display:flex;justify-content:flex-end;gap:8px;position:sticky;top:0;z-index:20;padding:8px 0;background:#f4f7fb';
-      row.innerHTML='<button type="button" class="btn gray" onclick="return tgyCloseResultAndReturnToSeries();">✕ Result बंद करें</button>';
-      root.insertBefore(row,root.firstChild);
-    };
-    patched.__tgyAuthoritativeClose=true;window.tgyShowResultSummary=patched;
-  }
-
-  /* Any access/cloud resolver may refresh data, but never navigate the UI. */
-  var resolver=window.tgyResolveCurrentStudentAccess;
-  if(typeof resolver==='function'&&!resolver.__tgyAuthoritativeNoNav){
-    var safeResolver=async function(){
-      var n=nav(),saved={exam:n.exam,level:n.level,testIndex:n.testIndex};
-      try{return await resolver.apply(this,arguments)}
-      finally{window.__tgyNav=window.__tgyNav||{};window.__tgyNav.exam=saved.exam;window.__tgyNav.level=saved.level;window.__tgyNav.testIndex=saved.testIndex;}
-    };
-    safeResolver.__tgyAuthoritativeNoNav=true;window.tgyResolveCurrentStudentAccess=safeResolver;
-  }
-})();
-</script>
-
 </body></html>
 <!-- TG&Y PDF + TEST SERIES COMBO PLAN -->
 <script id="tgy-combo-student-v1">
@@ -3020,7 +2701,7 @@ html,body{max-width:100%;overflow-x:hidden}
   // After cloud data arrives, refresh any currently open exam/purchase view.
   window.addEventListener('tgy-cloud-ready',function(){
     try{
-      // Do not auto-open/repaint Test List after cloud refresh.
+      if(window.tgyNavExam && document.getElementById('examModal')?.style.display==='flex' && typeof window.tgyShowTestList==='function') window.tgyShowTestList(window.tgyNavExam);
       var p=document.getElementById('studentPageOverlay');
       if(p && p.style.display!=='none' && p.classList.contains('tgy-buy-folder-open') && typeof window.tgyRenderPurchasePage==='function') window.tgyRenderPurchasePage();
     }catch(e){}
@@ -3056,7 +2737,7 @@ html,body{max-width:100%;overflow-x:hidden}
     var names=examNames();
     var h='<div class="tgy-list-head"><div><div class="tgy-kicker">TEST SERIES</div><h2>📚 Test Series</h2><p class="muted">नीचे अपनी परीक्षा चुनें। यहाँ केवल Test Series की परीक्षाएँ दिखाई देंगी।</p></div><button type="button" class="btn gray" onclick="closeExam();return false;">✕ बंद करें</button></div>';
     if(!names.length) h+='<div class="card"><h3>📭 अभी कोई परीक्षा उपलब्ध नहीं है।</h3></div>';
-    else h+='<div class="tgy-exam-grid">'+names.map(function(ex){var c=testRows(ex).length;return '<div class="tgy-exam-card" style="cursor:pointer" onclick="return window.tgyOpenExamHubFinal('+E(JSON.stringify(ex))+')"><div class="tgy-exam-name">'+E(ex)+'</div><div class="tgy-exam-sub">'+c+' Tests उपलब्ध</div><button type="button" class="tgy-view-btn" onclick="event.stopPropagation();return window.tgyOpenExamHubFinal('+E(JSON.stringify(ex))+')">📚 खोलें</button></div>'}).join('')+'</div>';
+    else h+='<div class="tgy-exam-grid">'+names.map(function(ex){var c=testRows(ex).length;return '<div class="tgy-exam-card" style="cursor:pointer" onclick="return window.tgyShowTestList('+E(JSON.stringify(ex))+',\'series\')"><div class="tgy-exam-name">'+E(ex)+'</div><div class="tgy-exam-sub">'+c+' Tests उपलब्ध</div><button type="button" class="tgy-view-btn" onclick="event.stopPropagation();return window.tgyShowTestList('+E(JSON.stringify(ex))+',\'series\')">📚 Test Series खोलें</button></div>'}).join('')+'</div>';
     box.innerHTML=h;showExamModal();return false;
   }
 
@@ -3504,9 +3185,7 @@ html,body{max-width:100%;overflow-x:hidden}
     try{
       var activeTest=!!(window.state&&window.state.t&&Array.isArray(window.state.t.questions));
       var activeLevel=window.__tgyNav&&window.__tgyNav.level==='active-test';
-      // Access refresh must never navigate or repaint the current screen.
-      // Navigation is performed only by an explicit user action.
-
+      if(!activeTest&&!activeLevel&&typeof window.tgyShowTestList==='function'&&window.__tgyNav&&window.__tgyNav.exam) window.tgyShowTestList(window.__tgyNav.exam);
     }catch(e){}
     return u;
   };
@@ -3531,9 +3210,7 @@ html,body{max-width:100%;overflow-x:hidden}
   async function resolve(){var cur=J('tgy_user',null);if(!cur)return null;var cloud=await cloudUsers(),cu=best(cloud,cur);if(!cu)return cur;var u=Object.assign({},cur,cu);S('tgy_user',u);var users=Array.isArray(cloud)?cloud.slice():[],ix=users.indexOf(cu);if(ix>=0)users[ix]=u;S('tgy_users',users);try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests()}catch(e){}try{
       var activeTest=!!(window.state&&window.state.t&&Array.isArray(window.state.t.questions));
       var activeLevel=window.__tgyNav&&window.__tgyNav.level==='active-test';
-      // Access refresh must never navigate or repaint the current screen.
-      // Navigation is performed only by an explicit user action.
-
+      if(!activeTest&&!activeLevel&&typeof window.tgyShowTestList==='function'&&window.__tgyNav&&window.__tgyNav.exam) window.tgyShowTestList(window.__tgyNav.exam);
     }catch(e){}return u}
   window.tgyResolveCurrentStudentAccess=resolve;
   window.tgyRefreshCurrentUserAccess=resolve;
@@ -4094,315 +3771,115 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
 })();
 </script>
 
-
-<!-- FINAL SMALL UX FIX: Test Series Back/Close + Result Close (2026-09-19) -->
-<style id="tgy-final-back-close-result-style">
-  .tgy-final-head-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .tgy-result-close-row{display:flex;justify-content:flex-end;gap:8px;position:sticky;top:0;z-index:10;padding:0 0 10px;background:#f4f7fb}
-</style>
-<script id="tgy-final-back-close-result-fix">
+<!-- FINAL CLEAN NAVIGATION CONTROLLER: single deterministic Exam -> Hub -> Series -> Test flow -->
+<script id="tgy-single-navigation-controller-20260919">
 (function(){
   'use strict';
-
-  function esc(v){return String(v??'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
-  function examModal(){return document.getElementById('examModal')}
-  function examContent(){return document.getElementById('examContent')}
-  function resultModal(){return document.getElementById('modal')}
-  function resultContent(){return document.getElementById('modalContent')}
-  function getTests(){return Array.isArray(window.tests)?window.tests:[]}
-  function examTests(ex){return getTests().map(function(t,i){return {t:t,i:i}}).filter(function(x){return x.t&&x.t.published!==false&&x.t.visible!==false&&x.t.exam===ex})}
-
-  /* Explicit, single-purpose back action: Test List -> Exam Hub. */
-  window.tgyBackToExamHubFinal=function(){
-    var ex=(window.__tgyNav&&window.__tgyNav.exam)||window.activeTestExam||'';
-    if(!ex){
-      var m=examModal();if(m)m.style.display='none';
-      return false;
-    }
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=ex;
-    window.__tgyNav.level='hub';
-    window.__tgyNav.testIndex=null;
-
-    var box=examContent(),m=examModal();
-    if(!box||!m)return false;
-    var arr=examTests(ex);
-    var notes=[];
-    try{if(typeof window.notes==='function')notes=window.notes(ex)||[]}catch(e){notes=[]}
-    box.innerHTML='<div class="tgy-exam-hub">'
-      +'<div class="tgy-list-head">'
-      +'<div><div class="tgy-kicker">परीक्षा</div><h2>📁 '+esc(ex)+'</h2><p class="muted">नीचे से Test Series या Notes चुनें।</p></div>'
-      +'<div class="tgy-final-head-actions"><button type="button" class="btn gray" onclick="return closeExam();">✕ बंद करें</button></div>'
-      +'</div>'
-      +'<div class="tgy-hub-grid">'
-      +'<div class="tgy-hub-card"><div class="tgy-hub-icon">📝</div><h3>Test Series</h3><p>'+arr.length+' Tests उपलब्ध हैं</p><button type="button" class="btn orange" onclick="return tgyOpenTestSeriesFinal('+JSON.stringify(ex)+');">📚 Test Series खोलें</button></div>'
-      +'<div class="tgy-hub-card"><div class="tgy-hub-icon">📄</div><h3>Notes / Study Material</h3><p>'+notes.length+' Notes उपलब्ध हैं</p><button type="button" class="btn orange" onclick="return tgyOpenNotesFolderFinal('+JSON.stringify(ex)+');">📂 Notes खोलें</button></div>'
-      +'</div></div>';
-    m.style.display='flex';
-    return false;
-  };
-
-  /* Re-render Test List with both working Back and Close controls. */
-  window.tgyShowTestList=function(exam){
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=exam;
-    window.__tgyNav.level='series';
-    window.__tgyNav.testIndex=null;
-    var box=examContent(),m=examModal();
-    if(!box||!m)return false;
-    var arr=examTests(exam);
-    var h='<div class="tgy-list-head">'
-      +'<div><div class="tgy-kicker">Test Series</div><h2>🎯 '+esc(exam)+' — Test List</h2><p class="muted">कुल '+arr.length+' Tests</p></div>'
-      +'<div class="tgy-final-head-actions">'
-      +'<button class="btn gray" type="button" onclick="return tgyBackToExamHubFinal();">← परीक्षा पर वापस</button>'
-      +'<button class="btn gray" type="button" onclick="return closeExam();">✕ बंद करें</button>'
-      +'</div></div>';
-    if(!arr.length){
-      h+='<div class="card"><h3>📭 कोई Test उपलब्ध नहीं है</h3></div>';
-    }else{
-      h+='<div id="tgyTestGrid" class="tgy-test-grid">';
-      arr.forEach(function(x,pos){
-        var t=x.t,free=t.demo===true,owned=false;
-        try{owned=typeof hasPurchasedTest==='function'&&hasPurchasedTest(t)}catch(e){}
-        var can=free||owned;
-        var action=can?'tgyOpenTestPreview('+x.i+')':'buySeriesAccess('+JSON.stringify(exam)+',0)';
-        h+='<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+esc(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>'
-          +(free?'<span class="tgy-status free">FREE DEMO</span>':owned?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>')
-          +'</div><button type="button" class="btn '+(can?'':'orange')+'" onclick="return '+action+'">'+(can?'▶️ Test खोलें':'🔒 Access लें')+'</button></div>';
-      });
-      h+='</div>';
-    }
-    box.innerHTML=h;
-    m.style.display='flex';
-    return false;
-  };
-
-  /* Preview also gets a Close button; it never starts/returns automatically. */
-  window.tgyOpenTestPreview=function(i){
-    var t=getTests()[Number(i)];if(!t)return false;
-    var box=examContent(),m=examModal();if(!box||!m)return false;
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=t.exam||window.__tgyNav.exam;
-    window.__tgyNav.level='preview';
-    window.__tgyNav.testIndex=Number(i);
-    var access=false;
-    try{access=t.demo===true||(typeof hasPurchasedTest==='function'&&hasPurchasedTest(t))}catch(e){access=t.demo===true}
-    var start=access
-      ?'<button type="button" class="btn orange tgy-start-btn" onclick="return tgyStartSelectedTest('+Number(i)+');">▶️ शुरू करें</button>'
-      :'<button type="button" class="btn orange tgy-start-btn" onclick="return buySeriesAccess('+JSON.stringify(t.exam||'')+',0);">🔒 Access लें</button>';
-    box.innerHTML='<div class="tgy-test-preview">'
-      +'<div class="tgy-test-preview-head"><div><div class="tgy-kicker">'+esc(t.exam||'Mock Test')+'</div><h2>📝 '+esc(t.name||'Test')+'</h2></div>'
-      +'<div class="tgy-final-head-actions"><button type="button" class="btn gray" onclick="return tgyShowTestList('+JSON.stringify(t.exam||'')+');">← Test List</button><button type="button" class="btn gray" onclick="return closeExam();">✕ बंद करें</button></div></div>'
-      +'<div class="tgy-test-info-grid"><div><b>📋 Questions</b><span>'+((t.questions||[]).length)+'</span></div><div><b>⏱️ समय</b><span>'+Number(t.time||60)+' मिनट</span></div><div><b>🔐 Access</b><span>'+(access?(t.demo===true?'FREE Demo':'Access Active'):'Access Required')+'</span></div></div>'
-      +'<div class="tgy-start-card"><h3>🚀 Test शुरू करने के लिए तैयार?</h3><p class="muted">नीचे <b>शुरू करें</b> दबाने पर ही टेस्ट शुरू होगा और Timer चलेगा।</p>'+start+'</div></div>';
-    m.style.display='flex';
-    return false;
-  };
-
-  /* Result screen: one-click Close returns directly to this exam's Test List. */
-  window.tgyCloseResultAndReturnToSeries=function(){
-    clearInterval(window.timer);
-    var s=window.state,ex=(s&&s.t&&s.t.exam)||window.activeTestExam||(window.__tgyNav&&window.__tgyNav.exam)||'';
-    var m=resultModal(),c=resultContent();
-    if(m)m.style.display='none';
-    if(c)c.style.cssText='';
-    window.state=null;
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=ex||window.__tgyNav.exam;
-    window.__tgyNav.level='series';
-    window.__tgyNav.testIndex=null;
-    if(ex)setTimeout(function(){window.tgyShowTestList(ex)},20);
-    return false;
-  };
-
-  /* Patch the result renderer only to add the requested Close button. */
-  var oldResult=window.tgyShowResultSummary;
-  if(typeof oldResult==='function'&&!oldResult.__tgyClosePatched){
-    function resultPatched(r){
-      oldResult.call(this,r);
-      var c=resultContent();if(!c)return;
-      var root=c.firstElementChild;if(!root)return;
-      var row=document.createElement('div');
-      row.className='tgy-result-close-row';
-      row.innerHTML='<button type="button" class="btn gray" onclick="return tgyCloseResultAndReturnToSeries();">✕ Result बंद करें</button>';
-      root.insertBefore(row,root.firstChild);
-    }
-    resultPatched.__tgyClosePatched=true;
-    window.tgyShowResultSummary=resultPatched;
-  }
-
-  /* Make the active-test entry point deterministic: only the Preview's Start button can call it. */
-  window.tgyStartSelectedTest=function(i){
-    var n=Number(i),t=getTests()[n];
-    if(!t)return false;
-    window.activeTestExam=t.exam||window.activeTestExam||null;
-    window.openedTestFromSeries=true;
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=t.exam||window.__tgyNav.exam;
-    window.__tgyNav.level='active-test';
-    window.__tgyNav.testIndex=n;
-    var m=examModal();if(m)m.style.display='none';
-    if(typeof window.startFinalMockTest==='function')window.startFinalMockTest(n);
-    return false;
-  };
-})();
-</script>
-
-<script id="tgy-final-navigation-lock-20260919">
-(function(){
-  'use strict';
-  // IMPORTANT: cloud/access refreshes may update data, but they must never
-  // decide which screen the student is viewing. Only explicit clicks navigate.
-  var originalResolve=window.tgyResolveCurrentStudentAccess;
-  if(typeof originalResolve==='function' && !originalResolve.__tgyNoAutoNavigation){
-    window.tgyResolveCurrentStudentAccess=async function(){
-      var nav=window.__tgyNav||{};
-      var savedExam=nav.exam, savedLevel=nav.level, savedIndex=nav.testIndex;
-      // The older resolver contains a legacy UI-navigation side effect.
-      // Temporarily clear the navigation state while it runs so that side
-      // effect cannot reopen the Test List after Close/Back/Preview.
-      try{
-        if(window.__tgyNav){window.__tgyNav.exam=null;}
-        return await originalResolve.apply(this,arguments);
-      }finally{
-        if(window.__tgyNav){
-          window.__tgyNav.exam=savedExam;
-          window.__tgyNav.level=savedLevel;
-          window.__tgyNav.testIndex=savedIndex;
-        }
-      }
-    };
-    window.tgyResolveCurrentStudentAccess.__tgyNoAutoNavigation=true;
-  }
-})();
-</script>
-
-<!-- FINAL NAVIGATION LOCK: preserve the exact Exam -> Hub -> Test Series -> Test List flow -->
-<script id="tgy-final-exact-series-navigation-lock-20260919">
-(function(){
-  'use strict';
-  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+  function E(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function tests(){return Array.isArray(window.tests)?window.tests:[]}
   function modal(){return document.getElementById('examModal')}
   function content(){return document.getElementById('examContent')}
   function show(){var m=modal();if(m)m.style.display='flex'}
-  function close(){var m=modal();if(m)m.style.display='none';return false}
-  function rows(ex){
-    return tests().map(function(t,i){return {t:t,i:i}}).filter(function(x){
-      return x.t && x.t.exam===ex && x.t.published!==false && x.t.visible!==false;
-    });
-  }
-  function hasAccess(t,i){
-    if(t.demo===true)return true;
-    try{return typeof window.hasPurchasedTest==='function'&&window.hasPurchasedTest(t)}catch(e){return false}
-  }
-
-  function openSeries(ex){
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=ex;
-    window.__tgyNav.level='series';
-    window.__tgyNav.testIndex=null;
-    window.__tgyNav.returnTo='hub';
-    var box=content(),m=modal();
-    if(!box||!m)return false;
-    var arr=rows(ex),h='';
-    h+='<div class="tgy-list-head">';
-    h+='<div><div class="tgy-kicker">Test Series</div><h2>🎯 '+E(ex)+' — Test List</h2><p class="muted">कुल '+arr.length+' Tests</p></div>';
-    h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
-    h+='<button type="button" class="btn gray" onclick="return window.__tgyExactBackToHub();">← परीक्षा पर वापस</button>';
-    h+='<button type="button" class="btn gray" onclick="return window.__tgyExactClose();">✕ बंद करें</button>';
-    h+='</div></div>';
-    if(!arr.length){
-      h+='<div class="card"><h3>📭 इस परीक्षा में कोई Test उपलब्ध नहीं है।</h3></div>';
-    }else{
-      h+='<div id="tgyTestGrid" class="tgy-test-grid">';
-      arr.forEach(function(x,pos){
-        var t=x.t,can=hasAccess(t,x.i),action;
-        if(can) action='window.__tgyExactOpenPreview('+x.i+')';
-        else action='window.__tgyExactLocked('+JSON.stringify(ex)+')';
-        h+='<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div>';
-        h+='<div class="tgy-test-card-body"><h3>'+E(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>';
-        h+=t.demo===true?'<span class="tgy-status free">FREE DEMO</span>':can?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>';
-        h+='</div><button type="button" class="btn '+(can?'':'orange')+'" onclick="return '+action+'">'+(can?'▶️ Test खोलें':'🔒 Access लें')+'</button></div>';
-      });
-      h+='</div>';
-    }
-    box.innerHTML=h;
-    m.style.display='flex';
-    return false;
-  }
+  function hide(){var m=modal();if(m)m.style.display='none'}
+  function rows(ex){return tests().map(function(t,i){return {t:t,i:i}}).filter(function(x){return x.t&&String(x.t.exam||'')===String(ex||'')&&x.t.published!==false&&x.t.visible!==false})}
+  function access(t){if(t&&t.demo===true)return true;try{return typeof window.hasPurchasedTest==='function'&&window.hasPurchasedTest(t)}catch(e){return false}}
+  function setNav(ex,level,index,returnTo){window.__tgyNav=window.__tgyNav||{};window.__tgyNav.exam=ex||null;window.__tgyNav.level=level;window.__tgyNav.testIndex=index==null?null:index;window.__tgyNav.returnTo=returnTo||window.__tgyNav.returnTo||'home'}
 
   function openHub(ex){
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=ex;
-    window.__tgyNav.level='hub';
-    window.__tgyNav.testIndex=null;
-    window.__tgyNav.returnTo='home';
-    var box=content(),m=modal();
-    if(!box||!m)return false;
+    try{window.tgyNavExam='';}catch(e){}
+    setNav(ex,'hub',null,'home');
+    var box=content(),m=modal();if(!box||!m)return false;
     var arr=rows(ex),notes=[];
     try{
       if(typeof window.notes==='function')notes=window.notes(ex)||[];
-      else {try{notes=JSON.parse(localStorage.getItem('tgy_pdf_notes')||'[]').filter(function(n){return n&&((n.folder||n.exam||'').trim()===String(ex).trim())&&n.visible!==false&&n.published!==false})}catch(e){notes=[]}}
+      else notes=JSON.parse(localStorage.getItem('tgy_pdf_notes')||'[]').filter(function(n){return n&&String(n.folder||n.exam||'')===String(ex||'')&&n.visible!==false&&n.published!==false});
     }catch(e){notes=[]}
-    box.innerHTML='<div class="tgy-exam-hub"><div class="tgy-list-head"><div><div class="tgy-kicker">परीक्षा</div><h2>📁 '+E(ex)+'</h2><p class="muted">पहले Test Series या Study Material चुनें।</p></div><button type="button" class="btn gray" onclick="return window.__tgyExactClose();">✕ बंद करें</button></div><div class="tgy-hub-grid"><div class="tgy-hub-card"><div class="tgy-hub-icon">📝</div><h3>Test Series</h3><p>'+arr.length+' Tests उपलब्ध हैं</p><button type="button" class="btn orange" onclick="return window.__tgyExactOpenSeries('+JSON.stringify(ex)+');">📚 Test Series खोलें</button></div><div class="tgy-hub-card"><div class="tgy-hub-icon">📚</div><h3>Study Material</h3><p>'+notes.length+' सामग्री उपलब्ध</p><button type="button" class="btn orange" onclick="return window.__tgyExactOpenNotes('+JSON.stringify(ex)+');">📚 Study Material खोलें</button></div></div></div>';
-    m.style.display='flex';
-    return false;
+    box.innerHTML='<div class="tgy-exam-hub"><div class="tgy-list-head"><div><div class="tgy-kicker">परीक्षा</div><h2>📁 '+E(ex)+'</h2><p class="muted">पहले Test Series या Study Material चुनें।</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn gray" onclick="return window.__tgyNavClose();">✕ बंद करें</button></div></div><div class="tgy-hub-grid"><div class="tgy-hub-card"><div class="tgy-hub-icon">📝</div><h3>Test Series</h3><p>'+arr.length+' Tests उपलब्ध हैं</p><button type="button" class="btn orange" onclick="return window.__tgyNavOpenSeries('+JSON.stringify(ex)+');">📚 Test Series खोलें</button></div><div class="tgy-hub-card"><div class="tgy-hub-icon">📚</div><h3>Study Material</h3><p>'+notes.length+' सामग्री उपलब्ध</p><button type="button" class="btn orange" onclick="return window.__tgyNavOpenNotes('+JSON.stringify(ex)+');">📂 Study Material खोलें</button></div></div></div>';
+    show();return false;
+  }
+
+  function openSeries(ex,returnTo){
+    try{window.tgyNavExam=ex;}catch(e){}
+    setNav(ex,'series',null,returnTo||'hub');
+    var box=content(),m=modal();if(!box||!m)return false;
+    var arr=rows(ex),h='<div class="tgy-list-head"><div><div class="tgy-kicker">Test Series</div><h2>🎯 '+E(ex)+' — Test List</h2><p class="muted">कुल '+arr.length+' Tests</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn gray" onclick="return window.__tgyNavBackHub('+JSON.stringify(ex)+');">← परीक्षा पर वापस</button><button type="button" class="btn gray" onclick="return window.__tgyNavClose();">✕ बंद करें</button></div></div>';
+    if(!arr.length)h+='<div class="card"><h3>📭 इस परीक्षा में कोई Test उपलब्ध नहीं है।</h3></div>';
+    else{
+      h+='<div id="tgyTestGrid" class="tgy-test-grid">';
+      arr.forEach(function(x,pos){
+        var t=x.t,can=access(t),action=can?'window.__tgyNavOpenPreview('+x.i+')':'window.__tgyNavLocked('+JSON.stringify(ex)+')';
+        h+='<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+E(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>'+(t.demo===true?'<span class="tgy-status free">FREE DEMO</span>':can?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>')+'</div><button type="button" class="btn '+(can?'':'orange')+'" onclick="return '+action+'">'+(can?'▶️ Test खोलें':'🔒 Access लें')+'</button></div>';
+      });
+      h+='</div>';
+    }
+    box.innerHTML=h;show();return false;
   }
 
   function openPreview(i){
     var t=tests()[Number(i)];if(!t)return false;
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=t.exam||window.__tgyNav.exam;
-    window.__tgyNav.level='preview';
-    window.__tgyNav.testIndex=Number(i);
+    try{window.tgyNavExam=t.exam||'';}catch(e){}
+    setNav(t.exam||'','preview',Number(i),window.__tgyNav&&window.__tgyNav.returnTo||'hub');
     var box=content(),m=modal();if(!box||!m)return false;
-    var can=hasAccess(t,i);
-    var start=can?'<button type="button" class="btn orange" onclick="return window.__tgyExactStart('+Number(i)+');">▶️ शुरू करें</button>':'<button type="button" class="btn orange" onclick="return window.__tgyExactLocked('+JSON.stringify(t.exam||'')+');">🔒 Access लें</button>';
-    box.innerHTML='<div class="tgy-test-preview"><div class="tgy-test-preview-head"><div><div class="tgy-kicker">'+E(t.exam||'Test Series')+'</div><h2>📝 '+E(t.name||'Test')+'</h2></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn gray" onclick="return window.__tgyExactOpenSeries('+JSON.stringify(t.exam||'')+');">← Test List</button><button type="button" class="btn gray" onclick="return window.__tgyExactClose();">✕ बंद करें</button></div></div><div class="tgy-test-info-grid"><div><b>📋 Questions</b><span>'+((t.questions||[]).length)+'</span></div><div><b>⏱️ समय</b><span>'+Number(t.time||60)+' मिनट</span></div><div><b>🔐 Access</b><span>'+(can?(t.demo===true?'FREE Demo':'Access Active'):'Access Required')+'</span></div></div><div class="tgy-start-card"><h3>🚀 Test शुरू करने के लिए तैयार?</h3><p class="muted">शुरू करें दबाने पर ही Test और Timer शुरू होगा।</p>'+start+'</div></div>';
-    m.style.display='flex';
+    var can=access(t),start=can?'<button type="button" class="btn orange tgy-start-btn" onclick="return window.__tgyNavStart('+Number(i)+');">▶️ शुरू करें</button>':'<button type="button" class="btn orange tgy-start-btn" onclick="return window.__tgyNavLocked('+JSON.stringify(t.exam||'')+');">🔒 Access लें</button>';
+    box.innerHTML='<div class="tgy-test-preview"><div class="tgy-test-preview-head"><div><div class="tgy-kicker">'+E(t.exam||'Test Series')+'</div><h2>📝 '+E(t.name||'Test')+'</h2></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn gray" onclick="return window.__tgyNavBackSeries('+JSON.stringify(t.exam||'')+');">← Test List</button><button type="button" class="btn gray" onclick="return window.__tgyNavClose();">✕ बंद करें</button></div></div><div class="tgy-test-info-grid"><div><b>📋 Questions</b><span>'+((t.questions||[]).length)+'</span></div><div><b>⏱️ समय</b><span>'+Number(t.time||60)+' मिनट</span></div><div><b>🔐 Access</b><span>'+(can?(t.demo===true?'FREE Demo':'Access Active'):'Access Required')+'</span></div></div><div class="tgy-start-card"><h3>🚀 Test शुरू करने के लिए तैयार?</h3><p class="muted">शुरू करें दबाने पर ही Test और Timer शुरू होगा।</p>'+start+'</div></div>';
+    show();return false;
+  }
+
+  function startTest(i){
+    var t=tests()[Number(i)];if(!t)return false;
+    try{window.tgyNavExam='';}catch(e){}
+    window.activeTestExam=t.exam||null;window.openedTestFromSeries=true;
+    setNav(t.exam||'','active-test',Number(i),window.__tgyNav&&window.__tgyNav.returnTo||'hub');
+    hide();
+    if(typeof window.startFinalMockTest==='function')window.startFinalMockTest(Number(i));
     return false;
   }
 
-  window.__tgyExactClose=close;
-  window.__tgyExactBackToHub=function(){return openHub((window.__tgyNav&&window.__tgyNav.exam)||window.activeTestExam||'')};
-  window.__tgyExactOpenSeries=openSeries;
-  window.__tgyExactOpenPreview=openPreview;
-  window.__tgyExactLocked=function(ex){
+  window.__tgyNavClose=function(){
+    try{window.tgyNavExam='';}catch(e){}
+    hide();
+    if(window.__tgyNav)window.__tgyNav.level='closed';
+    return false;
+  };
+  window.__tgyNavBackHub=function(ex){return openHub(ex)};
+  window.__tgyNavBackSeries=function(ex){return openSeries(ex,(window.__tgyNav&&window.__tgyNav.returnTo)||'hub')};
+  window.__tgyNavOpenSeries=function(ex){return openSeries(ex,'hub')};
+  window.__tgyNavOpenPreview=function(i){return openPreview(i)};
+  window.__tgyNavStart=startTest;
+  window.__tgyNavLocked=function(ex){
     if(typeof window.tgyOpenLockedPurchase==='function')return window.tgyOpenLockedPurchase(ex);
     if(typeof window.buySeriesAccess==='function')return window.buySeriesAccess(ex,0);
     return false;
   };
-  window.__tgyExactOpenNotes=function(ex){
+  window.__tgyNavOpenNotes=function(ex){
     if(typeof window.tgyOpenNotesFolderFinal==='function')return window.tgyOpenNotesFolderFinal(ex);
-    return false;
-  };
-  window.__tgyExactStart=function(i){
-    var t=tests()[Number(i)];if(!t)return false;
-    window.activeTestExam=t.exam||null;
-    window.openedTestFromSeries=true;
-    window.__tgyNav=window.__tgyNav||{};
-    window.__tgyNav.exam=t.exam||window.__tgyNav.exam;
-    window.__tgyNav.level='active-test';
-    window.__tgyNav.testIndex=Number(i);
-    close();
-    if(typeof window.startFinalMockTest==='function')window.startFinalMockTest(Number(i));
+    if(typeof window.tgyOpenExamPdf==='function')return window.tgyOpenExamPdf(ex);
     return false;
   };
 
-  // These are the ONLY public navigation entry points used by the Test Series flow.
-  function lock(name,fn){
-    try{
-      Object.defineProperty(window,name,{configurable:false,enumerable:true,get:function(){return fn},set:function(){/* ignore legacy override */}});
-    }catch(e){window[name]=fn}
+  // Final public entry points. Nothing below this script changes them.
+  window.tgyOpenExamHub=openHub;
+  window.tgyOpenExamHubFinal=openHub;
+  window.openExam=openHub;
+  window.tgyOpenTestSeriesFinal=function(ex){return openSeries(ex,'hub')};
+  window.tgyOpenExamTestSeries=function(ex){return openSeries(ex,'hub')};
+  window.tgyOpenSeriesInside=function(ex){return openSeries(ex,'hub')};
+  window.tgyShowTestList=function(ex){return openSeries(ex,(window.__tgyNav&&window.__tgyNav.returnTo)||'hub')};
+  window.tgyOpenTestPreview=openPreview;
+  window.tgyStartSelectedTest=startTest;
+
+  // Stop background cloud/access refreshes from changing the student's current screen.
+  var resolver=window.tgyResolveCurrentStudentAccess;
+  if(typeof resolver==='function'&&!resolver.__tgyCleanNavGuard){
+    var guarded=async function(){
+      var nav=window.__tgyNav||{};
+      if(nav.level==='active-test'||nav.level==='preview'||nav.level==='series'||nav.level==='hub'||nav.level==='closed'){
+        return null;
+      }
+      return resolver.apply(this,arguments);
+    };
+    guarded.__tgyCleanNavGuard=true;
+    window.tgyResolveCurrentStudentAccess=guarded;
   }
-  lock('tgyOpenTestSeriesFinal',function(ex){return openSeries(ex)});
-  lock('tgyOpenExamTestSeries',function(ex){return openSeries(ex)});
-  lock('tgyOpenSeriesInside',function(ex){return openSeries(ex)});
-  lock('tgyShowTestList',function(ex){return openSeries(ex)});
-  lock('tgyOpenTestPreview',function(i){return openPreview(i)});
-  lock('tgyStartSelectedTest',function(i){return window.__tgyExactStart(i)});
-  lock('openExam',function(ex){return openHub(ex)});
-  lock('tgyOpenExamHubFinal',function(ex){return openHub(ex)});
 })();
 </script>
