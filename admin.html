@@ -902,53 +902,45 @@ window.mtFinalSave = async function() {
   if (!n) { alert("Test का नाम लिखें।"); return; }
   if (negative && negativeMarks <= 0) { alert("Negative Marks की value डालें।"); return; }
 
-  const clean = v => String(v ?? '').replace(/[\u200b\u200c\u200d\ufeff]/g,'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim().toLowerCase(); 
-  const keyOf = x => [
-    clean(x?.q), ...(Array.isArray(x?.o) ? x.o.map(clean) : []), clean(x?.answer), clean(x?.ex), clean(x?.passage),
-    ...(Array.isArray(x?.statements) ? x.statements.map(clean) : []),
-    ...(Array.isArray(x?.conclusions) ? x.conclusions.map(clean) : [])
-  ].join("\u001f");
-
   const pending = Array.isArray(window.mtPreview) ? window.mtPreview : [];
   const d = ensureStore();
   d.exams[e] = d.exams[e] || { tests: {} };
-  const oldTest = d.exams[e].tests[n] || { name:n, exam:e, questions:[], published:true, visible:true };
+  const oldTest = d.exams[e].tests[n] || { name: n, exam: e, questions: [], published: true, visible: true };
+
   const existingQs = Array.isArray(oldTest.questions) ? oldTest.questions.slice() : [];
-  const existingKeys = new Set(existingQs.map(keyOf));
-  const pendingSeen = new Set();
-  const newQs = [];
+  const base = existingQs.length;
+  const newQs = pending.map((x, idx) => ({
+    q: x.q, o: x.o, answer: x.answer, ex: x.ex,
+    type: x.type || "normal", passage: x.passage || "",
+    statements: x.statements || [], conclusions: x.conclusions || [],
+    number: base + idx + 1
+  }));
 
-  for (const x of pending) {
-    const k = keyOf(x);
-    if (!k || pendingSeen.has(k) || existingKeys.has(k)) continue;
-    if (window.mtDeletedQuestionKeys instanceof Set && window.mtDeletedQuestionKeys.has(k)) continue;
-    pendingSeen.add(k);
-    newQs.push(Object.assign({}, x, { number: existingQs.length + newQs.length + 1 }));
-  }
-
-  // Never duplicate saved Questions. Renumber only the final saved sequence.
-  const merged = existingQs.concat(newQs).map((q,i)=>Object.assign({},q,{number:i+1}));
   const updatedTest = Object.assign({}, oldTest, {
-    name:n, exam:e, time:time, demo:isDemo,
-    negativeMarking:negative, negativeMarks:negativeMarks,
-    questions:merged,
-    published:oldTest.published !== false,
-    visible:oldTest.visible !== false
+    name: n, exam: e, time: time, demo: isDemo,
+    negativeMarking: negative, negativeMarks: negativeMarks,
+    questions: existingQs.concat(newQs),
+    published: oldTest.published !== false,
+    visible: oldTest.visible !== false
   });
 
+  d.exams[e].tests[n] = updatedTest;
   const saved = await mtPersistTest(updatedTest);
   if (!saved) {
     alert("❌ Test Save नहीं हो पाया। पुराना local data सुरक्षित रखा गया है।");
     return;
   }
 
-  window.mtPreview=[];
-  window.mtDeletedQuestionKeys.clear();
-  window.mtLastPreviewRaw="";
-  const tx=document.getElementById("mtBulkText"), box=document.getElementById("mtPreview"), st=document.getElementById("mtStatus");
-  if(tx)tx.value=""; if(box)box.innerHTML="";
-  if(st)st.innerHTML=`✅ <b>${newQs.length ? newQs.length+" नए Questions और पूरा Test सुरक्षित Save हो गया।" : "कोई नया Question नहीं था; Duplicate Question नहीं जोड़ा गया।"}</b>`;
-  mtRenderAll(); mtRenderQuestions();
+  window.mtPreview = [];
+  const tx = document.getElementById("mtBulkText");
+  const box = document.getElementById("mtPreview");
+  const st = document.getElementById("mtStatus");
+  if (tx) tx.value = "";
+  if (box) box.innerHTML = "";
+  if (st) st.innerHTML = `✅ <b>${newQs.length ? newQs.length + " Questions व पूरा Test सुरक्षित Save हो गए।" : "Test की जानकारी Save हो गई।"}</b>`;
+
+  mtRenderAll();
+  mtRenderQuestions();
 };
 
 /* =========================================================================
@@ -1146,52 +1138,72 @@ window.mtTextPreview = function() {
   const raw = document.getElementById("mtBulkText")?.value || "";
   if (!raw.trim()) { alert("पहले पूरा Question Set Paste करें।"); return; }
 
-  // The current Bulk Text is the source for the current Preview.
-  // Do NOT append the previous Preview again. This makes 10 -> 30 exactly 30,
-  // never 40, 31, 32, etc. A deleted saved Question remains excluded until
-  // the user intentionally changes the Bulk Text.
-  if (window.mtLastPreviewRaw !== raw) window.mtDeletedQuestionKeys.clear();
+  // If the Bulk text was actually changed after a delete, allow the
+  // edited/new input to be previewed again. If it is unchanged, a
+  // question just deleted from Saved Questions must NOT come back merely
+  // because Preview was clicked again.
+  if (window.mtLastPreviewRaw !== raw) {
+    window.mtDeletedQuestionKeys.clear();
+  }
   window.mtLastPreviewRaw = raw;
 
   const parsed = mtAutoParse(raw);
   const incoming = parsed.questions || [];
   if (!incoming.length) {
-    const st=document.getElementById("mtStatus");
-    if(st)st.innerHTML="❌ कोई Question पहचान में नहीं आया। कृपया फ़ॉर्मेट जाँचें।";
+    const st0 = document.getElementById("mtStatus");
+    if (st0) st0.innerHTML = "❌ कोई Question पहचान में नहीं आया। कृपया फ़ॉर्मेट जाँचें।";
     return;
   }
 
-  const norm = v => cleanText(v).replace(/\s+/g," ").toLowerCase();
-  const keyOf = x => [
-    norm(x.q), ...(Array.isArray(x.o)?x.o.map(norm):[]), norm(x.answer), norm(x.ex), norm(x.passage),
-    ...(Array.isArray(x.statements)?x.statements.map(norm):[]),
-    ...(Array.isArray(x.conclusions)?x.conclusions.map(norm):[])
+  // Pending Preview is temporary. Append only genuinely new Questions;
+  // the same Bulk batch pasted/previewed repeatedly must not duplicate.
+  const norm = (v) => cleanText(v).replace(/\s+/g, " ").toLowerCase();
+  const keyOf = (x) => [
+    norm(x.q),
+    ...(Array.isArray(x.o) ? x.o.map(norm) : []),
+    norm(x.answer),
+    norm(x.ex),
+    norm(x.passage),
+    ...(Array.isArray(x.statements) ? x.statements.map(norm) : []),
+    ...(Array.isArray(x.conclusions) ? x.conclusions.map(norm) : [])
   ].join("\u001f");
 
-  const seen=new Set(), cleanIncoming=[];
-  incoming.forEach(x=>{
-    const k=keyOf(x);
-    if(!k || seen.has(k)) return;
-    if(window.mtDeletedQuestionKeys instanceof Set && window.mtDeletedQuestionKeys.has(k)) return;
-    seen.add(k); cleanIncoming.push(x);
+  const previous = Array.isArray(window.mtPreview) ? window.mtPreview : [];
+  const seen = new Set(previous.map(keyOf));
+  const added = [];
+  incoming.forEach((x) => {
+    const k = keyOf(x);
+    if (window.mtDeletedQuestionKeys.has(k)) return;
+    if (!seen.has(k)) {
+      seen.add(k);
+      added.push(x);
+    }
   });
+  window.mtPreview = previous.concat(added).map((x, i) => Object.assign({}, x, { number: i + 1 }));
 
-  window.mtPreview=cleanIncoming.map((x,i)=>Object.assign({},x,{number:i+1}));
-  const st=document.getElementById("mtStatus"), box=document.getElementById("mtPreview");
-  if(st)st.innerHTML=`✅ <b>${window.mtPreview.length} Questions मिले — Preview में ठीक इतने ही Questions हैं (${parsed.type})</b>`;
-  if(!box)return;
+  const st = document.getElementById("mtStatus");
+  const box = document.getElementById("mtPreview");
+  if (st) st.innerHTML = `✅ <b>${window.mtPreview.length} Questions मिले — ${added.length} नए Questions जोड़े गए (${parsed.type})</b>`;
+  if (!box) return;
 
-  box.innerHTML=window.mtPreview.map((x,i)=>{
-    let h=`<div class="card" style="margin:8px 0;padding:12px;border:1px solid #c8ddf4;background:#fff">
-      <div style="margin-bottom:6px"><span class="badge">${x.type==='statement-conclusion'?'📋 कथन–निष्कर्ष':(x.type==='passage'?'📖 Passage / निर्देश':'📝 सामान्य प्रश्न')}</span></div>`;
-    if(x.passage)h+=`<div style="margin-bottom:8px;padding:8px;background:#f0f7ff;border-left:3px solid #1769aa;font-size:13px"><b>📖 Passage / निर्देश:</b><div style="white-space:pre-wrap">${esc(x.passage)}</div></div>`;
-    h+=`<div><b>प्रश्न ${i+1}.</b> ${esc(x.intro||x.q).replace(/\n/g,'<br>')}</div>`;
-    if(x.statements?.length)h+=`<div style="margin:6px 0;font-size:13px"><b>कथन:</b>${x.statements.map((s,j)=>`<div>${['I','II','III','IV'][j]||j+1}. ${esc(s)}</div>`).join('')}</div>`;
-    if(x.conclusions?.length)h+=`<div style="margin:6px 0;font-size:13px"><b>निष्कर्ष:</b>${x.conclusions.map((c,j)=>`<div>${['I','II','III','IV'][j]||j+1}. ${esc(c)}</div>`).join('')}</div>`;
-    h+=`<div style="margin:6px 0">${x.o.map((opt,j)=>opt?`<div>(${String.fromCharCode(65+j)}) ${esc(opt)}</div>`:'').join('')}</div>`;
-    h+=`<div style="margin-top:4px"><b>सही उत्तर:</b> ${esc(x.answer||'-')}</div>`;
-    if(x.ex)h+=`<div style="margin-top:4px;color:#875100;font-size:13px"><b>जानकारी/Explanation:</b> ${esc(x.ex)}</div>`;
-    return h+'</div>';
+  box.innerHTML = window.mtPreview.map((x, i) => {
+    let h = `<div class="card" style="margin:8px 0;padding:12px;border:1px solid #c8ddf4;background:#fff">
+      <div style="margin-bottom:6px"><span class="badge">${x.type === 'statement-conclusion' ? '📋 कथन–निष्कर्ष' : (x.type === 'passage' ? '📖 Passage / निर्देश' : '📝 सामान्य प्रश्न')}</span></div>`;
+    if (x.passage) {
+      h += `<div style="margin-bottom:8px;padding:8px;background:#f0f7ff;border-left:3px solid #1769aa;font-size:13px"><b>📖 Passage / निर्देश:</b><div style="white-space:pre-wrap">${esc(x.passage)}</div></div>`;
+    }
+    h += `<div><b>प्रश्न ${x.number || (i + 1)}.</b> ${esc(x.intro || x.q).replace(/\n/g, '<br>')}</div>`;
+    if (x.statements && x.statements.length) {
+      h += `<div style="margin:6px 0;font-size:13px"><b>कथन:</b>${x.statements.map((s, si) => `<div>${['I', 'II', 'III', 'IV'][si] || si + 1}. ${esc(s)}</div>`).join('')}</div>`;
+    }
+    if (x.conclusions && x.conclusions.length) {
+      h += `<div style="margin:6px 0;font-size:13px"><b>निष्कर्ष:</b>${x.conclusions.map((c, ci) => `<div>${['I', 'II', 'III', 'IV'][ci] || ci + 1}. ${esc(c)}</div>`).join('')}</div>`;
+    }
+    h += `<div style="margin:6px 0">${x.o.map((opt, oi) => opt ? `<div>(${String.fromCharCode(65 + oi)}) ${esc(opt)}</div>` : '').join('')}</div>`;
+    h += `<div style="margin-top:4px"><b>सही उत्तर:</b> ${esc(x.answer || '-')}</div>`;
+    if (x.ex) h += `<div style="margin-top:4px;color:#875100;font-size:13px"><b>जानकारी/Explanation:</b> ${esc(x.ex)}</div>`;
+    h += `</div>`;
+    return h;
   }).join('');
 };
 
@@ -1208,22 +1220,22 @@ window.mtClearPreview = function() {
 };
 
 window.mtManualAdd = function() {
-  const q=prompt("Question लिखें:"); if(!q)return;
-  const o=[prompt("Option A:"),prompt("Option B:"),prompt("Option C:"),prompt("Option D:")];
-  if(o.some(x=>x===null||!String(x).trim()))return;
-  const ans=(prompt("सही उत्तर A/B/C/D:","A")||"A").toUpperCase();
-  const ex=prompt("जानकारी / Explanation:","")||"";
-  window.mtPreview=Array.isArray(window.mtPreview)?window.mtPreview:[];
-  const norm=v=>cleanText(v).replace(/\s+/g," ").toLowerCase();
-  const key=x=>[norm(x.q),...(x.o||[]).map(norm),norm(x.answer),norm(x.ex),norm(x.passage)].join("\u001f");
-  const x={q:q.trim(),o:o.map(v=>String(v).trim()),answer:ans,ex,type:"normal"};
-  const k=key(x);
-  if(window.mtPreview.some(v=>key(v)===k)){alert("यह Question पहले से Preview में है। Duplicate नहीं जोड़ा गया।");return;}
-  window.mtPreview.push(x);
-  window.mtPreview=window.mtPreview.map((v,i)=>Object.assign({},v,{number:i+1}));
-  const st=document.getElementById("mtStatus"); if(st)st.innerHTML=`✅ <b>${window.mtPreview.length} Questions तैयार हैं — नीचे "पूरा Test Save करें" दबाएँ</b>`;
-  const box=document.getElementById("mtPreview");
-  if(box)box.innerHTML=window.mtPreview.map((v,i)=>`<div class="card" style="margin:8px 0;padding:12px"><b>प्रश्न ${i+1}.</b> ${esc(v.q)}<div>(A) ${esc(v.o[0])}<br>(B) ${esc(v.o[1])}<br>(C) ${esc(v.o[2])}<br>(D) ${esc(v.o[3])}</div><div><b>सही उत्तर:</b> ${esc(v.answer)}</div>${v.ex?`<div><b>जानकारी:</b> ${esc(v.ex)}</div>`:''}</div>`).join('');
+  const q = prompt("Question लिखें:"); if (!q) return;
+  const o = [prompt("Option A:"), prompt("Option B:"), prompt("Option C:"), prompt("Option D:")];
+  if (o.some(x => x === null || !String(x).trim())) return;
+  const ans = (prompt("सही उत्तर A/B/C/D:", "A") || "A").toUpperCase();
+  const ex = prompt("जानकारी / Explanation:", "") || "";
+  window.mtPreview = Array.isArray(window.mtPreview) ? window.mtPreview : [];
+  window.mtPreview.push({
+    q: q.trim(), o: o.map(x => String(x).trim()), answer: ans, ex,
+    number: window.mtPreview.length + 1, type: "normal"
+  });
+  const st = document.getElementById("mtStatus");
+  if (st) st.innerHTML = `✅ <b>${window.mtPreview.length} Questions तैयार हैं — नीचे "पूरा Test Save करें" दबाएँ</b>`;
+  const box = document.getElementById("mtPreview");
+  if (box) {
+    box.innerHTML += `<div class="card" style="margin:8px 0;padding:12px"><b>प्रश्न ${window.mtPreview.length}.</b> ${esc(q)}<div>(A) ${esc(o[0])}<br>(B) ${esc(o[1])}<br>(C) ${esc(o[2])}<br>(D) ${esc(o[3])}</div><div><b>सही उत्तर:</b> ${esc(ans)}</div>${ex ? `<div><b>जानकारी:</b> ${esc(ex)}</div>` : ''}</div>`;
+  }
 };
 
 /* Render Saved Questions */
@@ -1576,11 +1588,47 @@ function mtRenderAll() {
     return;
   }
 
+  /* Only presentation/order is handled here. Test records themselves are not changed. */
+  function mockTestOrder(item) {
+    const x = item[1] || {};
+    const name = String(x.name || item[0] || '');
+    const m = name.match(/(?:mock\s*test|test)\s*[-_#.:()\s]*([0-9]+)/i) || name.match(/\b([0-9]+)\b/);
+    return m ? Number(m[1]) : Number.MAX_SAFE_INTEGER;
+  }
+  function sortTests(entries) {
+    return entries.map((x, i) => ({x, i})).sort((a, b) => {
+      const an = mockTestOrder(a.x), bn = mockTestOrder(b.x);
+      if (an !== bn) return an - bn;
+      if (an !== Number.MAX_SAFE_INTEGER) return a.i - b.i;
+      return a.i - b.i;
+    }).map(z => z.x);
+  }
+
   box.innerHTML = masterExams.map((examObj, fi) => {
     const e = examObj.name;
     const logo = examObj.logo || "";
     const folderVisible = examObj.visible !== false;
-    const tests = Object.entries(d.exams?.[e]?.tests || {});
+    const tests = sortTests(Object.entries(d.exams?.[e]?.tests || {}));
+    const visibleCount = Math.min(3, tests.length);
+    const firstTests = tests.slice(0, visibleCount);
+    const moreTests = tests.slice(visibleCount);
+    const selectId = `mtMoreTests_${fi}`;
+
+    const testRows = (entries) => entries.map(([t, x]) => `
+      <tr>
+        <td><b>${esc(x.name || t)}</b></td>
+        <td>${x.questions?.length || 0}</td>
+        <td>${x.time || 60} min</td>
+        <td>${x.published === false ? '🙈 Hidden' : '👁️ Show'}</td>
+        <td>
+          <button type="button" class="btn" onclick="mtOpenTestEditor('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">👁️ देखें</button>
+          <button type="button" class="btn" onclick="mtRenameTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">✏️ Name</button>
+          <button type="button" class="btn" onclick="mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">➕ Questions</button>
+          <button type="button" class="btn ${x.published === false ? 'orange' : 'gray'}" onclick="mtTogglePublish('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">${x.published === false ? '👁️ Show' : '🙈 Hide'}</button>
+          <button type="button" class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">🗑️ Delete</button>
+        </td>
+      </tr>
+    `).join('');
 
     return `
       <div class="card" style="margin:16px 0;border:2px solid #1769aa;background:#fff;box-shadow:0 4px 14px rgba(18,59,104,0.06)">
@@ -1608,25 +1656,18 @@ function mtRenderAll() {
               <thead>
                 <tr><th>Test का नाम</th><th>Questions</th><th>Time</th><th>Status</th><th>Action</th></tr>
               </thead>
-              <tbody>
-                ${tests.map(([t, x]) => `
-                  <tr>
-                    <td><b>${esc(x.name || t)}</b></td>
-                    <td>${x.questions?.length || 0}</td>
-                    <td>${x.time || 60} min</td>
-                    <td>${x.published === false ? '🙈 Hidden' : '👁️ Show'}</td>
-                    <td>
-                      <button type="button" class="btn" onclick="mtOpenTestEditor('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">👁️ देखें</button>
-                      <button type="button" class="btn" onclick="mtRenameTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">✏️ Name</button>
-                      <button type="button" class="btn" onclick="mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">➕ Questions</button>
-                      <button type="button" class="btn ${x.published === false ? 'orange' : 'gray'}" onclick="mtTogglePublish('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">${x.published === false ? '👁️ Show' : '🙈 Hide'}</button>
-                      <button type="button" class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">🗑️ Delete</button>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
+              <tbody>${testRows(firstTests)}</tbody>
             </table>
           </div>
+          ${moreTests.length ? `
+            <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+              <label for="${selectId}" style="font-weight:700;color:#123b68">बाकी Tests देखें:</label>
+              <select id="${selectId}" style="min-width:220px;padding:9px;border:1px solid #c8d4e3;border-radius:8px" onchange="if(this.value){mtOpenTestEditor('${encodeURIComponent(e)}',this.value);this.value=''}">
+                <option value="">▼ सभी बाकी Tests</option>
+                ${moreTests.map(([t,x]) => `<option value="${encodeURIComponent(t)}">${esc(x.name || t)}</option>`).join('')}
+              </select>
+            </div>
+          ` : ''}
         ` : `
           <div class="card" style="margin-top:10px;background:#f8fafc">
             <p style="margin:0;color:#667085">📭 इस Folder में अभी कोई Test नहीं है। ऊपर परीक्षा चुनकर नया Test बनाएँ।</p>
