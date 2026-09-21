@@ -1629,8 +1629,8 @@ function mtRenderAll() {
     const moreTests = tests.slice(visibleCount);
     const selectId = `mtMoreTests_${fi}`;
 
-    const testRows = (entries) => entries.map(([t, x]) => `
-      <tr>
+    const testRows = (entries, extra=false) => entries.map(([t, x]) => `
+      <tr${extra ? ' class="mt-extra-test" style="display:none"' : ''}>
         <td><b>${esc(x.name || t)}</b></td>
         <td>${x.questions?.length || 0}</td>
         <td>${x.time || 60} min</td>
@@ -1671,16 +1671,12 @@ function mtRenderAll() {
               <thead>
                 <tr><th>Test का नाम</th><th>Questions</th><th>Time</th><th>Status</th><th>Action</th></tr>
               </thead>
-              <tbody>${testRows(firstTests)}</tbody>
+              <tbody>${testRows(firstTests)}${testRows(moreTests, true)}</tbody>
             </table>
           </div>
           ${moreTests.length ? `
             <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
-              <label for="${selectId}" style="font-weight:700;color:#123b68">बाकी Tests देखें:</label>
-              <select id="${selectId}" style="min-width:220px;padding:9px;border:1px solid #c8d4e3;border-radius:8px" onchange="if(this.value){mtOpenTestEditor('${encodeURIComponent(e)}',this.value);this.value=''}">
-                <option value="">▼ सभी बाकी Tests</option>
-                ${moreTests.map(([t,x]) => `<option value="${encodeURIComponent(t)}">${esc(x.name || t)}</option>`).join('')}
-              </select>
+              <button type="button" class="btn gray" onclick="const c=this.closest('.card'); const rows=c.querySelectorAll('.mt-extra-test'); const open=this.getAttribute('data-expanded')==='1'; rows.forEach(r=>r.style.display=open?'none':'table-row'); this.setAttribute('data-expanded',open?'0':'1'); this.textContent=open?'▼ और टेस्ट देखें':'▲ कम दिखाएँ';">▼ और टेस्ट देखें</button>
             </div>
           ` : ''}
         ` : `
