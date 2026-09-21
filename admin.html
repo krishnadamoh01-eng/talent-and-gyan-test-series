@@ -1019,6 +1019,16 @@ function mtAutoParse(raw) {
   if (!text) return { questions: [], type: "normal" };
   text = text.replace(/[‐‑‒–—―]/g, "-");
 
+  /*
+   * Robust bulk parser:
+   * - accepts Hindi/English question labels, including "प्रश्न 45:"
+   * - accepts the exact common format:
+   *     (A) ... (B) ... (C) ... (D) ...
+   *     उत्तर: (A)
+   *     जानकारी: ...
+   * - does not require question numbers to be sequential. 45 followed by 5
+   *   is still two valid questions; display numbering is handled separately.
+   */
   const qReG = /^\s*(?:प्रश्न|Question|question|क्वेश्चन|Q)\s*(?:No\.?|क्रमांक|क्रम)?\s*(\d{1,4})?\s*[\.\)\-:\/|]?\s*/gim;
   const starts = [];
   let m;
@@ -1033,7 +1043,7 @@ function mtAutoParse(raw) {
   }
   if (!starts.length) return { questions: [], type: "normal" };
 
-  const optRe = /^\s*\(?([A-Ea-e])\)?(?:[\.\)\-:\/]|(?=\s))\s*(.*)$/;
+  const optRe = /^\s*\(?([A-Ea-e])\)?\s*[\.\)\-:\/]+\s*(.*)$/;
   const infoRe = /^\s*(?:जानकारी|व्याख्या|विवरण|Explanation|Description|Solution|समाधान|नोट|Note|कारण|स्पष्टीकरण)\s*[:=\-]\s*(.*)$/i;
   const ansRe = /^\s*(?:Right\s*Answer|Right\s*Ans\.?|Correct\s*Answer|Answer|Ans\.?|सही\s*उत्तर|सही\s*विकल्प|उत्तर|Correct)\s*[:=\-]\s*(.*)$/i;
   const idxMap = { A: 0, B: 1, C: 2, D: 3, E: 4 };
@@ -1048,7 +1058,9 @@ function mtAutoParse(raw) {
   for (let i = 0; i < starts.length; i++) {
     const block = text.slice(starts[i].end, i + 1 < starts.length ? starts[i + 1].pos : text.length).trim();
     if (!block) continue;
+
     const allLines = block.split('\n').map(x => x.trim()).filter(x => x && !/^[-_]{5,}$/.test(x));
+    if (!allLines.length) continue;
 
     let firstOpt = -1;
     for (let j = 0; j < allLines.length; j++) {
@@ -1056,8 +1068,7 @@ function mtAutoParse(raw) {
     }
     if (firstOpt < 0) continue;
 
-    // A passage/instruction appearing after the previous question's explanation
-    // belongs to the following question(s), never to the previous explanation.
+    /* Keep a context/passage only when it is explicitly marked. */
     let ctxAt = -1;
     for (let j = firstOpt; j < allLines.length; j++) {
       if (mtContextMarker(allLines[j])) { ctxAt = j; break; }
@@ -1074,6 +1085,7 @@ function mtAutoParse(raw) {
 
     for (let j = firstOpt; j < questionLines.length; j++) {
       const line = questionLines[j];
+
       const am = line.match(ansRe);
       if (am) {
         const a = am[1].trim();
@@ -1082,29 +1094,33 @@ function mtAutoParse(raw) {
         current = -1;
         continue;
       }
+
       const im = line.match(infoRe);
       if (im) {
         ex = im[1].trim();
         if (j + 1 < questionLines.length) ex += (ex ? "\n" : "") + questionLines.slice(j + 1).join("\n");
         break;
       }
+
       const om = line.match(optRe);
       if (om) {
         current = idxMap[om[1].toUpperCase()] ?? -1;
         if (current >= 0) opts[current] = (om[2] || "").trim();
         continue;
       }
+
       if (current >= 0) opts[current] += (opts[current] ? " " : "") + line;
     }
 
     if (!before.length || opts.filter(Boolean).length < 2) continue;
+
     const q = before.join("\n").trim();
     const sc = splitStatementBlock(q);
     out.push({
-      q: q,
+      q,
       o: opts,
-      answer: answer,
-      ex: ex,
+      answer,
+      ex,
       number: starts[i].num || (i + 1),
       type: sc ? "statement-conclusion" : "normal",
       passage: "",
@@ -1114,8 +1130,6 @@ function mtAutoParse(raw) {
     });
   }
 
-  // Attach each context only to the question number(s) it explicitly targets.
-  // If there is no explicit target, attach it to the immediate next parsed question.
   out.forEach((q, idx) => {
     const qn = Number(q.number);
     const hit = contexts.find(c => {
@@ -1130,7 +1144,8 @@ function mtAutoParse(raw) {
 
   return {
     questions: out,
-    type: out.some(x => x.type === "passage") ? "Mixed / Passage" : (out.some(x => x.type === "statement-conclusion") ? "कथन–निष्कर्ष" : "Normal")
+    type: out.some(x => x.type === "passage") ? "Mixed / Passage" :
+          (out.some(x => x.type === "statement-conclusion") ? "कथन–निष्कर्ष" : "Normal")
   };
 }
 
