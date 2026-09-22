@@ -2172,7 +2172,8 @@ html,body{max-width:100%;overflow-x:hidden}
     }catch(e){}
   });
 })();
-</script>\n
+</script>
+
 
 
 <script id="tgy-final-mobile-registration-purchase-fix-20260909">
@@ -3152,5 +3153,61 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
     homeNow();
     if(typeof window.tgyLoadModernTests==='function')window.tgyLoadModernTests();
   },{once:true});
+})();
+</script>
+<script id="tgy-inner-folder-open-fix-20260922">
+(function(){
+  'use strict';
+  function esc2(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]})}
+  function examBox(){return document.getElementById('examContent')}
+  function examModal(){return document.getElementById('examModal')}
+  function showExam(){var m=examModal();if(m)m.style.display='flex'}
+
+  // Test Series button: always open the selected exam's Test Folder/Test List.
+  window.tgyOpenExamTestSeries=function(exam){
+    try{
+      if(typeof window.tgyShowTestList==='function') return window.tgyShowTestList(String(exam||''),'series-folder');
+    }catch(e){console.warn('[TGY Test Series open]',e)}
+    return false;
+  };
+
+  // Study Material button: open the selected exam's notes directly, without depending on another overlay.
+  window.tgyOpenExamPdf=function(exam){
+    exam=String(exam||'');
+    var notes=[];
+    try{notes=JSON.parse(localStorage.getItem('tgy_pdf_notes')||'[]');if(!Array.isArray(notes))notes=[];}catch(e){notes=[]}
+    notes=notes.filter(function(n){return n&&String(n.folder||n.exam||'').trim()===exam&&n.visible!==false&&n.published!==false});
+    var b=examBox(),m=examModal();
+    if(!b||!m)return false;
+    var h='<div class="tgy-list-head"><div><div class="tgy-kicker">📁 '+esc2(exam)+'</div><h2>📚 Study Material</h2><p class="muted">इस परीक्षा की उपलब्ध PDF सामग्री</p></div><button class="btn gray" type="button" onclick="return window.tgyOpenExamHubFinal('+JSON.stringify(exam)+')">← वापस</button></div>';
+    if(!notes.length){
+      h+='<div class="card"><h3>📭 अभी कोई Study Material उपलब्ध नहीं है।</h3></div>';
+    }else{
+      h+='<div class="grid" style="margin-top:14px">';
+      notes.forEach(function(n,i){
+        var title=esc2(n.title||('PDF Notes '+(i+1)));
+        var price=Number(n.offer)||Number(n.mrp)||0;
+        var owned=false;
+        try{owned=typeof window.hasPurchasedNote==='function'&&window.hasPurchasedNote(n)}catch(e){}
+        var action='';
+        if(price&&!owned && typeof window.buyPdfNote==='function'){
+          action='<button class="btn orange" type="button" onclick="return window.buyPdfNote('+JSON.stringify(n._i!=null?n._i:i)+')">💳 खरीदें</button>';
+        }else if(typeof window.viewPdfNote==='function'){
+          action='<button class="btn orange" type="button" onclick="return window.viewPdfNote('+JSON.stringify(n._i!=null?n._i:i)+')">📖 पढ़ें</button>';
+        }else if(n.dataUrl||n.url){
+          action='<a class="btn orange" target="_blank" rel="noopener" href="'+esc2(n.dataUrl||n.url)+'">📖 खोलें</a>';
+        }
+        h+='<div class="card" style="margin:0"><h3>📄 '+title+'</h3>'+(n.pages?'<p class="muted">'+esc2(n.pages)+' Pages</p>':'')+action+'</div>';
+      });
+      h+='</div>';
+    }
+    b.innerHTML=h;showExam();return false;
+  };
+
+  // Re-bind the two buttons if the Exam Hub is rendered by an older block.
+  function rebind(){
+    var b=examBox();if(!b)return;
+    b.querySelectorAll('[onclick*="tgyOpenExamTestSeries"]').forEach(function(el){el.setAttribute('onclick','return window.tgyOpenExamTestSeries('+JSON.stringify(window.tgyNavExam||'')+')')});
+  }
 })();
 </script>
