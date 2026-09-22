@@ -2937,7 +2937,8 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
       }
       const uniq=[]; const keys=new Set();
       all.forEach(t=>{const k=String(t.exam).trim()+'\u0000'+String(t.name).trim();if(keys.has(k))return;keys.add(k);uniq.push(t)});
-      window.tests=uniq;
+      tests=uniq;
+      window.tests=tests;
       nativeSet.call(localStorage,'tgy_tests',JSON.stringify(uniq));
       window.dispatchEvent(new Event('tgy-modern-tests-ready'));
       try{if(typeof window.renderHomeExams==='function')window.renderHomeExams()}catch(e){}
@@ -3051,7 +3052,105 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
     const css=document.createElement('style');
     css.textContent='.tgy-test-grid{max-height:none!important;overflow:visible!important}.tgy-test-preview-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.tgy-test-preview-head>div:first-child{margin-right:auto}';
     document.head.appendChild(css);
-    setTimeout(loadModernTests,1200);
-    setTimeout(loadModernTests,5000);
+    loadModernTests();
+    setTimeout(loadModernTests,3000);
   },{once:true});
 })();</script>
+
+
+<!-- TGY FLOW FIX 2026-09-22: Home immediate load + Exam > Test Series > Folder > Tests > Preview > Start -->
+<script id="tgy-flow-fix-20260922">
+(function(){
+  'use strict';
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v==null?d:v}catch(e){return d}}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function testsNow(){return Array.isArray(window.tests)?window.tests:[]}
+  function examVisible(ex){try{return typeof window.getFolderVisibilityStudent==='function'?window.getFolderVisibilityStudent(ex)!==false:true}catch(e){return true}}
+  function valid(t){return !!(t&&t.exam&&t.published!==false&&t.visible!==false&&(!t.availableUntil||new Date(String(t.availableUntil).length===10?t.availableUntil+'T23:59:59':t.availableUntil)>=new Date()))}
+  function modal(){return document.getElementById('examModal')}
+  function box(){return document.getElementById('examContent')}
+  function show(){var m=modal();if(m)m.style.display='flex'}
+  function hide(){var m=modal();if(m)m.style.display='none'}
+  function setNav(ex,level,returnTo,i){window.__tgyNav={exam:ex||null,level:level||'home',returnTo:returnTo||'home',testIndex:i==null?null:i,closed:false};window.tgyNavExam=ex||null}
+
+  // Test Series now has an explicit folder step. The folder contains the complete Test list.
+  window.tgyOpenExamTestSeries=function(exam){
+    if(!examVisible(exam))return false;
+    var b=box(),m=modal();if(!b||!m)return false;
+    var a=testsNow().filter(valid).filter(function(t){return t.exam===exam});
+    setNav(exam,'series-folder','hub',null);
+    var notes=J('tgy_pdf_notes',[]).filter(function(n){return n&&String(n.folder||n.exam||'').trim()===String(exam).trim()&&n.visible!==false&&n.published!==false});
+    b.innerHTML='<div class="tgy-list-head"><div><div class="tgy-kicker">Test Series</div><h2>📚 '+esc(exam)+'</h2><p class="muted">पहले Test Folder खोलें, फिर उसके अंदर सभी Tests दिखाई देंगे।</p></div><button class="btn gray" type="button" onclick="return tgyOpenExamHubFinal('+JSON.stringify(exam)+')">← परीक्षा</button></div>'+
+      '<div class="tgy-hub-grid">'+
+      '<div class="tgy-hub-card"><div class="tgy-hub-icon">📁</div><h3>'+esc(exam)+' — Test Folder</h3><p>'+a.length+' Tests उपलब्ध हैं</p><button class="btn orange" type="button" onclick="return tgyShowTestList('+JSON.stringify(exam)+',\'series-folder\')">📂 Folder खोलें</button></div>'+ 
+      '<div class="tgy-hub-card"><div class="tgy-hub-icon">📄</div><h3>Study Material</h3><p>'+notes.length+' PDF उपलब्ध हैं</p><button class="btn orange" type="button" onclick="return tgyOpenExamPdf('+JSON.stringify(exam)+')">📄 PDF खोलें</button></div>'+ 
+      '</div>';
+    show();return false;
+  };
+  window.tgyOpenSeriesInside=window.tgyOpenExamTestSeries;
+
+  // Keep Test List as the single place where all tests of the selected folder are shown.
+  window.tgyShowTestList=function(exam,returnTo){
+    if(!examVisible(exam))return false;
+    var b=box(),m=modal();if(!b||!m)return false;
+    var a=testsNow().map(function(t,i){return {t:t,i:i}}).filter(function(x){return valid(x.t)&&x.t.exam===exam});
+    a.sort(function(x,y){
+      function order(t){var n=String(t.name||'').trim();if(/^demo(?:\b|\s|[-_:])/i.test(n)||/^demo\s*test$/i.test(n))return [0,0,n.toLowerCase()];var q=n.match(/(?:^|\D)(\d+)(?:\D|$)/);return q?[1,Number(q[1]),n.toLowerCase()]:[2,999999,n.toLowerCase()]}
+      var A=order(x.t),B=order(y.t);return A[0]-B[0]||A[1]-B[1]||A[2].localeCompare(B[2],'hi');
+    });
+    setNav(exam,'tests',returnTo||'series-folder',null);
+    var h='<div class="tgy-list-head"><div><div class="tgy-kicker">📁 Test Folder</div><h2>🎯 '+esc(exam)+' — सभी Tests</h2><p class="muted">कुल '+a.length+' Tests • Demo → 1 → 2 → 3...</p></div><button class="btn gray" type="button" onclick="return tgyOpenExamTestSeries('+JSON.stringify(exam)+')">← Folder</button></div>';
+    if(!a.length)h+='<div class="card"><h3>📭 इस Folder में कोई Test उपलब्ध नहीं है।</h3></div>';
+    else{
+      h+='<div id="tgyTestGrid" class="tgy-test-grid">';
+      a.forEach(function(x,pos){
+        var t=x.t,can=t.demo===true;
+        try{can=can||(typeof hasPurchasedTest==='function'&&hasPurchasedTest(t));}catch(e){}
+        try{can=can||(typeof hasSeriesAccess==='function'&&hasSeriesAccess(t.exam,x.i));}catch(e){}
+        h+='<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+esc(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p><span class="tgy-status '+(t.demo===true?'free':can?'active':'locked')+'">'+(t.demo===true?'FREE DEMO':can?'🔓 Access Active':'🔒 Locked')+'</span></div><button type="button" class="btn '+(can?'':'orange')+'" onclick="return '+(can?'tgyOpenTestPreview('+x.i+',\''+esc(exam)+'\')':'tgyOpenLockedPurchase('+JSON.stringify(exam)+')')+'">'+(can?'▶️ Test खोलें':'🔒 Access लें')+'</button></div>';
+      });
+      h+='</div>';
+    }
+    b.innerHTML=h;show();return false;
+  };
+
+  // Before starting, make the current cloud-loaded tests the same array used by the actual runner.
+  window.tgyStartSelectedTest=function(i){
+    var a=testsNow(),idx=Number(i),t=a[idx];if(!valid(t))return false;
+    var can=t.demo===true;
+    try{can=can||(typeof hasPurchasedTest==='function'&&hasPurchasedTest(t));}catch(e){}
+    try{can=can||(typeof hasSeriesAccess==='function'&&hasSeriesAccess(t.exam,idx));}catch(e){}
+    if(!can)return false;
+    try{tests=a;window.tests=tests;}catch(e){window.tests=a}
+    window.activeTestExam=t.exam||null;window.openedTestFromSeries=true;
+    setNav(t.exam,'actual-test',(window.__tgyNav&&window.__tgyNav.returnTo)||'series-folder',idx);
+    hide();
+    setTimeout(function(){if(typeof window.startFinalMockTest==='function')window.startFinalMockTest(idx);else if(typeof window.openTest==='function')window.openTest(idx);},20);
+    return false;
+  };
+
+  // Exam hub remains the first screen after selecting an exam.
+  window.openExam=function(exam){return window.tgyOpenExamHubFinal(exam)};
+
+  // Do not let cloud refreshes replace an open Folder/Preview/Actual Test screen.
+  window.addEventListener('tgy-modern-tests-ready',function(){
+    var n=window.__tgyNav||{};
+    if(n.level==='tests' && n.exam && modal() && modal().style.display==='flex')window.tgyShowTestList(n.exam,n.returnTo||'series-folder');
+  });
+
+  // Home: render cached data immediately, then pull current Admin tests immediately (no 1.2s artificial wait).
+  function homeNow(){
+    try{
+      if(!Array.isArray(window.tests))window.tests=[];
+      if(window.tests.length===0){var c=J('tgy_tests',[]);if(Array.isArray(c)){window.tests=c;try{tests=c}catch(e){}}}
+      if(typeof window.renderHomeExams==='function')window.renderHomeExams();
+      if(typeof window.renderStudentSeriesPage==='function')window.renderStudentSeriesPage();
+      if(typeof window.renderStudentMockPage==='function')window.renderStudentMockPage();
+    }catch(e){console.warn('[TGY flow home]',e)}
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    homeNow();
+    if(typeof window.tgyLoadModernTests==='function')window.tgyLoadModernTests();
+  },{once:true});
+})();
+</script>
