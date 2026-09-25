@@ -2190,7 +2190,7 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
   window.tgyOpenNotesFolderFinal=function(ex){
     var box=document.getElementById("examContent"),m=document.getElementById("examModal");if(!box||!m)return;
     var ns=notes(ex);
-    var h='<div class="tgy-list-head"><div><h2>📄 '+E(ex)+' — Notes / Study Material</h2><p class="muted">इस परीक्षा के सभी Notes यहाँ हैं।</p></div><button class="btn gray" onclick="tgyOpenExamHubFinal('+E(JSON.stringify(ex))+')">← परीक्षा</button></div>';
+    var h='<div class="tgy-list-head"><div><h2>📄 '+E(ex)+' — Notes / Study Material</h2><p class="muted">इस परीक्षा के सभी Notes यहाँ हैं।</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn gray" onclick="tgyOpenExamHubFinal('+E(JSON.stringify(ex))+')">← परीक्षा</button><button type="button" class="btn gray" onclick="closeExam();return false;">✕ बंद करें</button></div></div>';
     if(!ns.length){h+='<div class="card"><h3>📭 अभी कोई Notes उपलब्ध नहीं हैं।</h3></div>'}
     else{
       h+='<div class="grid">';
@@ -3558,7 +3558,7 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
   window.tgyShowResultSummary=function(r){
     const s=window.state,c=document.getElementById('modalContent');if(!c||!s||!s.t||!Array.isArray(s.t.questions))return;
     const min=Math.floor(r.timeTaken/60),sec=r.timeTaken%60;
-    let html=`<div style="padding:20px;max-height:100vh;overflow:auto;background:#f4f7fb"><h2>🏆 Test Result</h2><div class="tgy-summary-grid"><div class="tgy-summary-box"><b>🟢 सही</b><br><span style="font-size:26px">${r.correct}</span></div><div class="tgy-summary-box"><b>🔴 गलत</b><br><span style="font-size:26px">${r.wrong}</span></div><div class="tgy-summary-box"><b>⚪ Attempted</b><br><span style="font-size:26px">${r.attempted}</span></div><div class="tgy-summary-box"><b>⚪ Not Attempted</b><br><span style="font-size:26px">${r.skipped}</span></div><div class="tgy-summary-box"><b>📊 Marks</b><br><span style="font-size:26px">${Number(r.score).toFixed(2)}</span></div><div class="tgy-summary-box"><b>❌ Negative</b><br><span style="font-size:26px">${Number(r.negativeMarks).toFixed(2)}</span></div></div><div class="card"><p><b>Total Questions:</b> ${r.total}</p><p><b>Final Score:</b> ${Number(r.score).toFixed(2)} / ${r.total}</p><p><b>Percentage:</b> ${r.percent}%</p><p><b>Time Taken:</b> ${min}m ${sec}s</p></div><h3 style="margin:18px 0 10px">📖 सभी Questions की Answer Information</h3>`;
+    let html=`<div style="padding:20px;max-height:100vh;overflow:auto;background:#f4f7fb"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">🏆 Test Result</h2><button type="button" class="btn gray" onclick="tgyBackToFolder();return false;">✕ बंद करें</button></div><div class="tgy-summary-grid"><div class="tgy-summary-box"><b>🟢 सही</b><br><span style="font-size:26px">${r.correct}</span></div><div class="tgy-summary-box"><b>🔴 गलत</b><br><span style="font-size:26px">${r.wrong}</span></div><div class="tgy-summary-box"><b>⚪ Attempted</b><br><span style="font-size:26px">${r.attempted}</span></div><div class="tgy-summary-box"><b>⚪ Not Attempted</b><br><span style="font-size:26px">${r.skipped}</span></div><div class="tgy-summary-box"><b>📊 Marks</b><br><span style="font-size:26px">${Number(r.score).toFixed(2)}</span></div><div class="tgy-summary-box"><b>❌ Negative</b><br><span style="font-size:26px">${Number(r.negativeMarks).toFixed(2)}</span></div></div><div class="card"><p><b>Total Questions:</b> ${r.total}</p><p><b>Final Score:</b> ${Number(r.score).toFixed(2)} / ${r.total}</p><p><b>Percentage:</b> ${r.percent}%</p><p><b>Time Taken:</b> ${min}m ${sec}s</p></div><h3 style="margin:18px 0 10px">📖 सभी Questions की Answer Information</h3>`;
     s.t.questions.forEach((q,i)=>{
       const opts=trimOptions(q.o),a=s.answers[i],ci=answerIndex(q.answer),ai=answerIndex(a),ok=ai!==null&&ci!==null&&ai===ci;
       const qtext=clean(q.intro||q.q||q.question||'');
@@ -3816,5 +3816,24 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
     guarded.__tgyNavGuarded=true;
     window.tgyResolveCurrentStudentAccess=guarded;
   }
+})();
+</script>
+
+<script id="tgy-locked-test-give-access-payment-fix">
+(function(){
+  // Locked test पर "Access लें" दबाते ही Payment/Purchase वाला पेज हमेशा खुलना चाहिए,
+  // भले ही उस exam के लिए exact pricing option न मिले।
+  var originalBuySeriesAccess=window.buySeriesAccess;
+  window.buySeriesAccess=function(exam,pricingIndex){
+    var options=[];
+    try{options=typeof getSeriesPricing==='function'?(getSeriesPricing(exam)||[]):[]}catch(e){options=[]}
+    var idx=Number(pricingIndex)||0;
+    if(!options.length||!options[idx]){
+      if(typeof window.tgyOpenLockedPurchase==='function')return window.tgyOpenLockedPurchase(exam);
+      if(typeof window.openStudentPage==='function'){window.tgyPurchaseExam=exam;return window.openStudentPage('purchase');}
+      return;
+    }
+    if(typeof originalBuySeriesAccess==='function')return originalBuySeriesAccess.apply(this,arguments);
+  };
 })();
 </script>
