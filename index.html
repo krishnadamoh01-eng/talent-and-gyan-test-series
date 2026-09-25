@@ -3757,8 +3757,8 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
         var t=x.t,free=t.demo===true,owned=false;
         try{owned=typeof hasPurchasedTest==='function'&&hasPurchasedTest(t)}catch(e){}
         var can=free||owned;
-        var action=can?'tgyOpenTestPreview('+x.i+')':'buySeriesAccess('+JSON.stringify(exam)+',0)';
-        h+='<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+esc(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>'+(free?'<span class="tgy-status free">FREE DEMO</span>':owned?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>')+'</div><button type="button" class="btn '+(can?'':'orange')+'" onclick="'+action+'">'+(can?'▶️ Test खोलें':'🔒 Access लें')+'</button></div>';
+        var action='tgyOpenTestPreview('+x.i+')';
+        h+='<div class="tgy-test-card"><div class="tgy-test-num">'+(pos+1)+'</div><div class="tgy-test-card-body"><h3>'+esc(t.name||'Test')+'</h3><p>'+((t.questions||[]).length)+' Questions • '+Number(t.time||60)+' मिनट</p>'+(free?'<span class="tgy-status free">FREE DEMO</span>':owned?'<span class="tgy-status active">🔓 Access Active</span>':'<span class="tgy-status locked">🔒 Locked</span>')+'</div><button type="button" class="btn '+(can?'':'orange')+'" onclick="'+action+'">'+(can?'▶️ Test खोलें':'👁️ Preview देखें')+'</button></div>';
       });
       h+='</div>';
     }
