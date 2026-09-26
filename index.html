@@ -1876,7 +1876,7 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
      var notes=J('tgy_pdf_notes',[]).filter(function(n){return n&&((n.folder||n.exam||'').trim()===ex)&&n.visible!==false&&n.published!==false;});
      var combos=J('tgy_combo_pricing',[]).filter(function(x){return x&&x.exam===ex;});
      html+='<div class="card" style="margin:14px 0;border:2px solid #1d65a6"><h2>📁 '+E(ex)+'</h2><div class="grid">';
-     if(sp.length){html+='<div class="card"><h3>📝 Test Series</h3>'+sp.map(function(x,i){var title=x.type==='folder'?'पूरा Test Series':((Number(x.count)||0)+' Tests');var pr=typeof seriesPriceText==='function'?seriesPriceText(x):'₹'+(Number(x.offer)||Number(x.mrp)||0);return '<div style="padding:10px 0;border-top:1px solid #eee"><b>'+E(title)+'</b><br>'+pr+'<br><span class="muted">'+E(typeof accessDurationTextStudent==='function'?accessDurationTextStudent(x):'Access')+'</span><br><button class="btn orange" onclick="tgyOpenPurchasePlan('+E(JSON.stringify(ex))+','+i+')">💳 यह Plan खरीदें</button></div>';}).join('')+'</div>';}
+     if(sp.length){html+='<div class="card"><h3>📝 Test Series</h3><div class="tgy-plan-grid">'+sp.map(function(x,i){var title=x.type==='folder'?'पूरा Test Series':((Number(x.count)||0)+' Tests');var pr=typeof seriesPriceText==='function'?seriesPriceText(x):'₹'+(Number(x.offer)||Number(x.mrp)||0);return '<div class="tgy-plan-item"><b>'+E(title)+'</b><br>'+pr+'<br><span class="muted">'+E(typeof accessDurationTextStudent==='function'?accessDurationTextStudent(x):'Access')+'</span><br><button class="btn orange" onclick="tgyOpenPurchasePlan('+E(JSON.stringify(ex))+','+i+')">💳 यह Plan खरीदें</button></div>';}).join('')+'</div></div>';}
      if(notes.length){var n0=notes[0],meta=typeof window.tgyFolderMeta==='function'?window.tgyFolderMeta(ex)||{}:{},pp=Number(meta.offer)||Number(meta.mrp)||0;html+='<div class="card"><h3>📄 PDF Notes</h3><p>'+notes.length+' PDF उपलब्ध</p><b>'+ (pp?'₹'+pp:'FREE') +'</b><br><button class="btn orange" onclick="'+(pp?'tgyOpenPdfPurchase('+E(JSON.stringify(ex))+','+pp+','+(Number(meta.days)||0)+')':'openStudentPage(\"notes\")')+'">'+(pp?'💳 PDF खरीदें':'📖 PDF देखें')+'</button></div>';}
      if(combos.length){html+='<div class="card"><h3>📦 PDF + Test Series</h3>'+combos.map(function(x,i){return '<div style="padding:10px 0;border-top:1px solid #eee"><b>'+E(x.name||'Combo')+'</b><br><b>₹'+(Number(x.offer)||Number(x.mrp)||0)+'</b><br><button class="btn orange" onclick="tgyOpenComboPurchase('+E(JSON.stringify(ex))+','+i+')">💳 Combo खरीदें</button></div>';}).join('')+'</div>';}
      html+='</div><button class="btn" onclick="openExam('+E(JSON.stringify(ex))+')">📂 Details / Tests देखें</button></div>';
@@ -1885,6 +1885,13 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
  };
 })();
 </script>
+<style id="tgy-plan-grid-css">
+.tgy-plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:8px;max-height:280px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px}
+.tgy-plan-item{border:1px solid #eee;border-radius:10px;padding:9px;font-size:13px;background:#fafcff}
+.tgy-plan-item b{font-size:13px}
+.tgy-plan-item .btn{padding:7px 9px;font-size:12px;margin-top:5px;width:100%}
+@media(max-width:600px){.tgy-plan-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:230px}}
+</style>
 <script id="tgy-final-lock-purchase-route">
 (function(){
   function goPurchase(exam){
@@ -2801,7 +2808,7 @@ html,body{max-width:100%;overflow-x:hidden}
     if(!root)return;
     var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];
     while(w.nextNode())nodes.push(w.currentNode);
-    nodes.forEach(function(n){var p=n.parentElement;if(!p||/^(SCRIPT|STYLE|NOSCRIPT)$/.test(p.tagName))return;if(n.nodeValue.indexOf('PDF Notes')>=0)n.nodeValue=n.nodeValue.replace(/PDF Notes/g,'Study Material')});
+    nodes.forEach(function(n){var p=n.parentElement;if(!p||/^(SCRIPT|STYLE|NOSCRIPT)$/.test(p.tagName))return;if(n.nodeValue.indexOf('PDF Notes')>=0)n.nodeValue=n.nodeValue.replace(/PDF Notes/g,'Study Material');if(n.nodeValue.indexOf('My Purchased Tests')>=0)n.nodeValue=n.nodeValue.replace(/My Purchased Tests/g,'My Purchase')});
   }
   function renameNow(){renameVisible(document.body)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(renameNow,50)});else setTimeout(renameNow,50);
