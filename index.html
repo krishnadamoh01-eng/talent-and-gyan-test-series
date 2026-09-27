@@ -1558,7 +1558,7 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
     window.tgyGoQ=function(j){if(window.state){window.state.idx=j;window.tgyRenderExamQ()}}; window.tgyPrevQ=function(){if(window.state&&window.state.idx>0){window.state.idx--;window.tgyRenderExamQ()}};
     window.tgyNextQ=function(){const s=window.state;if(!s)return;if(s.answers[s.idx]===null){alert('पहले कोई विकल्प चुनें।');return}if(s.idx===s.t.questions.length-1)window.tgySubmitExam(false);else{s.idx++;window.tgyRenderExamQ()}};
     window.tgyMarkReview=function(){const s=window.state;if(!s)return;s.review[s.idx]=!s.review[s.idx];if(s.idx<s.t.questions.length-1){s.idx++;window.tgyRenderExamQ()}else window.tgyRenderPalette()};
-    window.tgySubmitExam=function(auto){const s=window.state;if(!s)return;clearInterval(window.timer);const total=s.t.questions.length,attempted=s.answers.filter(x=>x!==null).length;let correct=0;s.t.questions.forEach((q,j)=>{if(s.answers[j]!==null&&Number(s.answers[j])===Number(q.answer))correct++});const wrong=attempted-correct,skipped=total-attempted,neg=s.t.negativeMarking?Number(s.t.negativeMarks||0):0,negativeMarks=wrong*neg,score=correct-negativeMarks,percent=total?((score/total)*100).toFixed(2):'0.00',timeTaken=Math.max(0,Math.round((Date.now()-(s.startedAt||Date.now()))/1000));try{localStorage.setItem('tgy_done_'+encodeURIComponent((s.t.exam||'')+'||'+(s.t.name||'')),'1')}catch(e){}let rs=[];try{rs=JSON.parse(localStorage.getItem('tgy_results')||'[]')}catch(e){}rs.unshift({test:s.t.name,exam:s.t.exam,total,attempted,wrong,correct,skipped,score,negativeMarks,percent,timeTaken,date:new Date().toLocaleString()});localStorage.setItem('tgy_results',JSON.stringify(rs));if(typeof window.tgyShowResultSummary==='function')window.tgyShowResultSummary({total,attempted,skipped,correct,wrong,negativeMarks,score,percent,timeTaken});else content.innerHTML=`<div class="card"><h2>🏆 Test Result</h2><p>सही: ${correct} / ${total} • अंक: ${Number(score).toFixed(2)} • ${percent}%</p><button class="btn" onclick="window.tgyShowSeriesSafe('${E(s.t.exam||'')}')">Test Series</button></div>`};
+    window.tgySubmitExam=function(auto){const s=window.state;if(!s)return;clearInterval(window.timer);const total=s.t.questions.length,attempted=s.answers.filter(x=>x!==null).length;let correct=0;s.t.questions.forEach((q,j)=>{if(s.answers[j]!==null&&q.answer!==null&&q.answer!==undefined&&Number(s.answers[j])===Number(q.answer))correct++});const wrong=attempted-correct,skipped=total-attempted,neg=s.t.negativeMarking?Number(s.t.negativeMarks||0):0,negativeMarks=wrong*neg,score=correct-negativeMarks,percent=total?((score/total)*100).toFixed(2):'0.00',timeTaken=Math.max(0,Math.round((Date.now()-(s.startedAt||Date.now()))/1000));try{localStorage.setItem('tgy_done_'+encodeURIComponent((s.t.exam||'')+'||'+(s.t.name||'')),'1')}catch(e){}let rs=[];try{rs=JSON.parse(localStorage.getItem('tgy_results')||'[]')}catch(e){}rs.unshift({test:s.t.name,exam:s.t.exam,total,attempted,wrong,correct,skipped,score,negativeMarks,percent,timeTaken,date:new Date().toLocaleString()});localStorage.setItem('tgy_results',JSON.stringify(rs));if(typeof window.tgyShowResultSummary==='function')window.tgyShowResultSummary({total,attempted,skipped,correct,wrong,negativeMarks,score,percent,timeTaken});else content.innerHTML=`<div class="card"><h2>🏆 Test Result</h2><p>सही: ${correct} / ${total} • अंक: ${Number(score).toFixed(2)} • ${percent}%</p><button class="btn" onclick="window.tgyShowSeriesSafe('${E(s.t.exam||'')}')">Test Series</button></div>`};
     window.tgyExitExam=function(){if(!confirm('क्या आप Test से बाहर निकलना चाहते हैं? आपका वर्तमान प्रयास Submit नहीं होगा।'))return;clearInterval(window.timer);modal.style.display='none';content.style.cssText='';window.tgyShowSeriesSafe(raw.exam||'')};
     window.tgyRenderExamQ(); let sec=Math.max(1,Number(raw.time||60)*60);clearInterval(window.timer);window.timer=setInterval(()=>{sec--;const el=document.getElementById('tgyExamTimer');if(el)el.textContent=`⏱️ ${Math.max(0,Math.floor(sec/60))}:${String(Math.max(0,sec%60)).padStart(2,'0')}`;if(sec<=0)window.tgySubmitExam(true)},1000);
   }
@@ -2166,9 +2166,9 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
     var html='<div class="tgy-section-head"><div class="tgy-section-title">💳 Access Plans</div></div>';
     exs.forEach(function(ex){
       var ps=prices(ex); if(!ps.length)return;
-      html+='<div class="card" style="margin:10px 0;border:2px solid #dce7f3"><h3>📁 '+E(ex)+'</h3><div class="grid">'+ps.map(function(x,i){
+      html+='<div class="card" style="margin:10px 0;border:2px solid #dce7f3"><h3>📁 '+E(ex)+'</h3><div class="tgy-plan-grid">'+ps.map(function(x,i){
         var title=x.type==="folder"?"पूरा Test Series":((Number(x.count)||1)+" Tests");
-        return '<div class="card" style="margin:0"><b>'+E(x.name||title)+'</b><p>'+price(x)+' • '+E(duration(x))+'</p><button class="btn orange" onclick="return tgyOpenPurchasePayment('+E(JSON.stringify(ex))+','+i+')">PURCHASE</button><button class="btn gray" style="margin-left:6px" onclick="return tgyShowPlanDetails('+E(JSON.stringify(ex))+','+i+')">Details</button></div>';
+        return '<div class="tgy-plan-item"><b>'+E(x.name||title)+'</b><br>'+price(x)+'<br><span class="muted">'+E(duration(x))+'</span><br><button class="btn orange" onclick="return tgyOpenPurchasePayment('+E(JSON.stringify(ex))+','+i+')">PURCHASE</button><button class="btn gray" onclick="return tgyShowPlanDetails('+E(JSON.stringify(ex))+','+i+')">Details</button></div>';
       }).join("")+'</div></div>';
     });
     sec.innerHTML=html;
@@ -3473,11 +3473,15 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
   const E=window.esc||function(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))};
   const roman=['I','II','III','IV','V','VI','VII','VIII','IX','X'];
   function clean(v){return String(v??'').replace(/\u200b|\u200c|\u200d|\ufeff/g,'').trim()}
-  function answerIndex(v){
+  function normEqual(a,b){return clean(a).toLowerCase()===clean(b).toLowerCase()}
+  function answerIndex(v,opts){
     if(v===null||v===undefined||v==='')return null;
     if(typeof v==='number'&&Number.isFinite(v))return v>=0?v:null;
-    const s=clean(v),m=s.match(/^\(?\s*([A-Ea-e])\s*\)?/);
+    const s=clean(v);
+    const m=s.match(/^\(?\s*([A-Ea-e])\s*[).:]?\s*$/);
     if(m)return m[1].toUpperCase().charCodeAt(0)-65;
+    if(/^-?\d+$/.test(s)){const n=Number(s);return Number.isFinite(n)?(n>=0?n:null):null;}
+    if(Array.isArray(opts)){const idx=opts.findIndex(o=>normEqual(o,s));if(idx>=0)return idx;}
     const n=Number(s);return Number.isFinite(n)?(n>=0?n:null):null;
   }
   function trimOptions(arr){
@@ -3488,7 +3492,7 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
   function normalizeQ(q){
     if(Array.isArray(q)){
       const o=trimOptions(q[1]);
-      const out={q:String(q[0]??''),o:o,answer:answerIndex(q[2]),ex:q[3]??''};
+      const out={q:String(q[0]??''),o:o,answer:answerIndex(q[2],o),ex:q[3]??''};
       if(q.passage)out.passage=q.passage;
       if(q.type)out.type=q.type;
       if(q.intro)out.intro=q.intro;
@@ -3498,7 +3502,7 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
       return out;
     }
     const o=trimOptions(Array.isArray(q?.o)?q.o:[q?.a??'',q?.b??'',q?.c??'',q?.d??'',q?.e??'']);
-    const out={q:String(q?.q??q?.question??''),o:o,answer:answerIndex(q?.answer??q?.correct),ex:q?.ex??q?.explanation??''};
+    const out={q:String(q?.q??q?.question??''),o:o,answer:answerIndex(q?.answer??q?.correct,o),ex:q?.ex??q?.explanation??''};
     ['passage','type','intro','number','range','passageRange'].forEach(k=>{if(q&&q[k]!==undefined)out[k]=q[k]});
     if(Array.isArray(q?.statements))out.statements=q.statements.slice();
     if(Array.isArray(q?.conclusions))out.conclusions=q.conclusions.slice();
