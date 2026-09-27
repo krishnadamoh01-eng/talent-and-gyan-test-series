@@ -189,7 +189,7 @@ header{margin-left:0!important;padding-left:5%!important}
 <nav class="tgy-new-nav" id="studentNavigation">
   <a href="#" onclick="studentGoHome();return false">🏠 Home</a>
   <a href="#" onclick="openStudentPage('series');return false">📚 Test Series</a>
-  <a href="#" onclick="openStudentPage('purchased');return false">🎓 My Purchased Tests</a>
+  <a href="#" onclick="openStudentPage('purchased');return false">🎓 My Purchase</a>
   <a href="#" onclick="openStudentPage('notes');return false">📄 PDF Notes</a>
   <a href="#" onclick="openStudentPage('help');return false">📞 सहायता</a>
   <span class="tgy-nav-spacer"></span>
@@ -647,14 +647,14 @@ function openStudentPage(key){
  if(key==="home"){studentGoHome();return}
  let overlay=document.getElementById("studentPageOverlay");
  if(!overlay){overlay=document.createElement("div");overlay.id="studentPageOverlay";overlay.className="student-page";document.body.appendChild(overlay)}
- const titles={mock:"🎯 Mock Tests",series:"📚 Test Series",plans:"💳 Access Plans",info:"ℹ️ Exam Information",help:"📞 सहायता",purchased:"🎓 My Purchased Tests",notes:"📄 PDF Notes"};
+ const titles={mock:"🎯 Mock Tests",series:"📚 Test Series",plans:"💳 Access Plans",info:"ℹ️ Exam Information",help:"📞 सहायता",purchased:"🎓 My Purchase",notes:"📄 PDF Notes"};
  let body="";
  if(key==="mock")body='<div class="card"><h2>🎯 Mock Tests</h2><p class="muted">Test देखने के लिए नीचे परीक्षा चुनें। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentMockPageList"></div></div>';
  if(key==="series")body='<div class="card"><h2>📚 Test Series</h2><p class="muted">हर परीक्षा की पूरी Test Series एक ही Folder में मिलेगी। Test खोलते समय Login/Registration जरूरी होगा।</p><div id="studentSeriesPageList"></div></div>';
  if(key==="plans")body='<div class="card"><h2 style="display:none">💳 Access Plans</h2><p>पहले Test Series चुनें, फिर अपना Plan चुनें और Payment करें।</p><button class="btn orange" onclick="pay()">Plan चुनें / Payment</button></div>';
 
  if(key==="info")body='<div class="card"><h2>ℹ️ Exam Information</h2><p>परीक्षा की तारीख, आवेदन, Admit Card, Exam Pattern, Syllabus, Result और Latest Updates यहाँ दिखाई देंगे।</p></div>';
- if(key==="purchased")body='<div class="card"><h2>🎓 My Purchased Tests</h2><div id="myPurchasedTests"></div></div>';
+ if(key==="purchased")body='<div class="card"><h2>🎓 My Purchase</h2><div id="myPurchasedTests"></div></div>';
  if(key==="notes")body='<div class="card"><h2>📄 PDF Notes</h2><p>Notes दिखाई देंगे। Open करने के लिए Login/Register जरूरी होगा। Paid Notes के लिए पहले खरीदना होगा।</p><div id="studentNotesList"></div></div>';
  if(key==="help")body='<div class="card"><h2>📞 सहायता</h2><p>Payment, Login या Test से संबंधित सहायता के लिए यहाँ जानकारी दी जाएगी।</p></div>';
  overlay.innerHTML='<div class="student-page-head"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="student-close" onclick="studentGoBack()">← पीछे</button><h2>'+titles[key]+'</h2></div><button class="student-close" onclick="closeStudentPage()">✕ बंद करें</button></div><div class="student-page-body">'+body+'</div>';
