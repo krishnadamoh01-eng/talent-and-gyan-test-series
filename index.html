@@ -3480,7 +3480,7 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
     const s=clean(v);
     const m=s.match(/^\(?\s*([A-Ea-e])\s*[).:]?\s*$/);
     if(m)return m[1].toUpperCase().charCodeAt(0)-65;
-    if(/^-?\d+$/.test(s)){const n=Number(s);return Number.isFinite(n)?(n>=0?n:null):null;}
+    if(/^-?\d+$/.test(s)){const n=Number(s);if(!Array.isArray(opts)||(n>=0&&n<opts.length))return Number.isFinite(n)?(n>=0?n:null):null;}
     if(Array.isArray(opts)){const idx=opts.findIndex(o=>normEqual(o,s));if(idx>=0)return idx;}
     const n=Number(s);return Number.isFinite(n)?(n>=0?n:null):null;
   }
@@ -3567,6 +3567,21 @@ window.tgyResolveCurrentStudentAccess=window.tgyResolveCurrentStudentAccess||fun
     let sec=Math.max(1,Number(t.time||60)*60);clearInterval(window.timer);window.timer=setInterval(()=>{sec--;const el=document.getElementById('tgyExamTimer');if(el)el.textContent=`⏱️ ${Math.max(0,Math.floor(sec/60))}:${String(Math.max(0,sec%60)).padStart(2,'0')}`;if(sec<=0)window.tgySubmitExam(true)},1000);
   };
   window.tgyNextQ=function(){const s=window.state;if(!s)return;if(s.answers[s.idx]===null){alert('पहले कोई विकल्प चुनें।');return}if(s.idx<s.t.questions.length-1){s.idx++;window.tgyRenderExamQ()}else{window.tgyRenderPalette()}};
+  window.tgySubmitExam=function(auto){
+    const s=window.state;if(!s||!s.t||!Array.isArray(s.t.questions))return;
+    clearInterval(window.timer);
+    const total=s.t.questions.length;let attempted=0,correct=0;
+    s.t.questions.forEach((q,j)=>{
+      const ai=answerIndex(s.answers[j]),ci=answerIndex(q.answer,trimOptions(q.o));
+      if(ai!==null){attempted++;if(ci!==null&&ai===ci)correct++}
+    });
+    const wrong=attempted-correct,skipped=total-attempted,neg=s.t.negativeMarking?Number(s.t.negativeMarks||0):0,negativeMarks=wrong*neg,score=correct-negativeMarks,percent=total?((score/total)*100).toFixed(2):'0.00',timeTaken=Math.max(0,Math.round((Date.now()-(s.startedAt||Date.now()))/1000));
+    try{localStorage.setItem('tgy_done_'+encodeURIComponent((s.t.exam||'')+'||'+(s.t.name||'')),'1')}catch(e){}
+    let rs=[];try{rs=JSON.parse(localStorage.getItem('tgy_results')||'[]')}catch(e){}
+    rs.unshift({test:s.t.name,exam:s.t.exam,total,attempted,wrong,correct,skipped,score,negativeMarks,percent,timeTaken,date:new Date().toLocaleString()});
+    try{localStorage.setItem('tgy_results',JSON.stringify(rs))}catch(e){}
+    window.tgyShowResultSummary({total,attempted,skipped,correct,wrong,negativeMarks,score,percent,timeTaken});
+  };
   window.tgyShowResultSummary=function(r){
     const s=window.state,c=document.getElementById('modalContent');if(!c||!s||!s.t||!Array.isArray(s.t.questions))return;
     const min=Math.floor(r.timeTaken/60),sec=r.timeTaken%60;
