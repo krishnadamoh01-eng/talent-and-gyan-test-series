@@ -218,17 +218,13 @@ body.admin-locked > header,body.admin-locked > .layout,body.admin-locked > main,
         <p>यहाँ से PDF सीधे अपलोड करें। विद्यार्थी इसे वेबसाइट पर पढ़ सकेगा; सुरक्षित पठन हेतु Download button नहीं दिया जाएगा।</p>
         <label>Notes का नाम</label>
         <input id="noteTitle" placeholder="जैसे MP पटवारी Notes">
-        <label>Exam / Folder का नाम</label>
+        <label>1. परीक्षा चुनें</label>
         <select id="noteExam"></select>
-        <div class="row">
-          <div><label>💰 MRP (₹)</label><input id="noteMrp" type="number" min="0" placeholder="जैसे 50"></div>
-          <div><label>🏷️ Offer Price (₹)</label><input id="noteOffer" type="number" min="0" placeholder="जैसे 30"></div>
-          <div><label>📅 Available Till</label><input id="noteUntil" type="date"></div>
-        </div>
-        <label>📄 PDF Upload करें</label>
+        <label>2. 📄 PDF Upload करें</label>
         <input id="notePdfFile" type="file" accept="application/pdf,.pdf" style="width:100%;padding:10px">
         <div id="noteUploadStatus" class="muted" style="margin:8px 0;color:#667085"></div>
-        <button type="button" class="btn orange" onclick="uploadPdfNote()">⬆️ PDF Upload करके नया Note Save करें</button>
+        <p class="muted" style="font-size:13px">Price/Access का सेटअप अब <b>Access Pricing</b> Section में होगा।</p>
+        <button type="button" class="btn orange" onclick="uploadPdfNote()">3. ⬆️ Upload करें</button>
       </div>
       <div id="adminNotesList"></div>
     </section>
@@ -356,20 +352,16 @@ body.admin-locked > header,body.admin-locked > .layout,body.admin-locked > main,
           <div>
             <label>📁 2. Access Option</label>
             <select id="apType" onchange="apTypeChanged()">
-              <option value="folder">📁 पूरा Test Series / Folder</option>
-              <option value="testseries">⚙️ Custom Test Series</option>
+              <option value="folder">1️⃣ Test Series — पूरी Series</option>
+              <option value="testseries">2️⃣ Custom Test — ख़ुद Numbers डालें</option>
+              <option value="pdf_folder">3️⃣ PDF — सभी PDF Notes</option>
+              <option value="pdf_custom">4️⃣ Custom PDF — ख़ुद Numbers डालें</option>
+              <option value="combo">5️⃣ Test + PDF दोनों एक साथ</option>
             </select>
           </div>
           <div id="apCustomWrap" style="display:none">
-            <label>📝 Custom में कितने Tests?</label>
-            <select id="apCount">
-              <option value="10">10 Tests</option>
-              <option value="20">20 Tests</option>
-              <option value="30">30 Tests</option>
-              <option value="50">50 Tests</option>
-              <option value="80">80 Tests</option>
-              <option value="100">100 Tests</option>
-            </select>
+            <label id="apCustomLabel">📝 कौन-कौन से Test Numbers? (जैसे: 1,3,5,10)</label>
+            <input id="apNumbers" placeholder="जैसे: 1,3,5,10">
           </div>
           <div id="apNameWrap" style="display:none">
             <label>Custom का नाम (Optional)</label>
@@ -948,8 +940,6 @@ window.mtFinalSave = async function() {
    ========================================================================= */
 
 window.mtPreview = [];
-window.mtDeletedQuestionKeys = new Set();
-window.mtLastPreviewRaw = "";
 
 function cleanText(v) {
   return String(v ?? '')
@@ -967,51 +957,14 @@ function looksLikePassage(t) {
 
 function splitStatementBlock(full) {
   const lines = full.split('\n').map(x => x.trim()).filter(Boolean);
-  const stmtHeadRe = /^(?:कथन|Statements?|Statement)\s*(?:[IVX]+|\d+)?\s*[:：\.\-]?\s*(.*)$/i;
-  const conclHeadRe = /^(?:निष्कर्ष|Conclusions?|Conclusion)\s*(?:[IVX]+|\d+)?\s*[:：\.\-]?\s*(.*)$/i;
-  const si = lines.findIndex(x => stmtHeadRe.test(x));
-  const ci = si >= 0 ? lines.findIndex((x, j) => j > si && conclHeadRe.test(x)) : -1;
+  let si = lines.findIndex(x => /^(?:कथन|Statements?|Statement)\s*[:：]?/i.test(x));
+  let ci = si >= 0 ? lines.findIndex((x, j) => j > si && /^(?:निष्कर्ष|Conclusions?|Conclusion)\s*[:：]?/i.test(x)) : -1;
   if (si < 0 || ci < 0) return null;
-
-  const statements = [];
-  for (const line of lines.slice(si, ci)) {
-    const m = line.match(stmtHeadRe);
-    if (m) {
-      if (m[1]) statements.push(m[1].trim());
-    } else if (line) {
-      statements.push(line);
-    }
-  }
-
-  const conclusions = [];
-  for (const line of lines.slice(ci)) {
-    const m = line.match(conclHeadRe);
-    if (m) {
-      if (m[1]) conclusions.push(m[1].trim());
-    } else if (line) {
-      conclusions.push(line);
-    }
-  }
-
   return {
     intro: lines.slice(0, si).join('\n').trim(),
-    statements: statements.filter(Boolean),
-    conclusions: conclusions.filter(Boolean)
+    statements: lines.slice(si + 1, ci),
+    conclusions: lines.slice(ci + 1)
   };
-}
-
-function mtContextMarker(line) {
-  const x = String(line || '').trim();
-  return /^(?:[-*•]+\s*)?(?:निर्देश|दिशा|दिशा-निर्देश|गद्यांश|पद्यांश|काव्यांश|कथ्यांश|कथनांश|पैसेज|केसलेट|अनुच्छेद|संदर्भ|प्रसंग|भाग|पाठ|Instructions?|Directions?|Passage|Prose\s+Passage|Poetry\s+Passage|Poem|Poetry|Verse|Stanza|Extract|Context|Caselet|Section|Part|Text|Reading\s+Passage)\s*(?:[:：ः\-]|\(|$)/i.test(x);
-}
-
-function mtContextTarget(text) {
-  const x = String(text || '');
-  let m = x.match(/(?:प्रश्न|Question|Questions?|Q\.)\s*(\d{1,4})\s*(?:से|to|[-–—])\s*(\d{1,4})/i);
-  if (m) return { from: Number(m[1]), to: Number(m[2]) };
-  m = x.match(/(?:प्रश्न|Question|Q\.)\s*(\d{1,4})/i);
-  if (m) return { from: Number(m[1]), to: Number(m[1]) };
-  return null;
 }
 
 function mtAutoParse(raw) {
@@ -1019,16 +972,6 @@ function mtAutoParse(raw) {
   if (!text) return { questions: [], type: "normal" };
   text = text.replace(/[‐‑‒–—―]/g, "-");
 
-  /*
-   * Robust bulk parser:
-   * - accepts Hindi/English question labels, including "प्रश्न 45:"
-   * - accepts the exact common format:
-   *     (A) ... (B) ... (C) ... (D) ...
-   *     उत्तर: (A)
-   *     जानकारी: ...
-   * - does not require question numbers to be sequential. 45 followed by 5
-   *   is still two valid questions; display numbering is handled separately.
-   */
   const qReG = /^\s*(?:प्रश्न|Question|question|क्वेश्चन|Q)\s*(?:No\.?|क्रमांक|क्रम)?\s*(\d{1,4})?\s*[\.\)\-:\/|]?\s*/gim;
   const starts = [];
   let m;
@@ -1043,49 +986,38 @@ function mtAutoParse(raw) {
   }
   if (!starts.length) return { questions: [], type: "normal" };
 
-  const optRe = /^\s*\(?([A-Ea-e])\)?\s*[\.\)\-:\/]+\s*(.*)$/;
+  const preamble = cleanText(text.slice(0, starts[0].pos));
+  let activePassage = looksLikePassage(preamble) ? preamble : "";
+
+  const optRe = /^\s*\(?([A-Ea-e])\)?[\.\)\-:\/]\s*(.*)$/;
   const infoRe = /^\s*(?:जानकारी|व्याख्या|विवरण|Explanation|Description|Solution|समाधान|नोट|Note|कारण|स्पष्टीकरण)\s*[:=\-]\s*(.*)$/i;
   const ansRe = /^\s*(?:Right\s*Answer|Right\s*Ans\.?|Correct\s*Answer|Answer|Ans\.?|सही\s*उत्तर|सही\s*विकल्प|उत्तर|Correct)\s*[:=\-]\s*(.*)$/i;
   const idxMap = { A: 0, B: 1, C: 2, D: 3, E: 4 };
+
   const out = [];
-  const contexts = [];
-
-  const preamble = cleanText(text.slice(0, starts[0].pos));
-  if (looksLikePassage(preamble)) {
-    contexts.push({ text: preamble, target: mtContextTarget(preamble), fallbackIndex: 0 });
-  }
-
   for (let i = 0; i < starts.length; i++) {
     const block = text.slice(starts[i].end, i + 1 < starts.length ? starts[i + 1].pos : text.length).trim();
     if (!block) continue;
-
-    const allLines = block.split('\n').map(x => x.trim()).filter(x => x && !/^[-_]{5,}$/.test(x));
-    if (!allLines.length) continue;
+    const lines = block.split('\n').map(x => x.trim()).filter(x => x && !/^[-_]{5,}$/.test(x));
 
     let firstOpt = -1;
-    for (let j = 0; j < allLines.length; j++) {
-      if (optRe.test(allLines[j])) { firstOpt = j; break; }
+    for (let j = 0; j < lines.length; j++) {
+      if (optRe.test(lines[j])) { firstOpt = j; break; }
     }
     if (firstOpt < 0) continue;
 
-    /* Keep a context/passage only when it is explicitly marked. */
-    let ctxAt = -1;
-    for (let j = firstOpt; j < allLines.length; j++) {
-      if (mtContextMarker(allLines[j])) { ctxAt = j; break; }
-    }
-    const questionLines = ctxAt >= 0 ? allLines.slice(0, ctxAt) : allLines;
-    if (ctxAt >= 0) {
-      const ctxText = allLines.slice(ctxAt).join('\n').trim();
-      contexts.push({ text: ctxText, target: mtContextTarget(ctxText), fallbackIndex: i + 1 });
-    }
-
-    const before = questionLines.slice(0, firstOpt);
+    const before = lines.slice(0, firstOpt);
     const opts = ["", "", "", "", ""];
     let answer = "", ex = "", current = -1;
 
-    for (let j = firstOpt; j < questionLines.length; j++) {
-      const line = questionLines[j];
-
+    for (let j = firstOpt; j < lines.length; j++) {
+      const line = lines[j];
+      const im = line.match(infoRe);
+      if (im) {
+        ex = im[1].trim();
+        if (j + 1 < lines.length) ex += (ex ? "\n" : "") + lines.slice(j + 1).join("\n");
+        break;
+      }
       const am = line.match(ansRe);
       if (am) {
         const a = am[1].trim();
@@ -1094,74 +1026,42 @@ function mtAutoParse(raw) {
         current = -1;
         continue;
       }
-
-      const im = line.match(infoRe);
-      if (im) {
-        ex = im[1].trim();
-        if (j + 1 < questionLines.length) ex += (ex ? "\n" : "") + questionLines.slice(j + 1).join("\n");
-        break;
-      }
-
       const om = line.match(optRe);
       if (om) {
         current = idxMap[om[1].toUpperCase()] ?? -1;
         if (current >= 0) opts[current] = (om[2] || "").trim();
         continue;
       }
-
       if (current >= 0) opts[current] += (opts[current] ? " " : "") + line;
     }
 
     if (!before.length || opts.filter(Boolean).length < 2) continue;
-
     const q = before.join("\n").trim();
     const sc = splitStatementBlock(q);
+
     out.push({
-      q,
+      q: q,
       o: opts,
-      answer,
-      ex,
+      answer: answer,
+      ex: ex,
       number: starts[i].num || (i + 1),
-      type: sc ? "statement-conclusion" : "normal",
-      passage: "",
+      type: sc ? "statement-conclusion" : (activePassage ? "passage" : "normal"),
+      passage: activePassage,
       statements: sc ? sc.statements : [],
       conclusions: sc ? sc.conclusions : [],
       intro: sc ? sc.intro : ""
     });
   }
 
-  out.forEach((q, idx) => {
-    const qn = Number(q.number);
-    const hit = contexts.find(c => {
-      if (c.target && Number.isFinite(qn)) return qn >= c.target.from && qn <= c.target.to;
-      return c.fallbackIndex === idx;
-    });
-    if (hit) {
-      q.passage = hit.text;
-      q.type = q.type === "statement-conclusion" ? q.type : "passage";
-    }
-  });
-
   return {
     questions: out,
-    type: out.some(x => x.type === "passage") ? "Mixed / Passage" :
-          (out.some(x => x.type === "statement-conclusion") ? "कथन–निष्कर्ष" : "Normal")
+    type: out.some(x => x.type === "passage") ? "Mixed / Passage" : (out.some(x => x.type === "statement-conclusion") ? "कथन–निष्कर्ष" : "Normal")
   };
 }
 
 window.mtTextPreview = function() {
   const raw = document.getElementById("mtBulkText")?.value || "";
   if (!raw.trim()) { alert("पहले पूरा Question Set Paste करें।"); return; }
-
-  // If the Bulk text was actually changed after a delete, allow the
-  // edited/new input to be previewed again. If it is unchanged, a
-  // question just deleted from Saved Questions must NOT come back merely
-  // because Preview was clicked again.
-  if (window.mtLastPreviewRaw !== raw) {
-    window.mtDeletedQuestionKeys.clear();
-  }
-  window.mtLastPreviewRaw = raw;
-
   const parsed = mtAutoParse(raw);
   const incoming = parsed.questions || [];
   if (!incoming.length) {
@@ -1169,36 +1069,12 @@ window.mtTextPreview = function() {
     if (st0) st0.innerHTML = "❌ कोई Question पहचान में नहीं आया। कृपया फ़ॉर्मेट जाँचें।";
     return;
   }
-
-  // Pending Preview is temporary. Append only genuinely new Questions;
-  // the same Bulk batch pasted/previewed repeatedly must not duplicate.
-  const norm = (v) => cleanText(v).replace(/\s+/g, " ").toLowerCase();
-  const keyOf = (x) => [
-    norm(x.q),
-    ...(Array.isArray(x.o) ? x.o.map(norm) : []),
-    norm(x.answer),
-    norm(x.ex),
-    norm(x.passage),
-    ...(Array.isArray(x.statements) ? x.statements.map(norm) : []),
-    ...(Array.isArray(x.conclusions) ? x.conclusions.map(norm) : [])
-  ].join("\u001f");
-
   const previous = Array.isArray(window.mtPreview) ? window.mtPreview : [];
-  const seen = new Set(previous.map(keyOf));
-  const added = [];
-  incoming.forEach((x) => {
-    const k = keyOf(x);
-    if (window.mtDeletedQuestionKeys.has(k)) return;
-    if (!seen.has(k)) {
-      seen.add(k);
-      added.push(x);
-    }
-  });
-  window.mtPreview = previous.concat(added).map((x, i) => Object.assign({}, x, { number: i + 1 }));
+  window.mtPreview = previous.concat(incoming).map((x, i) => Object.assign({}, x, { number: i + 1 }));
 
   const st = document.getElementById("mtStatus");
   const box = document.getElementById("mtPreview");
-  if (st) st.innerHTML = `✅ <b>${window.mtPreview.length} Questions मिले — ${added.length} नए Questions जोड़े गए (${parsed.type})</b>`;
+  if (st) st.innerHTML = `✅ <b>${window.mtPreview.length} Questions मिले — (${parsed.type})</b>`;
   if (!box) return;
 
   box.innerHTML = window.mtPreview.map((x, i) => {
@@ -1224,8 +1100,6 @@ window.mtTextPreview = function() {
 
 window.mtClearPreview = function() {
   window.mtPreview = [];
-  window.mtDeletedQuestionKeys.clear();
-  window.mtLastPreviewRaw = "";
   const b = document.getElementById("mtPreview");
   const st = document.getElementById("mtStatus");
   const bt = document.getElementById("mtBulkText");
@@ -1306,52 +1180,10 @@ window.mtDeleteQuestion = async function(i) {
   if (!confirm("क्या आप यह प्रश्न हटाना चाहते हैं?")) return;
   const d = ensureStore();
   const qs = d.exams?.[e]?.tests?.[t]?.questions || [];
-  const deleted = qs[i];
-  if (!deleted) return;
-
-  // Important: if this same Question is still present in the temporary
-  // Bulk Preview, remove it there too. Otherwise the next Bulk Preview
-  // would silently bring the just-deleted Question back.
-  const norm = (v) => cleanText(v).replace(/\s+/g, " ").toLowerCase();
-  const keyOf = (x) => [
-    norm(x.q),
-    ...(Array.isArray(x.o) ? x.o.map(norm) : []),
-    norm(x.answer),
-    norm(x.ex),
-    norm(x.passage),
-    ...(Array.isArray(x.statements) ? x.statements.map(norm) : []),
-    ...(Array.isArray(x.conclusions) ? x.conclusions.map(norm) : [])
-  ].join("\u001f");
-  const deletedKey = keyOf(deleted);
-  window.mtDeletedQuestionKeys = window.mtDeletedQuestionKeys || new Set();
-  window.mtDeletedQuestionKeys.add(deletedKey);
-  if (Array.isArray(window.mtPreview)) {
-    window.mtPreview = window.mtPreview.filter(x => keyOf(x) !== deletedKey)
-      .map((x, n) => Object.assign({}, x, { number: n + 1 }));
-  }
-
   qs.splice(i, 1);
   qs.forEach((q, n) => q.number = n + 1);
   await mtSaveStore(d, d.exams?.[e]?.tests?.[t]);
   mtRenderQuestions();
-
-  // Keep the temporary preview UI synchronized with the deletion.
-  const pbox = document.getElementById("mtPreview");
-  const pst = document.getElementById("mtStatus");
-  if (pbox && Array.isArray(window.mtPreview)) {
-    pbox.innerHTML = window.mtPreview.map((x, n) => {
-      let h = `<div class="card" style="margin:8px 0;padding:12px;border:1px solid #c8ddf4;background:#fff">`;
-      h += `<div><b>प्रश्न ${n + 1}.</b> ${esc(x.intro || x.q).replace(/\n/g, '<br>')}</div>`;
-      if (x.passage) h += `<div style="margin:6px 0;padding:8px;background:#f0f7ff;border-left:3px solid #1769aa"><b>📖 Passage / निर्देश:</b><div style="white-space:pre-wrap">${esc(x.passage)}</div></div>`;
-      if (x.statements?.length) h += `<div><b>कथन:</b>${x.statements.map((v,j)=>`<div>${['I','II','III','IV'][j]||j+1}. ${esc(v)}</div>`).join('')}</div>`;
-      if (x.conclusions?.length) h += `<div><b>निष्कर्ष:</b>${x.conclusions.map((v,j)=>`<div>${['I','II','III','IV'][j]||j+1}. ${esc(v)}</div>`).join('')}</div>`;
-      h += x.o.map((o,j)=>o?`<div>(${String.fromCharCode(65+j)}) ${esc(o)}</div>`:'').join('');
-      h += `<div><b>सही उत्तर:</b> ${esc(x.answer||'-')}</div>`;
-      if(x.ex) h += `<div><b>जानकारी/Explanation:</b> ${esc(x.ex)}</div>`;
-      return h + `</div>`;
-    }).join('');
-  }
-  if (pst) pst.innerHTML = `✅ <b>Question Delete हो गया। Pending Preview में भी इसे वापस नहीं जोड़ा जाएगा, जब तक Bulk text बदला नहीं जाता।</b>`;
 };
 
 /* =========================================================================
@@ -1603,47 +1435,11 @@ function mtRenderAll() {
     return;
   }
 
-  /* Only presentation/order is handled here. Test records themselves are not changed. */
-  function mockTestOrder(item) {
-    const x = item[1] || {};
-    const name = String(x.name || item[0] || '');
-    const m = name.match(/(?:mock\s*test|test)\s*[-_#.:()\s]*([0-9]+)/i) || name.match(/\b([0-9]+)\b/);
-    return m ? Number(m[1]) : Number.MAX_SAFE_INTEGER;
-  }
-  function sortTests(entries) {
-    return entries.map((x, i) => ({x, i})).sort((a, b) => {
-      const an = mockTestOrder(a.x), bn = mockTestOrder(b.x);
-      if (an !== bn) return an - bn;
-      if (an !== Number.MAX_SAFE_INTEGER) return a.i - b.i;
-      return a.i - b.i;
-    }).map(z => z.x);
-  }
-
   box.innerHTML = masterExams.map((examObj, fi) => {
     const e = examObj.name;
     const logo = examObj.logo || "";
     const folderVisible = examObj.visible !== false;
-    const tests = sortTests(Object.entries(d.exams?.[e]?.tests || {}));
-    const visibleCount = Math.min(3, tests.length);
-    const firstTests = tests.slice(0, visibleCount);
-    const moreTests = tests.slice(visibleCount);
-    const selectId = `mtMoreTests_${fi}`;
-
-    const testRows = (entries, extra=false) => entries.map(([t, x]) => `
-      <tr${extra ? ' class="mt-extra-test" style="display:none"' : ''}>
-        <td><b>${esc(x.name || t)}</b></td>
-        <td>${x.questions?.length || 0}</td>
-        <td>${x.time || 60} min</td>
-        <td>${x.published === false ? '🙈 Hidden' : '👁️ Show'}</td>
-        <td>
-          <button type="button" class="btn" onclick="mtOpenTestEditor('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">👁️ देखें</button>
-          <button type="button" class="btn" onclick="mtRenameTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">✏️ Name</button>
-          <button type="button" class="btn" onclick="mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">➕ Questions</button>
-          <button type="button" class="btn ${x.published === false ? 'orange' : 'gray'}" onclick="mtTogglePublish('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">${x.published === false ? '👁️ Show' : '🙈 Hide'}</button>
-          <button type="button" class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">🗑️ Delete</button>
-        </td>
-      </tr>
-    `).join('');
+    const tests = Object.entries(d.exams?.[e]?.tests || {});
 
     return `
       <div class="card" style="margin:16px 0;border:2px solid #1769aa;background:#fff;box-shadow:0 4px 14px rgba(18,59,104,0.06)">
@@ -1671,14 +1467,25 @@ function mtRenderAll() {
               <thead>
                 <tr><th>Test का नाम</th><th>Questions</th><th>Time</th><th>Status</th><th>Action</th></tr>
               </thead>
-              <tbody>${testRows(firstTests)}${testRows(moreTests, true)}</tbody>
+              <tbody>
+                ${tests.map(([t, x]) => `
+                  <tr>
+                    <td><b>${esc(x.name || t)}</b></td>
+                    <td>${x.questions?.length || 0}</td>
+                    <td>${x.time || 60} min</td>
+                    <td>${x.published === false ? '🙈 Hidden' : '👁️ Show'}</td>
+                    <td>
+                      <button type="button" class="btn" onclick="mtOpenTestEditor('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">👁️ देखें</button>
+                      <button type="button" class="btn" onclick="mtRenameTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">✏️ Name</button>
+                      <button type="button" class="btn" onclick="mtSelectTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">➕ Questions</button>
+                      <button type="button" class="btn ${x.published === false ? 'orange' : 'gray'}" onclick="mtTogglePublish('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">${x.published === false ? '👁️ Show' : '🙈 Hide'}</button>
+                      <button type="button" class="btn danger" onclick="mtDeleteTest('${encodeURIComponent(e)}','${encodeURIComponent(t)}')">🗑️ Delete</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
             </table>
           </div>
-          ${moreTests.length ? `
-            <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
-              <button type="button" class="btn gray" onclick="const c=this.closest('.card'); const rows=c.querySelectorAll('.mt-extra-test'); const open=this.getAttribute('data-expanded')==='1'; rows.forEach(r=>r.style.display=open?'none':'table-row'); this.setAttribute('data-expanded',open?'0':'1'); this.textContent=open?'▼ और टेस्ट देखें':'▲ कम दिखाएँ';">▼ और टेस्ट देखें</button>
-            </div>
-          ` : ''}
         ` : `
           <div class="card" style="margin-top:10px;background:#f8fafc">
             <p style="margin:0;color:#667085">📭 इस Folder में अभी कोई Test नहीं है। ऊपर परीक्षा चुनकर नया Test बनाएँ।</p>
@@ -1924,7 +1731,7 @@ window.activatePayment = async function(i) {
     activatedAt: new Date().toISOString(),
     expiresAt: exp
   });
-  u.access = `Active • ${u.seriesAccess.length} Course${u.seriesAccess.length > 1 ? 's' : ''}`;
+  u.access = `Active • ${days} दिन • ${new Date(exp).toLocaleDateString()}`;
 
   p.status = "Access Activated";
   p.adminConfirmed = true;
@@ -1962,30 +1769,20 @@ function renderUsers() {
     tb.innerHTML = "<tr><td colspan='6' style='text-align:center;color:#667085'>अभी कोई User Register नहीं है।</td></tr>";
     return;
   }
-  tb.innerHTML = users.map((u, i) => {
-    const accesses = Array.isArray(u.seriesAccess) ? u.seriesAccess.filter(x => x && x.exam) : [];
-    const accessHtml = accesses.length ? accesses.map((x, ai) => {
-      const exp = x.expiresAt ? new Date(x.expiresAt).toLocaleDateString('hi-IN') : 'Unlimited';
-      const title = x.count >= 999999 ? 'Full Series' : `${Number(x.count)||0} Tests`;
-      return `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:3px 0">
-        <span class="badge" style="background:#e6f4ea;color:#1e7e34">${esc(x.exam)} • ${title} • ${exp}</span>
-        <button type="button" class="btn gray" style="padding:2px 6px;font-size:11px" onclick="removeUserCourseAccess(${i},${ai})">❌</button>
-      </div>`;
-    }).join('') : 'No Access';
-    return `
+  tb.innerHTML = users.map((u, i) => `
     <tr>
       <td>${u.deviceType === 'mobile' ? '📱' : '💻'} <b>${esc(u.name || '-')}</b></td>
       <td>${esc(u.email || '-')}</td>
       <td>${esc(u.mobile || '-')}</td>
       <td>${esc(u.created || '-')}</td>
-      <td>${accessHtml}</td>
+      <td>${u.access ? `<span class="badge" style="background:#e6f4ea;color:#1e7e34">${esc(u.access)}</span>` : 'No Access'}</td>
       <td>
         <button type="button" class="btn orange" style="padding:4px 8px;font-size:12px" onclick="tgyDirectAccess(${i})">🎓 Give Access</button>
-        ${accesses.length ? `<button type="button" class="btn gray" style="padding:4px 8px;font-size:12px" onclick="removeUserAccess(${i})">❌ All Access Lock</button>` : ''}
+        ${u.access ? `<button type="button" class="btn gray" style="padding:4px 8px;font-size:12px" onclick="removeUserAccess(${i})">❌ Lock Access</button>` : ''}
         <button type="button" class="btn danger" style="padding:4px 8px;font-size:12px" onclick="tgyDeleteUserPermanently(${i})">🗑️ Delete</button>
       </td>
-    </tr>`;
-  }).join('');
+    </tr>
+  `).join('');
   const su = document.getElementById("su");
   if (su) su.textContent = users.length;
 }
@@ -2039,7 +1836,7 @@ window.saveDirectAccessAction = async function() {
   u.seriesAccess.push({
     exam, count, amount: 0, activatedAt: new Date().toISOString(), expiresAt: exp, source: "admin-direct"
   });
-  u.access = `Active • ${u.seriesAccess.length} Course${u.seriesAccess.length > 1 ? 's' : ''}`;
+  u.access = `Active • ${count >= 999999 ? 'Full Series' : count + ' Tests'} • ${exam} • ${days} दिन`;
 
   localStorage.setItem("tgy_users", JSON.stringify(users));
   await cloudUpsert("tgy_users", users);
@@ -2048,31 +1845,12 @@ window.saveDirectAccessAction = async function() {
   alert("✅ Student को Direct Access सफलतापूर्वक दे दिया गया।");
 };
 
-window.removeUserCourseAccess = async function(userIndex, accessIndex) {
-  const users = getUsers();
-  const u = users[userIndex];
-  if (!u) return;
-  const arr = Array.isArray(u.seriesAccess) ? u.seriesAccess : [];
-  const item = arr[accessIndex];
-  if (!item) return;
-  if (!confirm(`क्या केवल ${item.exam || 'इस Course'} का Access बंद करना चाहते हैं?
-बाकी Courses का Access चलता रहेगा।`)) return;
-  arr.splice(accessIndex, 1);
-  u.seriesAccess = arr;
-  u.access = arr.length ? `Active • ${arr.length} Course${arr.length > 1 ? 's' : ''}` : null;
-  localStorage.setItem("tgy_users", JSON.stringify(users));
-  await cloudUpsert("tgy_users", users);
-  renderUsers();
-};
-
 window.removeUserAccess = async function(i) {
-  if (!confirm("क्या इस User के सभी Course/Exam Access समाप्त करना चाहते हैं?")) return;
+  if (!confirm("क्या इस User का Access समाप्त करना चाहते हैं?")) return;
   const users = getUsers();
   if (users[i]) {
     users[i].access = null;
     users[i].seriesAccess = [];
-    users[i].accessExam = null;
-    users[i].accessExpiresAt = null;
     localStorage.setItem("tgy_users", JSON.stringify(users));
     await cloudUpsert("tgy_users", users);
     renderUsers();
@@ -2182,7 +1960,57 @@ function getAdminNotes() {
   try { return JSON.parse(localStorage.getItem("tgy_pdf_notes") || "[]"); } catch(e) { return []; }
 }
 
-window.uploadPdfNote = function() {
+/* ---- PDF data lives in IndexedDB (localStorage is too small for real PDF files) ---- */
+const TGY_PDF_DB_NAME = "tgy_pdf_blobs_db", TGY_PDF_DB_VERSION = 1, TGY_PDF_STORE = "blobs";
+function tgyOpenPdfDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) { reject(new Error("IndexedDB उपलब्ध नहीं है।")); return; }
+    const r = indexedDB.open(TGY_PDF_DB_NAME, TGY_PDF_DB_VERSION);
+    r.onupgradeneeded = function() {
+      const db = r.result;
+      if (!db.objectStoreNames.contains(TGY_PDF_STORE)) db.createObjectStore(TGY_PDF_STORE, { keyPath: "id" });
+    };
+    r.onsuccess = function() { resolve(r.result); };
+    r.onerror = function() { reject(r.error || new Error("PDF Database खोलने में समस्या।")); };
+  });
+}
+function tgyPutPdfBlob(id, dataUrl) {
+  return tgyOpenPdfDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(TGY_PDF_STORE, "readwrite");
+    tx.objectStore(TGY_PDF_STORE).put({ id, dataUrl });
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+function tgyGetPdfBlob(id) {
+  return tgyOpenPdfDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(TGY_PDF_STORE, "readonly");
+    const rq = tx.objectStore(TGY_PDF_STORE).get(id);
+    rq.onsuccess = () => resolve(rq.result ? rq.result.dataUrl : null);
+    rq.onerror = () => reject(rq.error);
+  }));
+}
+function tgyDeletePdfBlob(id) {
+  return tgyOpenPdfDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(TGY_PDF_STORE, "readwrite");
+    tx.objectStore(TGY_PDF_STORE).delete(id);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+async function tgySyncPdfNotesToCloud() {
+  try {
+    const a = getAdminNotes();
+    const full = await Promise.all(a.map(async n => {
+      let dataUrl = "";
+      try { dataUrl = await tgyGetPdfBlob(n.id); } catch (e) {}
+      return { ...n, dataUrl: dataUrl || "" };
+    }));
+    cloudUpsert("tgy_pdf_notes", full);
+  } catch (e) { console.warn("[PDF Notes] cloud sync skipped:", e); }
+}
+
+window.uploadPdfNote = async function() {
   const title = document.getElementById("noteTitle")?.value.trim();
   const exam = document.getElementById("noteExam")?.value.trim();
   const file = document.getElementById("notePdfFile")?.files?.[0];
@@ -2191,24 +2019,29 @@ window.uploadPdfNote = function() {
   if (!title) { alert("Notes का नाम लिखें।"); return; }
   if (!file) { alert("पहले PDF चुनें।"); return; }
 
+  if (st) st.textContent = "⏳ PDF Upload हो रही है...";
   const r = new FileReader();
-  r.onload = function() {
+  r.onload = async function() {
+    const id = "note_" + Date.now();
+    try {
+      await tgyPutPdfBlob(id, r.result);
+    } catch (e) {
+      if (st) st.textContent = "❌ PDF Save नहीं हुई: " + e.message;
+      alert("❌ PDF Save नहीं हो सकी। Browser का PDF Storage (IndexedDB) शायद उपलब्ध नहीं है।\n\n" + e.message);
+      return;
+    }
     const a = getAdminNotes();
-    a.push({
-      id: 'note_' + Date.now(),
-      title, exam, fileName: file.name,
-      dataUrl: r.result,
-      mrp: Number(document.getElementById("noteMrp")?.value) || 0,
-      offer: Number(document.getElementById("noteOffer")?.value) || 0,
-      availableUntil: document.getElementById("noteUntil")?.value || ""
-    });
+    a.push({ id, title, exam, fileName: file.name });
     localStorage.setItem("tgy_pdf_notes", JSON.stringify(a));
-    cloudUpsert("tgy_pdf_notes", a);
+    tgySyncPdfNotesToCloud();
     if (st) st.textContent = "✅ PDF Notes Save हो गई।";
     renderAdminNotes();
-    ["noteTitle", "notePdfFile", "noteMrp", "noteOffer"].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = "";
+    ["noteTitle", "notePdfFile"].forEach(fid => {
+      const el = document.getElementById(fid); if (el) el.value = "";
     });
+  };
+  r.onerror = function() {
+    if (st) st.textContent = "❌ PDF पढ़ने में समस्या हुई।";
   };
   r.readAsDataURL(file);
 };
@@ -2221,7 +2054,6 @@ function renderAdminNotes() {
     <div class="card" style="margin:10px 0">
       <b>📄 ${esc(n.title)}</b> — <span>${esc(n.exam || '')}</span><br>
       <small style="color:#667085">${esc(n.fileName || 'PDF')}</small><br>
-      <b>MRP:</b> ₹${n.mrp || 0} &nbsp; <b>Offer:</b> ₹${n.offer || 0}<br>
       <div style="margin-top:8px">
         <button type="button" class="btn" onclick="previewAdminPdfNote(${i})">👁️ Preview</button>
         <button type="button" class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button>
@@ -2230,22 +2062,27 @@ function renderAdminNotes() {
   `).join('') || '<p style="color:#667085">अभी कोई Study Material Notes नहीं हैं।</p>';
 }
 
-window.previewAdminPdfNote = function(i) {
+window.previewAdminPdfNote = async function(i) {
   const n = getAdminNotes()[i];
-  if (!n?.dataUrl) return;
+  if (!n) return;
+  let dataUrl = "";
+  try { dataUrl = await tgyGetPdfBlob(n.id); } catch (e) {}
+  if (!dataUrl) { alert("यह PDF नहीं मिली।"); return; }
   const w = window.open("", "_blank");
   if (w) {
-    w.document.write(`<title>${esc(n.title)}</title><iframe src="${n.dataUrl}#toolbar=0" style="width:100%;height:100vh;border:0"></iframe>`);
+    w.document.write(`<title>${esc(n.title)}</title><iframe src="${dataUrl}#toolbar=0" style="width:100%;height:100vh;border:0"></iframe>`);
     w.document.close();
   }
 };
 
-window.deletePdfNote = function(i) {
+window.deletePdfNote = async function(i) {
   if (!confirm("यह PDF Note हटाएँ?")) return;
   const a = getAdminNotes();
+  const n = a[i];
   a.splice(i, 1);
   localStorage.setItem("tgy_pdf_notes", JSON.stringify(a));
-  cloudUpsert("tgy_pdf_notes", a);
+  if (n && n.id) { try { await tgyDeletePdfBlob(n.id); } catch (e) {} }
+  tgySyncPdfNotesToCloud();
   renderAdminNotes();
 };
 
@@ -2313,20 +2150,49 @@ function getAccessPricing() {
 
 function apTypeChanged() {
   const type = document.getElementById("apType")?.value;
-  const custom = type === "testseries";
+  const custom = type === "testseries" || type === "pdf_custom";
   const cw = document.getElementById("apCustomWrap");
   const nw = document.getElementById("apNameWrap");
+  const lbl = document.getElementById("apCustomLabel");
+  const numInput = document.getElementById("apNumbers");
   if (cw) cw.style.display = custom ? "block" : "none";
   if (nw) nw.style.display = custom ? "block" : "none";
+  if (lbl) lbl.textContent = type === "pdf_custom"
+    ? "📝 कौन-कौन से PDF Numbers? (जैसे: 1,3,5)"
+    : "📝 कौन-कौन से Test Numbers? (जैसे: 1,3,5,10)";
+  if (numInput) numInput.placeholder = type === "pdf_custom" ? "जैसे: 1,3,5" : "जैसे: 1,3,5,10";
+}
+
+function apParseNumbers(raw) {
+  return String(raw || "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(s => s !== "" && !isNaN(Number(s)))
+    .map(Number);
 }
 
 window.saveAccessPricing = function() {
   const exam = document.getElementById("apExam")?.value;
   const type = document.getElementById("apType")?.value || "folder";
-  const count = type === "testseries" ? Number(document.getElementById("apCount")?.value || 10) : 0;
-  const name = type === "testseries"
-    ? (document.getElementById("apName")?.value.trim() || `${count} Test Series`)
-    : `${exam} — पूरा Test Series`;
+  const isCustomTest = type === "testseries";
+  const isCustomPdf = type === "pdf_custom";
+  const testNumbers = isCustomTest || type === "combo" ? apParseNumbers(document.getElementById("apNumbers")?.value) : [];
+  const pdfNumbers = isCustomPdf ? apParseNumbers(document.getElementById("apNumbers")?.value) : [];
+  const count = testNumbers.length;
+
+  if ((isCustomTest || isCustomPdf) && count === 0 && pdfNumbers.length === 0) {
+    alert("कम से कम एक Number डालें (जैसे: 1,3,5)।"); return;
+  }
+
+  const typeLabels = {
+    folder: `${exam} — पूरा Test Series`,
+    testseries: `Custom Test — ${testNumbers.join(",")}`,
+    pdf_folder: `${exam} — सभी PDF Notes`,
+    pdf_custom: `Custom PDF — ${pdfNumbers.join(",")}`,
+    combo: `Test + PDF Combo`
+  };
+  const name = (document.getElementById("apName")?.value.trim()) || typeLabels[type] || exam;
+
   const durationValue = Number(document.getElementById("apDuration")?.value) || 30;
   const unit = document.getElementById("apUnit")?.value || "days";
   const mrp = Number(document.getElementById("apMrp")?.value) || 0;
@@ -2340,9 +2206,13 @@ window.saveAccessPricing = function() {
   const obj = {
     exam, type, count, name, durationValue, unit,
     days: unit === "months" ? durationValue * 30 : durationValue,
-    mrp, offer, scope: type === "folder" ? "full" : "custom"
+    mrp, offer,
+    scope: (type === "folder" || type === "pdf_folder" || type === "combo") ? "full" : "custom",
+    testNumbers, pdfNumbers,
+    includesTests: type === "folder" || type === "testseries" || type === "combo",
+    includesPdf: type === "pdf_folder" || type === "pdf_custom" || type === "combo"
   };
-  const idx = a.findIndex(x => x.exam === exam && x.type === type && Number(x.count || 0) === count);
+  const idx = a.findIndex(x => x.exam === exam && x.type === type && x.name === name);
   if (idx >= 0) a[idx] = obj; else a.push(obj);
 
   localStorage.setItem("tgy_access_pricing", JSON.stringify(a));
@@ -2355,12 +2225,22 @@ function renderAccessPricing() {
   const b = document.getElementById("accessPricingList");
   if (!b) return;
   const a = getAccessPricing();
-  b.innerHTML = a.map((x, i) => `
+  const typeDisplay = {
+    folder: "1️⃣ 📁 पूरा Test Series",
+    testseries: x => `2️⃣ ⚙️ Custom Test — ${(x.testNumbers||[]).join(",") || x.count}`,
+    pdf_folder: "3️⃣ 📄 सभी PDF",
+    pdf_custom: x => `4️⃣ 📄 Custom PDF — ${(x.pdfNumbers||[]).join(",")}`,
+    combo: "5️⃣ 📁📄 Test + PDF दोनों"
+  };
+  b.innerHTML = a.map((x, i) => {
+    const d = typeDisplay[x.type];
+    const label = typeof d === "function" ? d(x) : (d || x.type);
+    return `
     <div class="card" style="margin:8px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
-      <div><b>${esc(x.exam)}</b> — ${x.type === 'folder' ? '📁 पूरा Test Series' : `⚙️ Custom — ${x.count} Tests`} — ${x.days} दिन — <b>₹${x.offer || x.mrp}</b></div>
+      <div><b>${esc(x.exam)}</b> — ${label} — ${x.days} दिन — <b>₹${x.offer || x.mrp}</b></div>
       <button type="button" class="btn danger" onclick="deleteAccessPricing(${i})">🗑️ Delete</button>
-    </div>
-  `).join('') || '<p style="color:#667085">अभी कोई Pricing नहीं बनाई गई है।</p>';
+    </div>`;
+  }).join('') || '<p style="color:#667085">अभी कोई Pricing नहीं बनाई गई है।</p>';
 }
 
 window.deleteAccessPricing = function(i) {
@@ -2596,5 +2476,167 @@ document.addEventListener("DOMContentLoaded", async () => {
   tgySyncUsersFromCloud(false);
 });
 </script>
+
+<script id="tgy-instruction-passage-autodetect-fix">
+(function(){
+  "use strict";
+  function mtNorm(v){return String(v==null?"":v).replace(/[\u200b\u200c\u200d\ufeff]/g,"").replace(/\u00a0/g," ").replace(/\r\n?/g,"\n").replace(/[ \t]+/g," ").trim();}
+
+  function mtContextHeader(line){
+    const x=mtNorm(line);
+    if(!x) return false;
+    const strong=/^(?:निर्देश|दिशा(?:-निर्देश)?|दिशानिर्देश|गद्यांश|पद्यांश|काव्यांश|कथ्यांश|पैसेज|पासेज|प्रसंग|केसलेट|अनुच्छेद|संदर्भ|कविता|Instructions?|Directions?|Direction|Passage|Prose\s+Passage|Poem|Poetry|Poetry\s+Passage|Verse|Stanza|Extract|Context|Caselet|Section|Part|Text)(?:\s*[:：ः.\-–—(]|\s*$)/i;
+    const short=/^(?:पद|अंश|पाठ|भाग)\b/i;
+    if(strong.test(x)) return true;
+    if(short.test(x)) return /^(?:पद|अंश|पाठ|भाग)(?:\s*(?:[:：ः.\-–—]|\(|[A-Ea-e]|[0-9०-९]+)|\s*$)/i.test(x);
+    return false;
+  }
+  function mtContextText(text){
+    const lines=String(text||"").replace(/\r\n?/g,"\n").split("\n");
+    let idx=-1;
+    for(let i=0;i<lines.length;i++) if(mtContextHeader(lines[i])) idx=i;
+    return idx>=0?lines.slice(idx).join("\n").trim():"";
+  }
+  function mtContextLooksUseful(text){return mtNorm(text).length>=8 && /(?:निर्देश|दिशा(?:-निर्देश)?|दिशानिर्देश|गद्यांश|पद्यांश|काव्यांश|कथ्यांश|पैसेज|पासेज|प्रसंग|कविता|पद|अंश|पाठ|Instructions?|Directions?|Direction|Passage|Prose\s+Passage|Poem|Poetry|Poetry\s+Passage|Verse|Stanza|Extract|Caselet|Section|Part|भाग)/i.test(mtNorm(text));}
+
+  function mtFingerprint(x){return [x.type||"normal",x.passage||"",x.q||"",Array.isArray(x.o)?x.o.join("|"):"",x.answer||"",Array.isArray(x.statements)?x.statements.join("|"):x.statements||"",Array.isArray(x.conclusions)?x.conclusions.join("|"):x.conclusions||""].map(mtNorm).join("\u241E").toLowerCase();}
+
+  function mtQuestionStartRe(){
+    return /^(?:\s*(?:प्रश्न|Question|question|क्वेश्चन)\s*(?:No\.?|क्रमांक|क्रम)?\s*(\d{1,4})\s*[\.\)\-:\/|]?\s*|\s*Q\s*\.?\s*(\d{1,4})\s*[\.\)\-:\/|]?\s*)/gim;
+  }
+  function mtFindStarts(text){
+    const starts=[]; let m, re=mtQuestionStartRe();
+    while((m=re.exec(text))!==null){
+      const lineStart=text.lastIndexOf("\n",m.index)+1;
+      const prefix=text.slice(lineStart,m.index).trim();
+      // Do not mistake "निर्देश: (प्रश्न 113...)" for the actual question start.
+      if(mtContextHeader(prefix)) continue;
+      starts.push({pos:m.index,end:re.lastIndex,num:m[1]||m[2]||""});
+    }
+    if(!starts.length){
+      const n=/^\s*(\d{1,4})\s*[\.\)\-:\/|]\s+/gm;
+      while((m=n.exec(text))!==null){
+        const lineStart=text.lastIndexOf("\n",m.index)+1;
+        const prefix=text.slice(lineStart,m.index).trim();
+        if(mtContextHeader(prefix)) continue;
+        starts.push({pos:m.index,end:n.lastIndex,num:m[1]||""});
+      }
+    }
+    return starts;
+  }
+
+  function mtSplitStatements(lines){
+    const arr=[];
+    let cur="";
+    const flush=()=>{if(mtNorm(cur))arr.push(mtNorm(cur));cur="";};
+    lines.forEach(function(raw){
+      const line=mtNorm(raw); if(!line)return;
+      const marker=line.match(/^\(?\s*(I{1,3}|IV|V|VI|VII|VIII|IX|X|[1-9]\d?|[A-Ea-e])\s*[\.\)\-:：]\s*(.*)$/i);
+      if(marker){flush();cur=marker[2]||"";} else cur+=(cur?" ":"")+line;
+    });
+    flush();
+    return arr;
+  }
+  function mtFindLabel(lines, re, from){
+    for(let i=from||0;i<lines.length;i++) if(re.test(lines[i])) return i;
+    return -1;
+  }
+  function mtParseStatementBlock(qLines){
+    const lines=qLines.map(mtNorm).filter(Boolean);
+    const sRe=/^(?:कथन|कथ्य|Statements?|Statement)\s*(?:[:：\-–—]|\s)\s*(.*)$/i;
+    const cRe=/^(?:निष्कर्ष|Conclusions?|Conclusion)\s*(?:[:：\-–—]|\s)\s*(.*)$/i;
+    const si=mtFindLabel(lines,sRe,0);
+    const ci=si>=0?mtFindLabel(lines,cRe,si+1):-1;
+    if(si<0 || ci<0) return null;
+    const intro=lines.slice(0,si).join("\n").trim();
+    const s0=lines[si].match(sRe), c0=lines[ci].match(cRe);
+    const sLines=[]; if(s0&&mtNorm(s0[1]))sLines.push(s0[1]); sLines.push(...lines.slice(si+1,ci));
+    const cLines=[]; if(c0&&mtNorm(c0[1]))cLines.push(c0[1]); cLines.push(...lines.slice(ci+1));
+    return {intro,statements:mtSplitStatements(sLines),conclusions:mtSplitStatements(cLines)};
+  }
+
+  function mtContextRange(text){
+    const x=mtNorm(text);
+    const m=x.match(/(?:प्रश्न|Questions?|Q)\s*(?:No\.?|क्रमांक|क्रम)?\s*(\d{1,4})\s*(?:-|से|to|तक)\s*(\d{1,4})/i);
+    return m?{from:Number(m[1]),to:Number(m[2])}:null;
+  }
+
+  window.mtAutoParse=function(raw){
+    let text=mtNorm(raw); if(!text)return {questions:[],type:"normal"}; text=text.replace(/[‐‑‒–—―]/g,"-");
+    const starts=mtFindStarts(text); if(!starts.length)return {questions:[],type:"normal"};
+    let pendingContext=mtContextText(text.slice(0,starts[0].pos));
+    let pendingRange=mtContextRange(pendingContext);
+    const optRe=/^\s*\(?([A-Ea-e])\)?[\.\)\-:\/]\s*(.*)$/;
+    const infoRe=/^\s*(?:जानकारी|व्याख्या|विवरण|Explanation|Description|Solution|समाधान|नोट|Note|कारण|स्पष्टीकरण)\s*[:ः=\-]\s*(.*)$/i;
+    const ansRe=/^\s*(?:Right\s*Answer|Right\s*Ans\.?|Correct\s*Answer|Answer|Ans\.?|सही\s*उत्तर|सही\s*विकल्प|उत्तर|Correct)\s*[:ः=\-]\s*(.*)$/i;
+    const idx={A:0,B:1,C:2,D:3,E:4}; const out=[];
+    for(let i=0;i<starts.length;i++){
+      let block=text.slice(starts[i].end,i+1<starts.length?starts[i+1].pos:text.length).trim(); if(!block)continue;
+      let lines=block.split("\n").map(mtNorm).filter(x=>x&&!/^[-_]{5,}$/.test(x));
+      let firstOpt=-1; for(let j=0;j<lines.length;j++){if(optRe.test(lines[j])){firstOpt=j;break;}}
+      if(firstOpt<0)continue;
+      let before=lines.slice(0,firstOpt);
+      // A context heading before the options is not part of the question text.
+      let localContext=mtContextText(before.join("\n"));
+      if(localContext){const ci=before.findIndex(mtContextHeader);if(ci>=0)before=before.slice(0,ci);}
+      const opts=["","","",""]; let answer="",ex="",current=-1; let nextContext="";
+      for(let j=firstOpt;j<lines.length;j++){
+        const line=lines[j];
+        if(mtContextHeader(line)){nextContext=lines.slice(j).join("\n").trim();break;}
+        const im=line.match(infoRe);
+        if(im){
+          ex=im[1].trim(); let k=j+1;
+          for(;k<lines.length;k++){
+            if(mtContextHeader(lines[k]))break;
+            ex+=(ex?"\n":"")+lines[k];
+          }
+          if(k<lines.length)nextContext=lines.slice(k).join("\n").trim();
+          break;
+        }
+        const am=line.match(ansRe);
+        if(am){const a=am[1].trim(),lm=a.match(/^\(?\s*([A-Ea-e])\s*\)?/);answer=lm?lm[1].toUpperCase():(a.split(/\s+/)[0]||"");current=-1;continue;}
+        const om=line.match(optRe);
+        if(om){current=idx[om[1].toUpperCase()]??-1;if(current>=0)opts[current]=(om[2]||"").trim();continue;}
+        if(current>=0)opts[current]+=(opts[current]?" ":"")+line;
+      }
+      if(!before.length || opts.filter(Boolean).length<2)continue;
+      const q=before.join("\n").trim(); if(!q)continue;
+      const sc=mtParseStatementBlock(before);
+      let passage=pendingContext||localContext||"";
+      let range=pendingRange||mtContextRange(passage);
+      const qNum=Number(starts[i].num)||out.length+1;
+      // If a carried context has an explicit question range, only attach it inside that range.
+      if(range && (qNum<range.from || qNum>range.to)) passage="";
+      out.push({q:sc?sc.intro:q,o:opts,answer,ex,number:starts[i].num||(i+1),type:sc?"statement-conclusion":(passage?"passage":"normal"),passage,range:range||undefined,statements:sc?sc.statements:[],conclusions:sc?sc.conclusions:[],intro:sc?sc.intro:""});
+      // Context found after the previous question belongs to the following question(s).
+      if(nextContext){pendingContext=nextContext;pendingRange=mtContextRange(nextContext);} 
+      else if(range && qNum>=range.to){pendingContext="";pendingRange=null;}
+      else if(!range){pendingContext="";pendingRange=null;}
+    }
+    return {questions:out,type:out.some(x=>x.type==="passage")?"Mixed / Passage":(out.some(x=>x.type==="statement-conclusion")?"कथन–निष्कर्ष":"Normal")};
+  };
+
+  function mtRenderPreview(){
+    const box=document.getElementById("mtPreview");if(!box)return;const arr=Array.isArray(window.mtPreview)?window.mtPreview:[];
+    box.innerHTML=arr.map(function(x,i){let h='<div class="card" style="margin:8px 0;padding:12px;border:1px solid #c8ddf4;background:#fff">';
+      h+='<div style="margin-bottom:6px"><span class="badge">'+(x.type==='statement-conclusion'?'📋 कथन–निष्कर्ष':(x.type==='passage'?'📖 निर्देश / Passage':'📝 सामान्य प्रश्न'))+'</span></div>';
+      if(x.passage)h+='<div style="margin-bottom:8px;padding:8px;background:#f0f7ff;border-left:3px solid #1769aa;font-size:13px"><b>📖 निर्देश / गद्यांश / पद्यांश / Passage:</b><div style="white-space:pre-wrap">'+esc(x.passage)+'</div></div>';
+      h+='<div><b>प्रश्न '+(x.number||(i+1))+'.</b> '+esc(x.intro||x.q).replace(/\n/g,'<br>')+'</div>';
+      if(x.statements&&x.statements.length)h+='<div style="margin:6px 0;font-size:13px"><b>कथन:</b>'+x.statements.map((s,si)=>'<div>'+(['I','II','III','IV','V','VI'][si]||si+1)+'. '+esc(s)+'</div>').join('')+'</div>';
+      if(x.conclusions&&x.conclusions.length)h+='<div style="margin:6px 0;font-size:13px"><b>निष्कर्ष:</b>'+x.conclusions.map((c,ci)=>'<div>'+(['I','II','III','IV','V','VI'][ci]||ci+1)+'. '+esc(c)+'</div>').join('')+'</div>';
+      h+='<div style="margin:6px 0">'+x.o.map((opt,oi)=>opt?'<div>('+String.fromCharCode(65+oi)+') '+esc(opt)+'</div>':'').join('')+'</div>';
+      h+='<div style="margin-top:4px"><b>सही उत्तर:</b> '+esc(x.answer||'-')+'</div>';if(x.ex)h+='<div style="margin-top:4px;color:#875100;font-size:13px"><b>जानकारी/Explanation:</b> '+esc(x.ex)+'</div>';h+='</div>';return h;}).join('');
+  }
+  window.mtTextPreview=function(){
+    const raw=document.getElementById("mtBulkText")?.value||"";if(!raw.trim()){alert("पहले पूरा Question Set Paste करें।");return;}
+    const parsed=window.mtAutoParse(raw),incoming=parsed.questions||[];if(!incoming.length){const st=document.getElementById("mtStatus");if(st)st.innerHTML="❌ कोई Question पहचान में नहीं आया। कृपया फ़ॉर्मेट जाँचें।";return;}
+    const previous=Array.isArray(window.mtPreview)?window.mtPreview:[],seen=new Set(previous.map(mtFingerprint));let added=0;
+    incoming.forEach(function(x){const k=mtFingerprint(x);if(!seen.has(k)){seen.add(k);previous.push(x);added++;}});
+    window.mtPreview=previous.map((x,i)=>Object.assign({},x,{number:i+1}));const st=document.getElementById("mtStatus");if(st)st.innerHTML='✅ <b>'+window.mtPreview.length+' Questions तैयार हैं</b> — इस Preview में '+added+' नए Questions जुड़े। दोबारा वही Bulk देने पर duplicate नहीं जुड़ेंगे।';mtRenderPreview();
+  };
+})();
+
+</script>
+
 </body>
 </html>
