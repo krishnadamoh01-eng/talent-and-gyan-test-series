@@ -1823,16 +1823,21 @@ window.tgyDirectAccess = function(prefill) {
       ${users.map((x, i) => `<option value="${i}" ${u === x ? 'selected' : ''}>${esc(x.name || '-')} — ${esc(x.email || x.mobile || '-')}</option>`).join('')}
     </select>
     <label>परीक्षा</label>
-    <select id="tgyDAExam">
+    <select id="tgyDAExam" onchange="tgyDAModeChanged()">
       ${exams.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('')}
     </select>
     <label>Access Type</label>
-    <select id="tgyDACount">
+    <select id="tgyDACount" onchange="tgyDAModeChanged()">
       <option value="999999">Full Series (सभी Tests)</option>
-      <option value="10">10 Tests</option>
-      <option value="25">25 Tests</option>
-      <option value="50">50 Tests</option>
+      <option value="pick">☑️ चुने हुए Tests (एक से ज़्यादा चुन सकते हैं)</option>
+      <option value="10">पहले 10 Tests</option>
+      <option value="25">पहले 25 Tests</option>
+      <option value="50">पहले 50 Tests</option>
     </select>
+    <div id="tgyDAPickWrap" style="display:none;margin-top:8px">
+      <label>जो Tests देने हैं उन पर टिक करें</label>
+      <div id="tgyDAPickList" style="max-height:220px;overflow:auto;border:1px solid #d6e0ea;border-radius:10px;padding:8px;background:#fff"></div>
+    </div>
     <label>Validity (दिन)</label>
     <input id="tgyDADays" type="number" value="30" min="1">
     <div style="display:flex;gap:8px;margin-top:14px">
@@ -1843,14 +1848,55 @@ window.tgyDirectAccess = function(prefill) {
   modal.style.display = "flex";
 };
 
+window.tgyDAExamTests = function(exam) {
+  let all = [];
+  try { all = JSON.parse(localStorage.getItem("tgy_tests") || "[]"); } catch (e) {}
+  return all.filter(t => t && String(t.exam || "").trim() === String(exam || "").trim() && t.published !== false && t.visible !== false);
+};
+
+window.tgyDAModeChanged = function() {
+  const mode = document.getElementById("tgyDACount")?.value;
+  const wrap = document.getElementById("tgyDAPickWrap");
+  const box = document.getElementById("tgyDAPickList");
+  if (!wrap || !box) return;
+  wrap.style.display = mode === "pick" ? "block" : "none";
+  if (mode !== "pick") return;
+  const exam = document.getElementById("tgyDAExam")?.value;
+  const tests = tgyDAExamTests(exam);
+  box.innerHTML = tests.length
+    ? tests.map((t, i) => `<label style="display:flex;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid #eef2f6;font-weight:600"><input type="checkbox" class="tgyDAPick" value="${esc(t.name)}" style="width:auto;margin:0"> ${i + 1}. ${esc(t.name)}</label>`).join("")
+    : '<p class="muted" style="margin:6px">इस परीक्षा में अभी कोई Test नहीं है।</p>';
+};
+
 window.saveDirectAccessAction = async function() {
   const users = getUsers();
   const uIdx = Number(document.getElementById("tgyDAUser")?.value);
   const u = users[uIdx]; if (!u) return alert("Student चुनें।");
   const exam = document.getElementById("tgyDAExam")?.value || "All Exams";
-  const count = Number(document.getElementById("tgyDACount")?.value) || 999999;
+  const mode = document.getElementById("tgyDACount")?.value;
   const days = Number(document.getElementById("tgyDADays")?.value) || 30;
   const exp = new Date(Date.now() + days * 86400000).toISOString();
+
+  if (mode === "pick") {
+    const names = [...document.querySelectorAll(".tgyDAPick:checked")].map(x => x.value);
+    if (!names.length) return alert("कम से कम एक Test चुनें।");
+    u.purchasedTests = Array.isArray(u.purchasedTests) ? u.purchasedTests : [];
+    names.forEach(name => {
+      const at = new Date().toISOString();
+      // same test again -> renew the earlier entry instead of duplicating it
+      u.purchasedTests = u.purchasedTests.filter(x => !(x && typeof x === "object" && x.name === name && x.exam === exam));
+      u.purchasedTests.push({ exam, name, testId: name, amount: 0, activatedAt: at, expiresAt: exp, source: "admin-direct" });
+    });
+    u.access = `Active • ${names.length} चुने हुए Tests • ${exam} • ${days} दिन`;
+    localStorage.setItem("tgy_users", JSON.stringify(users));
+    await cloudUpsert("tgy_users", users);
+    closeM();
+    renderUsers();
+    alert(`✅ ${names.length} Tests का Access दे दिया गया।`);
+    return;
+  }
+
+  const count = Number(mode) || 999999;
 
   u.seriesAccess = Array.isArray(u.seriesAccess) ? u.seriesAccess : [];
   u.seriesAccess.push({
