@@ -220,6 +220,11 @@ body.admin-locked > header,body.admin-locked > .layout,body.admin-locked > main,
         <input id="noteTitle" placeholder="जैसे MP पटवारी Notes">
         <label>1. परीक्षा चुनें</label>
         <select id="noteExam"></select>
+        <label>Access (Free / Paid)</label>
+        <select id="noteAccess">
+          <option value="paid">💳 Paid — इस परीक्षा की Price के अनुसार</option>
+          <option value="free">🆓 Free — सबके लिए मुफ़्त</option>
+        </select>
         <label>2. 📄 PDF Upload करें</label>
         <input id="notePdfFile" type="file" accept="application/pdf,.pdf" style="width:100%;padding:10px">
         <div id="noteUploadStatus" class="muted" style="margin:8px 0;color:#667085"></div>
@@ -2028,6 +2033,7 @@ async function tgySyncPdfNotesToCloud() {
 window.uploadPdfNote = async function() {
   const title = document.getElementById("noteTitle")?.value.trim();
   const exam = document.getElementById("noteExam")?.value.trim();
+  const isFree = document.getElementById("noteAccess")?.value === "free";
   const file = document.getElementById("notePdfFile")?.files?.[0];
   const st = document.getElementById("noteUploadStatus");
 
@@ -2047,7 +2053,7 @@ window.uploadPdfNote = async function() {
       return;
     }
     const a = getAdminNotes();
-    a.push({ id, title, exam, folder: exam, fileName: file.name, visible: true });
+    a.push({ id, title, exam, folder: exam, fileName: file.name, visible: true, free: isFree });
     localStorage.setItem("tgy_pdf_notes", JSON.stringify(a));
     tgySyncPdfNotesToCloud();
     if (st) st.textContent = "✅ PDF Notes Save हो गई।";
@@ -2092,10 +2098,12 @@ function renderAdminNotes() {
           <div style="border:1px solid #d6e0ea;border-radius:12px;padding:12px;background:${vis ? '#fff' : '#f3f4f6'}">
             <b>📄 ${esc(n.title)}</b><br>
             <small style="color:#667085;word-break:break-all">${esc(n.fileName || 'PDF')}</small><br>
-            <small style="font-weight:700;color:${vis ? '#1a7f37' : '#b45309'}">${vis ? '👁️ Student को दिख रही है' : '🙈 Hidden है'}</small>
+            <small style="font-weight:700;color:${vis ? '#1a7f37' : '#b45309'}">${vis ? '👁️ Student को दिख रही है' : '🙈 Hidden है'}</small><br>
+            <small style="font-weight:700;color:${n.free === true ? '#1a7f37' : '#123b68'}">${n.free === true ? '🆓 Free' : '💳 Price के अनुसार'}</small>
             <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
               <button type="button" class="btn" onclick="previewAdminPdfNote(${i})">👁️ View</button>
               <button type="button" class="btn ${vis ? 'gray' : 'orange'}" onclick="togglePdfNoteVisible(${i})">${vis ? '🙈 Hide' : '👁️ Show'}</button>
+              <button type="button" class="btn ${n.free === true ? 'gray' : 'orange'}" onclick="togglePdfNoteFree(${i})">${n.free === true ? '💳 Paid करें' : '🆓 Free करें'}</button>
               <button type="button" class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button>
             </div>
           </div>`;
@@ -2104,6 +2112,16 @@ function renderAdminNotes() {
     </div>
   `).join('');
 }
+
+window.togglePdfNoteFree = function(i) {
+  const a = getAdminNotes();
+  const n = a[i];
+  if (!n) return;
+  n.free = n.free !== true;
+  localStorage.setItem("tgy_pdf_notes", JSON.stringify(a));
+  tgySyncPdfNotesToCloud();
+  renderAdminNotes();
+};
 
 window.togglePdfNoteVisible = function(i) {
   const a = getAdminNotes();
