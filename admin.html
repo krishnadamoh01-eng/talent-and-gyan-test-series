@@ -1440,6 +1440,9 @@ function mtRenderAll() {
     const logo = examObj.logo || "";
     const folderVisible = examObj.visible !== false;
     const tests = Object.entries(d.exams?.[e]?.tests || {});
+    const MT_PREVIEW = 4;
+    const mtExpanded = !!(window.__mtExpanded && window.__mtExpanded[e]);
+    const shownTests = (mtExpanded || tests.length <= MT_PREVIEW) ? tests : tests.slice(0, MT_PREVIEW);
 
     return `
       <div class="card" style="margin:16px 0;border:2px solid #1769aa;background:#fff;box-shadow:0 4px 14px rgba(18,59,104,0.06)">
@@ -1468,7 +1471,7 @@ function mtRenderAll() {
                 <tr><th>Test का नाम</th><th>Questions</th><th>Time</th><th>Status</th><th>Action</th></tr>
               </thead>
               <tbody>
-                ${tests.map(([t, x]) => `
+                ${shownTests.map(([t, x]) => `
                   <tr>
                     <td><b>${esc(x.name || t)}</b></td>
                     <td>${x.questions?.length || 0}</td>
@@ -1486,6 +1489,11 @@ function mtRenderAll() {
               </tbody>
             </table>
           </div>
+          ${tests.length > MT_PREVIEW ? `
+            <div style="text-align:center;margin-top:10px">
+              <button type="button" class="btn gray" onclick="mtToggleExpand('${encodeURIComponent(e)}')">${mtExpanded ? '▲ कम दिखाएँ' : '▼ सभी ' + tests.length + ' Tests देखें (View All)'}</button>
+            </div>
+          ` : ''}
         ` : `
           <div class="card" style="margin-top:10px;background:#f8fafc">
             <p style="margin:0;color:#667085">📭 इस Folder में अभी कोई Test नहीं है। ऊपर परीक्षा चुनकर नया Test बनाएँ।</p>
@@ -1495,6 +1503,13 @@ function mtRenderAll() {
     `;
   }).join('');
 }
+
+window.mtToggleExpand = function(e) {
+  e = decodeURIComponent(e);
+  window.__mtExpanded = window.__mtExpanded || {};
+  window.__mtExpanded[e] = !window.__mtExpanded[e];
+  mtRenderAll();
+};
 
 window.mtToggleFolder = function(e) {
   e = decodeURIComponent(e);
@@ -2017,6 +2032,7 @@ window.uploadPdfNote = async function() {
   const st = document.getElementById("noteUploadStatus");
 
   if (!title) { alert("Notes का नाम लिखें।"); return; }
+  if (!exam) { alert("पहले परीक्षा (Folder) चुनें।"); return; }
   if (!file) { alert("पहले PDF चुनें।"); return; }
 
   if (st) st.textContent = "⏳ PDF Upload हो रही है...";
@@ -2031,7 +2047,7 @@ window.uploadPdfNote = async function() {
       return;
     }
     const a = getAdminNotes();
-    a.push({ id, title, exam, fileName: file.name });
+    a.push({ id, title, exam, folder: exam, fileName: file.name, visible: true });
     localStorage.setItem("tgy_pdf_notes", JSON.stringify(a));
     tgySyncPdfNotesToCloud();
     if (st) st.textContent = "✅ PDF Notes Save हो गई।";
@@ -2050,17 +2066,54 @@ function renderAdminNotes() {
   const b = document.getElementById("adminNotesList");
   if (!b) return;
   const a = getAdminNotes();
-  b.innerHTML = a.map((n, i) => `
-    <div class="card" style="margin:10px 0">
-      <b>📄 ${esc(n.title)}</b> — <span>${esc(n.exam || '')}</span><br>
-      <small style="color:#667085">${esc(n.fileName || 'PDF')}</small><br>
-      <div style="margin-top:8px">
-        <button type="button" class="btn" onclick="previewAdminPdfNote(${i})">👁️ Preview</button>
-        <button type="button" class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button>
+  if (!a.length) {
+    b.innerHTML = '<p style="color:#667085">अभी कोई Study Material Notes नहीं हैं।</p>';
+    return;
+  }
+  // Group by Exam Folder (original array index kept so Preview/Hide/Delete hit the right PDF)
+  const groups = {};
+  a.forEach((n, i) => {
+    const f = String(n.exam || n.folder || "अन्य").trim() || "अन्य";
+    (groups[f] || (groups[f] = [])).push({ n, i });
+  });
+  const examOrder = getExamMaster().map(x => x.name);
+  const names = Object.keys(groups).sort((x, y) => {
+    const ix = examOrder.indexOf(x), iy = examOrder.indexOf(y);
+    return (ix < 0 ? 9999 : ix) - (iy < 0 ? 9999 : iy);
+  });
+  b.innerHTML = names.map(f => `
+    <div class="card" style="margin:16px 0;border:2px solid #1769aa">
+      <h2 style="margin:0 0 4px;color:#123b68;font-size:18px">📁 ${esc(f)}</h2>
+      <p class="muted" style="margin:0 0 12px;color:#667085;font-weight:600">${groups[f].length} PDF</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+        ${groups[f].map(({ n, i }) => {
+          const vis = n.visible !== false;
+          return `
+          <div style="border:1px solid #d6e0ea;border-radius:12px;padding:12px;background:${vis ? '#fff' : '#f3f4f6'}">
+            <b>📄 ${esc(n.title)}</b><br>
+            <small style="color:#667085;word-break:break-all">${esc(n.fileName || 'PDF')}</small><br>
+            <small style="font-weight:700;color:${vis ? '#1a7f37' : '#b45309'}">${vis ? '👁️ Student को दिख रही है' : '🙈 Hidden है'}</small>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+              <button type="button" class="btn" onclick="previewAdminPdfNote(${i})">👁️ View</button>
+              <button type="button" class="btn ${vis ? 'gray' : 'orange'}" onclick="togglePdfNoteVisible(${i})">${vis ? '🙈 Hide' : '👁️ Show'}</button>
+              <button type="button" class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button>
+            </div>
+          </div>`;
+        }).join('')}
       </div>
     </div>
-  `).join('') || '<p style="color:#667085">अभी कोई Study Material Notes नहीं हैं।</p>';
+  `).join('');
 }
+
+window.togglePdfNoteVisible = function(i) {
+  const a = getAdminNotes();
+  const n = a[i];
+  if (!n) return;
+  n.visible = n.visible === false;
+  localStorage.setItem("tgy_pdf_notes", JSON.stringify(a));
+  tgySyncPdfNotesToCloud();
+  renderAdminNotes();
+};
 
 window.previewAdminPdfNote = async function(i) {
   const n = getAdminNotes()[i];
