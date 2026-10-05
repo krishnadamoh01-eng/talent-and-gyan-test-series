@@ -173,7 +173,7 @@ body.admin-locked > header,body.admin-locked > .layout,body.admin-locked > main,
       <div class="card" style="padding:0;overflow:hidden">
         <table>
           <thead>
-            <tr><th>नाम</th><th>Email</th><th>Mobile</th><th>Register Date</th><th>Access Status</th><th>Action</th></tr>
+            <tr><th>नाम</th><th>Email</th><th>Mobile</th><th>Register Date</th><th>Access (क्या-क्या मिला है)</th><th>Action</th></tr>
           </thead>
           <tbody id="ut"></tbody>
         </table>
@@ -1781,6 +1781,51 @@ window.tgyClearPayment = async function(i) {
    USERS & DIRECT ACCESS
    ========================================================================= */
 
+window.tgyUserAccessItems = function(u) {
+  const now = Date.now();
+  const items = [];
+  const fmt = d => { try { return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); } catch (e) { return ""; } };
+  const add = (icon, text, expiresAt) => {
+    const dead = !!(expiresAt && new Date(expiresAt).getTime() <= now);
+    items.push({ icon, text, till: expiresAt ? fmt(expiresAt) : "", dead });
+  };
+  (Array.isArray(u.seriesAccess) ? u.seriesAccess : []).forEach(x => {
+    if (!x) return;
+    const c = Number(x.count) || 0;
+    const what = c >= 999999 ? "पूरी Series (सभी Tests)" : ("पहले " + c + " Tests");
+    add("📚", (x.exam || "All Exams") + " — " + what, x.expiresAt);
+  });
+  (Array.isArray(u.purchasedTests) ? u.purchasedTests : []).forEach(x => {
+    if (!x) return;
+    if (typeof x === "object") add("📝", (x.exam ? x.exam + " — " : "") + (x.name || x.testId || "Test"), x.expiresAt);
+    else add("📝", "Test: " + x);
+  });
+  let notes = [];
+  try { notes = JSON.parse(localStorage.getItem("tgy_pdf_notes") || "[]"); } catch (e) {}
+  (Array.isArray(u.notesFolderAccess) ? u.notesFolderAccess : []).forEach(x => {
+    if (x) add("📄", "PDF Folder: " + (x.folder || "-"), x.expiresAt);
+  });
+  (Array.isArray(u.purchasedNotes) ? u.purchasedNotes : []).forEach(x => {
+    if (!x) return;
+    const key = typeof x === "object" ? (x.id || x.title || x.name) : x;
+    const hit = notes.find(n => n && (n.id === key || n.title === key));
+    add("📄", "PDF: " + (hit ? hit.title : (typeof x === "object" ? (x.title || x.name || x.id) : x)), typeof x === "object" ? x.expiresAt : "");
+  });
+  return items;
+};
+
+window.tgyUserAccessHtml = function(u) {
+  const items = tgyUserAccessItems(u);
+  const active = items.filter(i => !i.dead);
+  if (!items.length) {
+    return u.access ? `<span class="badge" style="background:#e6f4ea;color:#1e7e34">${esc(u.access)}</span>` : "No Access";
+  }
+  return `<div style="min-width:210px">` + items.map(i => `
+    <div style="margin:3px 0;font-size:13px;line-height:1.35;${i.dead ? 'opacity:.55;text-decoration:line-through' : ''}">
+      ${i.icon} <b>${esc(i.text)}</b>${i.till ? `<br><span style="color:#667085;font-size:12px">${i.dead ? 'समाप्त: ' : 'तक: '}${esc(i.till)}</span>` : ''}
+    </div>`).join("") + (active.length ? "" : `<div style="color:#b45309;font-size:12px;font-weight:700">⚠️ कोई चालू Access नहीं</div>`) + `</div>`;
+};
+
 function renderUsers() {
   const tb = document.getElementById("ut");
   if (!tb) return;
@@ -1795,10 +1840,10 @@ function renderUsers() {
       <td>${esc(u.email || '-')}</td>
       <td>${esc(u.mobile || '-')}</td>
       <td>${esc(u.created || '-')}</td>
-      <td>${u.access ? `<span class="badge" style="background:#e6f4ea;color:#1e7e34">${esc(u.access)}</span>` : 'No Access'}</td>
+      <td>${tgyUserAccessHtml(u)}</td>
       <td>
         <button type="button" class="btn orange" style="padding:4px 8px;font-size:12px" onclick="tgyDirectAccess(${i})">🎓 Give Access</button>
-        ${u.access ? `<button type="button" class="btn gray" style="padding:4px 8px;font-size:12px" onclick="removeUserAccess(${i})">❌ Lock Access</button>` : ''}
+        ${(u.access || tgyUserAccessItems(u).length) ? `<button type="button" class="btn gray" style="padding:4px 8px;font-size:12px" onclick="removeUserAccess(${i})">❌ Lock Access</button>` : ''}
         <button type="button" class="btn danger" style="padding:4px 8px;font-size:12px" onclick="tgyDeleteUserPermanently(${i})">🗑️ Delete</button>
       </td>
     </tr>
@@ -1917,6 +1962,7 @@ window.removeUserAccess = async function(i) {
   if (users[i]) {
     users[i].access = null;
     users[i].seriesAccess = [];
+    users[i].purchasedTests = [];
     localStorage.setItem("tgy_users", JSON.stringify(users));
     await cloudUpsert("tgy_users", users);
     renderUsers();

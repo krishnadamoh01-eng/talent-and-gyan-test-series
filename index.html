@@ -2258,6 +2258,7 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
 
 <script id="tgy-purchased-folder-click-fix-final">
 (function(){
+  var E=window.esc||function(v){return String(v==null?"":v).replace(/[&<>"']/g,function(m){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})};
   var old=window.renderMyPurchasedTests;
   if(typeof old!=="function")return;
   window.renderMyPurchasedTests=function(){
@@ -2271,7 +2272,25 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
       h+='<h3>📚 Purchased Test Series</h3>';
       sa.forEach(function(x){
         var rem=x.expiresAt?Math.max(0,Math.ceil((new Date(x.expiresAt).getTime()-now)/86400000)):"∞";
-        h+='<div class="card" style="margin:10px 0"><h3>📁 '+E(x.accessName||x.exam||"Test Series")+'</h3><p>✅ Access Active • ⏳ '+(rem==="∞"?"Unlimited":rem+" दिन बाकी")+'</p><button class="btn orange" onclick="tgyOpenTestSeriesFinal('+JSON.stringify(x.exam||"")+')">📂 Folder खोलें</button></div>';
+        h+='<div class="card" style="margin:10px 0"><h3>📁 '+E(x.accessName||x.exam||"Test Series")+'</h3><p>✅ '+(Number(x.count)>=999999?"पूरी Series (सभी Tests)":(Number(x.count)>0?"पहले "+Number(x.count)+" Tests":"Access Active"))+' • ⏳ '+(rem==="∞"?"Unlimited":rem+" दिन बाकी")+'</p><button class="btn orange" onclick="tgyOpenTestSeriesFinal('+E(JSON.stringify(x.exam||""))+')">📂 Folder खोलें</button></div>';
+      });
+    }
+    var tl=Array.isArray(window.tests)?window.tests:[],picked=[];
+    (u.purchasedTests||[]).forEach(function(x){
+      if(x&&typeof x==="object"){
+        if(x.expiresAt&&new Date(x.expiresAt).getTime()<=now)return;
+        var nm=x.name||x.testId,i=tl.findIndex(function(t){return t&&t.name===nm&&(!x.exam||String(t.exam||"").trim().toLowerCase()===String(x.exam).trim().toLowerCase())});
+        picked.push({name:nm,exam:x.exam||"",i:i,exp:x.expiresAt||""});
+      }else{
+        var j=tl.findIndex(function(t){return t&&(t.name===x||t.id===x)});
+        if(j>=0)picked.push({name:tl[j].name,exam:tl[j].exam||"",i:j,exp:""});
+      }
+    });
+    if(picked.length){
+      h+='<h3 style="margin-top:20px">📝 आपको दिए गए Tests</h3>';
+      picked.forEach(function(x){
+        var rem=x.exp?Math.max(0,Math.ceil((new Date(x.exp).getTime()-now)/86400000)):"∞";
+        h+='<div class="card" style="margin:10px 0"><h3>📝 '+E(x.name||"Test")+'</h3><p>'+(x.exam?E(x.exam)+' • ':'')+'✅ Access Active • ⏳ '+(rem==="∞"?"Unlimited":rem+" दिन बाकी")+'</p>'+(x.i>=0?'<button class="btn orange" onclick="tgyOpenTestFromFolder('+x.i+')">▶️ Test दें</button>':'')+'</div>';
       });
     }
     var allowed=u.purchasedNotes||[];
