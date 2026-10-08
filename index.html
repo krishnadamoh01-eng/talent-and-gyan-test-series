@@ -1895,6 +1895,10 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
 </script>
 <style id="tgy-plan-grid-css">
 .tgy-plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:8px;max-height:280px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px}
+.tgy-plans-exams{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;align-items:start;margin-top:10px}
+.tgy-plans-card h3{margin:0 0 6px;font-size:15px;line-height:1.3}
+.tgy-plans-card .tgy-plan-grid{grid-template-columns:1fr;max-height:260px}
+@media(max-width:600px){.tgy-plans-exams{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.tgy-plans-card{padding:10px!important}.tgy-plans-card h3{font-size:13px}}
 .tgy-plan-item{border:1px solid #eee;border-radius:10px;padding:9px;font-size:13px;background:#fafcff}
 .tgy-plan-item b{font-size:13px}
 .tgy-plan-item .btn{padding:7px 9px;font-size:12px;margin-top:5px;width:100%}
@@ -2171,14 +2175,15 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
     // Plans directly below Exams, not a separate Home button.
     var old=document.getElementById("tgyHomeAccessPlansFinal");if(old)old.remove();
     var sec=document.createElement("section");sec.className="tgy-section";sec.id="tgyHomeAccessPlansFinal";
-    var html='<div class="tgy-section-head"><div class="tgy-section-title">💳 Access Plans</div></div>';
+    var html='<div class="tgy-section-head"><div class="tgy-section-title">💳 Access Plans</div></div><div class="tgy-plans-exams">';
     exs.forEach(function(ex){
       var ps=prices(ex); if(!ps.length)return;
-      html+='<div class="card" style="margin:10px 0;border:2px solid #dce7f3"><h3>📁 '+E(ex)+'</h3><div class="tgy-plan-grid">'+ps.map(function(x,i){
+      html+='<div class="card tgy-plans-card" style="margin:0;border:2px solid #dce7f3"><h3>📁 '+E(ex)+'</h3><div class="tgy-plan-grid">'+ps.map(function(x,i){
         var title=x.type==="folder"?"पूरा Test Series":((Number(x.count)||1)+" Tests");
         return '<div class="tgy-plan-item"><b>'+E(x.name||title)+'</b><br>'+price(x)+'<br><span class="muted">'+E(duration(x))+'</span><br><button class="btn orange" onclick="return tgyOpenPurchasePayment('+E(JSON.stringify(ex))+','+i+')">PURCHASE</button><button class="btn gray" onclick="return tgyShowPlanDetails('+E(JSON.stringify(ex))+','+i+')">Details</button></div>';
       }).join("")+'</div></div>';
     });
+    html+='</div>';
     sec.innerHTML=html;
     var examsSection=document.getElementById("exams");
     if(examsSection&&examsSection.parentNode)examsSection.parentNode.insertBefore(sec,examsSection.nextSibling);
