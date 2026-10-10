@@ -2131,7 +2131,7 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
     var logged=J("tgy_user",null);
     if(logged){return oldOpenAuth(mode)}
     var box=document.getElementById("authContent"); if(!box)return oldOpenAuth(mode);
-    box.innerHTML='<h2>🔐 Login</h2><label>Email / Mobile Number</label><input id="aemail" type="text" inputmode="email" autocomplete="username" placeholder="Email या Mobile Number"><label>Password</label><div class="password-field-wrap"><input id="apass" type="password" autocomplete="current-password"><button type="button" class="btn password-toggle" onclick="togglePassword(\'apass\',this)">👁️ दिखाएँ</button></div><button class="btn" onclick="doLogin()">Login</button> <button class="btn gray" onclick="closeAuth()">बंद करें</button><p>Account नहीं है? <a href="#" onclick="openAuth(\'register\');return false">Register करें</a></p>';
+    box.innerHTML='<h2>🔐 Login</h2><label>Email / Mobile Number</label><input id="aemail" type="text" inputmode="email" autocomplete="username" placeholder="Email या Mobile Number"><label>Password</label><div class="password-field-wrap"><input id="apass" type="password" autocomplete="current-password"><button type="button" class="btn password-toggle" onclick="togglePassword(\'apass\',this)">👁️ दिखाएँ</button></div><button class="btn" onclick="doLogin()">Login</button> <button class="btn gray" onclick="closeAuth()">बंद करें</button><p>Account नहीं है? <a href="#" onclick="openAuth(\'register\');return false">Register करें</a></p><p><a href="#" onclick="tgyForgotPassword();return false">🔑 Password भूल गए?</a></p>';
     document.getElementById("authModal").style.display="flex";
   };
   window.doLogin=function(){
@@ -2477,7 +2477,6 @@ body.tgy-payment-open #modal .box{width:100vw!important;max-width:none!important
   document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){if(J('tgy_user',null)&&window.tgySyncCurrentStudentDevice)window.tgySyncCurrentStudentDevice()},1200)},{once:true});
 })();
 </script>
-
 </body></html>
 <!-- TG&Y PDF + TEST SERIES COMBO PLAN -->
 <script id="tgy-combo-student-v1">
@@ -2884,7 +2883,7 @@ html,body{max-width:100%;overflow-x:hidden}
     var local=J('tgy_users',[]),cloud=await cloudUsers(),users=mergeUsers(cloud,local);
     var byEmail=users.find(function(u){return email(u.email)===em}),byMobile=users.find(function(u){return mobile(u.mobile)===mo});
     if(byEmail||byMobile){
-      if(byEmail&&byMobile&&byEmail===byMobile){
+      if(byEmail&&byMobile&&byEmail===byMobile&&byEmail.password===pass){
         // Existing account on the same credentials: do not create a duplicate. Log it in on this device.
         var u=Object.assign({},byEmail,{deviceType:device(),deviceIcon:icon(device()),lastLoginAt:new Date().toISOString(),deviceHistory:Array.from(new Set((byEmail.deviceHistory||[]).concat([device()]))) });
         S('tgy_users',mergeUsers(users,[u]));S('tgy_user',u);await saveCloudUsers(mergeUsers(users,[u]));
@@ -2895,7 +2894,7 @@ html,body{max-width:100%;overflow-x:hidden}
       if(byEmail){alert('यह Email पहले से Registered है। इसी Email से Login करें।');return false;}
       alert('यह Mobile Number पहले से Registered है। उसी Account से Login करें।');return false;
     }
-    var u={name:name,email:em,mobile:mo,password:pass,created:new Date().toLocaleString(),access:null,deviceType:device(),deviceIcon:icon(device()),lastLoginAt:new Date().toISOString(),deviceHistory:[device()]};
+    var u={name:name,email:em,mobile:mo,password:pass,created:new Date().toLocaleString(),registeredAt:new Date().toISOString(),access:null,deviceType:device(),deviceIcon:icon(device()),lastLoginAt:new Date().toISOString(),deviceHistory:[device()]};
     users.push(u);S('tgy_users',users);S('tgy_user',u);await saveCloudUsers(users);
     alert('Registration सफल हुआ।');try{closeAuth();}catch(e){}try{updateAuthUI();}catch(e){}try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests();}catch(e){}
     return false;
@@ -3083,7 +3082,7 @@ html,body{max-width:100%;overflow-x:hidden}
     var cloud=await getUsers(), local=J('tgy_users',[]), users=mergeIdentity(cloud,local);
     var byEmail=users.find(function(u){return normEmail(u.email)===em}), byMobile=users.find(function(u){return normMobile(u.mobile)===mo});
     if(byEmail||byMobile){
-      if(byEmail&&byMobile&&((byEmail===byMobile)||(normEmail(byEmail.email)===normEmail(byMobile.email)))){
+      if(byEmail&&byMobile&&byEmail.password===pass&&((byEmail===byMobile)||(normEmail(byEmail.email)===normEmail(byMobile.email)))){
         var d=dev(),u=Object.assign({},byEmail,{deviceType:d,deviceIcon:icon(d),lastLoginAt:new Date().toISOString(),deviceHistory:Array.from(new Set((byEmail.deviceHistory||[]).concat([d])))});
         // Preserve any Access already granted by Admin.
         var ci=cloud.find(function(x){return normEmail(x.email)===em||(normMobile(x.mobile)===mo&&mo.length>=8)});
@@ -3095,7 +3094,7 @@ html,body{max-width:100%;overflow-x:hidden}
       if(byEmail){alert('यह Email पहले से Registered है। उसी Account से Login करें।');return false;}
       alert('यह Mobile Number पहले से Registered है। उसी Account से Login करें।');return false;
     }
-    var d=dev(),u={name:name,email:em,mobile:mo,password:pass,created:new Date().toLocaleString(),access:null,deviceType:d,deviceIcon:icon(d),lastLoginAt:new Date().toISOString(),deviceHistory:[d]};
+    var d=dev(),u={name:name,email:em,mobile:mo,password:pass,created:new Date().toLocaleString(),registeredAt:new Date().toISOString(),access:null,deviceType:d,deviceIcon:icon(d),lastLoginAt:new Date().toISOString(),deviceHistory:[d]};
     users.push(u);S('tgy_users',users);S('tgy_user',u);await putUsers(users);
     try{closeAuth();updateAuthUI()}catch(e){} try{if(typeof renderMyPurchasedTests==='function')renderMyPurchasedTests()}catch(e){}
     alert('Registration सफल हुआ।');return false;
@@ -3173,10 +3172,14 @@ html,body{max-width:100%;overflow-x:hidden}
     window[name]=async function(){
       var ident=(document.getElementById(name==='doLogin'?'aemail':'remail')?.value||'').trim();
       var mob=(document.getElementById(name==='doLogin'?'aemail':'rmobile')?.value||'').trim();
+      var passIn=(document.getElementById(name==='doLogin'?'apass':'rpass')?.value||'');
       var before=await getUsers(), protectedUser=before.find(function(x){return em(x.email)===em(ident)||(mo(x.mobile)===mo(mob)&&mo(mob).length>=8)});
       var r=await old.apply(this,arguments);
       try{
-        if(protectedUser){
+        // Log the account in only when the password really matched (a wrong password must never create a session).
+        var curSession=J('tgy_user',null);
+        var sessionOk=!!(protectedUser&&curSession&&same(curSession,protectedUser)&&protectedUser.password===passIn);
+        if(protectedUser&&sessionOk){
           var after=await getUsers(), target=after.find(function(x){return same(x,protectedUser)});
           if(target){copyAccess(target,protectedUser);var users=mergeCloudFirst(after,[target]);S('tgy_users',users);S('tgy_user',target);await putUsers(users);}
         }
@@ -4060,5 +4063,123 @@ window.tgyOpenPdfFull=async function(title,raw,extraUrl){
     fail(String(err&&err.message||err).slice(0,120));
   }
 };
+})();
+</script>
+
+<script id="tgy-account-guard">
+(function(){
+  'use strict';
+  var SUPA='https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store';
+  var KEY='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U';
+  var HD={apikey:KEY,Authorization:'Bearer '+KEY};
+  function J(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}}
+  function S(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+  function nEmail(v){return String(v==null?'':v).trim().toLowerCase()}
+  function nMob(v){var d=String(v==null?'':v).replace(/\D/g,'');return d.length>=8?d.slice(-10):''}
+  function idE(v){var e=nEmail(v);return e&&e!=='-'?e.replace(/[^a-z0-9@._-]/g,'_'):''}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  // undefined = server could not be reached, null = key does not exist
+  async function getKey(k){
+    try{var r=await fetch(SUPA+'?select=value&key=eq.'+encodeURIComponent(k),{headers:HD});if(!r.ok)return undefined;var a=await r.json();return a&&a[0]?a[0].value:null}catch(e){return undefined}
+  }
+  async function putKey(k,v){
+    try{var r=await fetch(SUPA+'?on_conflict=key',{method:'POST',headers:Object.assign({'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},HD),body:JSON.stringify({key:k,value:v,updated_at:new Date().toISOString()})});return r.ok}catch(e){return false}
+  }
+  function findUser(list,ident){
+    var e=nEmail(ident),m=nMob(ident);
+    return (Array.isArray(list)?list:[]).find(function(u){return u&&((e&&nEmail(u.email)===e)||(m&&nMob(u.mobile)===m))});
+  }
+
+  /* ---------- Forgot password: send a request to Admin ---------- */
+  window.tgyForgotPassword=function(){
+    var box=document.getElementById('authContent');if(!box)return;
+    box.innerHTML='<h2>🔑 Password भूल गए?</h2><p>अपना Email या Mobile Number डालें। आपकी Request Admin को भेज दी जाएगी और Admin आपको आपका Password बता देंगे।</p><label>Email / Mobile Number</label><input id="fpIdent" type="text" inputmode="email" autocomplete="username" placeholder="Email या Mobile Number"><button class="btn" id="fpBtn" onclick="tgySendPasswordRequest()">📨 Admin को Request भेजें</button> <button class="btn gray" onclick="openAuth(\'login\')">← वापस Login</button><p id="fpMsg" style="font-weight:700"></p>';
+    var m=document.getElementById('authModal');if(m)m.style.display='flex';
+  };
+  window.tgySendPasswordRequest=async function(){
+    var inp=document.getElementById('fpIdent'),msg=document.getElementById('fpMsg'),btn=document.getElementById('fpBtn');
+    var ident=(inp&&inp.value||'').trim();
+    function say(t,ok){if(msg){msg.style.color=ok?'#1e7e34':'#b42318';msg.textContent=t}}
+    if(!ident){say('अपना Email या Mobile Number डालें।',false);return}
+    if(btn)btn.disabled=true;say('⏳ कृपया प्रतीक्षा करें...',true);
+    var cloud=await getKey('tgy_users');
+    if(cloud===undefined){say('Server से संपर्क नहीं हो पाया। इंटरनेट जाँचकर दोबारा कोशिश करें।',false);if(btn)btn.disabled=false;return}
+    var u=findUser(cloud,ident);
+    if(!u){say('इस Email/Mobile से कोई Account नहीं मिला। कृपया पहले Register करें।',false);if(btn)btn.disabled=false;return}
+    var key='tgy_pwreq_'+(idE(u.email)||nMob(u.mobile));
+    var ok=await putKey(key,{name:u.name||'',email:u.email||'',mobile:u.mobile||'',at:new Date().toISOString(),status:'pending'});
+    if(ok){say('✅ आपकी Request Admin को भेज दी गई है। Admin आपसे संपर्क करके Password बता देंगे।',true)}
+    else{say('Request नहीं भेजी जा सकी। कुछ देर बाद दोबारा कोशिश करें।',false);if(btn)btn.disabled=false}
+  };
+
+  /* ---------- Accounts removed by Admin must register again ---------- */
+  async function deletedAt(u){
+    var keys=[];var e=idE(u&&u.email),m=nMob(u&&u.mobile);
+    if(e)keys.push('tgy_del_e_'+e);if(m)keys.push('tgy_del_m_'+m);
+    var latest=0,failed=false;
+    for(var i=0;i<keys.length;i++){
+      var v=await getKey(keys[i]);
+      if(v===undefined){failed=true;continue}
+      if(v&&v.at){var t=Date.parse(v.at);if(t>latest)latest=t}
+    }
+    return {at:latest,failed:failed};
+  }
+  async function isRemoved(u){
+    var d=await deletedAt(u);
+    if(!d.at)return false;                      // no removal marker (or server unreachable): do not lock anyone out
+    var reg=u&&u.registeredAt?Date.parse(u.registeredAt):0;
+    return !(reg>d.at);                         // an account registered after the removal is valid
+  }
+  function purgeLocal(u){
+    var e=nEmail(u&&u.email),m=nMob(u&&u.mobile);
+    var rest=J('tgy_users',[]).filter(function(x){return !(x&&((e&&nEmail(x.email)===e)||(m&&nMob(x.mobile)===m)))});
+    S('tgy_users',rest);
+    var cur=J('tgy_user',null);
+    if(cur&&((e&&nEmail(cur.email)===e)||(m&&nMob(cur.mobile)===m))){try{localStorage.removeItem('tgy_user')}catch(x){}}
+  }
+  var REMOVED_MSG='आपका Account Admin द्वारा हटा दिया गया है। कृपया पहले दोबारा Register करें।';
+
+  // Login: a removed account cannot sign in (checked before any other login code runs).
+  var oldLogin=window.doLogin;
+  if(typeof oldLogin==='function'){
+    window.doLogin=async function(){
+      try{
+        var ident=(document.getElementById('aemail')&&document.getElementById('aemail').value||'').trim();
+        var cloud=await getKey('tgy_users');
+        var cand=findUser(J('tgy_users',[]),ident)||findUser(cloud,ident);
+        // no account found for this Email/Mobile: still tell a removed student what to do
+        var probe=cand||{email:ident,mobile:ident};
+        if(await isRemoved(probe)){purgeLocal(probe);alert(REMOVED_MSG);return false}
+      }catch(e){}
+      return oldLogin.apply(this,arguments);
+    };
+  }
+  // Register: if the Email/Mobile was removed by Admin, drop the stale local copy so a fresh account is created.
+  var oldReg=window.doRegister;
+  if(typeof oldReg==='function'){
+    window.doRegister=async function(){
+      try{
+        var em=document.getElementById('remail')&&document.getElementById('remail').value,mo=document.getElementById('rmobile')&&document.getElementById('rmobile').value;
+        var probe={email:em,mobile:mo};
+        var d=await deletedAt(probe);
+        if(d.at)purgeLocal(probe);
+      }catch(e){}
+      return oldReg.apply(this,arguments);
+    };
+  }
+  // Already signed-in device: if Admin removed this account, sign out.
+  async function checkSession(){
+    var cur=J('tgy_user',null);if(!cur)return;
+    try{
+      if(await isRemoved(cur)){
+        purgeLocal(cur);
+        try{if(typeof updateAuthUI==='function')updateAuthUI()}catch(e){}
+        alert(REMOVED_MSG);
+        try{location.reload()}catch(e){}
+      }
+    }catch(e){}
+  }
+  setTimeout(checkSession,2500);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)checkSession()});
 })();
 </script>

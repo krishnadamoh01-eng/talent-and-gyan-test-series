@@ -170,10 +170,15 @@ body.admin-locked > header,body.admin-locked > .layout,body.admin-locked > main,
         <button type="button" class="btn orange" onclick="tgyDirectAccess()">🎓 Direct Access दें</button>
         <button type="button" class="btn" style="background:#0284c7;color:#fff" onclick="tgySyncUsersFromCloud(true)">🔄 Cloud से Refresh करें</button>
       </div>
+      <div class="card" id="pwReqCard" style="display:none;margin-bottom:14px;border:2px solid #f59e0b">
+        <h3 style="margin-top:0">🔑 Password Requests <span id="pwReqCount" class="badge">0</span></h3>
+        <p class="muted" style="color:#667085;margin-top:0">इन Students ने "Password भूल गए" दबाया है। नीचे उनका Password दिख रहा है, उन्हें बता दें, या नया Password दे दें।</p>
+        <div id="pwReqList"></div>
+      </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table>
           <thead>
-            <tr><th>नाम</th><th>Email</th><th>Mobile</th><th>Register Date</th><th>Access (क्या-क्या मिला है)</th><th>Action</th></tr>
+            <tr><th>नाम</th><th>Email</th><th>Mobile</th><th>Password</th><th>Register Date</th><th>Access (क्या-क्या मिला है)</th><th>Action</th></tr>
           </thead>
           <tbody id="ut"></tbody>
         </table>
@@ -392,7 +397,8 @@ body.admin-locked > header,body.admin-locked > .layout,body.admin-locked > main,
             </select>
           </div>
         </div>
-        <button type="button" class="btn orange" onclick="saveAccessPricing()">💾 Save Pricing</button>
+        <button type="button" class="btn orange" id="apSaveBtn" onclick="saveAccessPricing()">💾 Save Pricing</button>
+        <button type="button" class="btn gray" id="apCancelBtn" style="display:none" onclick="apCancelEdit()">✖️ Edit रद्द करें</button>
       </div>
 
       <div class="card">
@@ -1703,12 +1709,16 @@ function getUsers() {
 function renderPayments() {
   const tb = document.getElementById("pt");
   if (!tb) return;
-  const payments = getPayments().filter(x => x.adminCleared !== true);
-  if (!payments.length) {
+  const all = getPayments();
+  // keep each row's real position, so Give Access / Remove always act on the right payment
+  const rows = all.map((x, idx) => ({ x, idx })).filter(r => r.x.adminCleared !== true);
+  if (!rows.length) {
     tb.innerHTML = "<tr><td colspan='9' style='text-align:center;color:#667085'>अभी कोई Pending Payment Request नहीं है।</td></tr>";
+    const sp0 = document.getElementById("sp");
+    if (sp0) sp0.textContent = 0;
     return;
   }
-  tb.innerHTML = payments.map((x, i) => {
+  tb.innerHTML = rows.map(({ x, idx }) => {
     const isConfirmed = x.status === "Access Activated" || x.adminConfirmed === true;
     return `
       <tr>
@@ -1722,16 +1732,17 @@ function renderPayments() {
         <td><span class="badge" style="${isConfirmed ? 'background:#e6f4ea;color:#1e7e34' : ''}">${esc(x.status || 'Pending')}</span></td>
         <td>
           ${isConfirmed ? `
-            <button type="button" class="btn gray" onclick="tgyClearPayment(${i})">✓ Clear</button>
+            <button type="button" class="btn gray" onclick="tgyClearPayment(${idx})">✓ Clear</button>
           ` : `
-            <button type="button" class="btn orange" onclick="activatePayment(${i})">Give Access</button>
+            <button type="button" class="btn orange" onclick="activatePayment(${idx})">Give Access</button>
+            <button type="button" class="btn danger" onclick="tgyRemovePayment(${idx})">🗑️ हटाएँ</button>
           `}
         </td>
       </tr>
     `;
   }).join('');
   const sp = document.getElementById("sp");
-  if (sp) sp.textContent = payments.filter(x => x.status !== "Access Activated").length;
+  if (sp) sp.textContent = rows.filter(r => r.x.status !== "Access Activated").length;
 }
 
 window.activatePayment = async function(i) {
@@ -1767,14 +1778,28 @@ window.activatePayment = async function(i) {
   alert("✅ Access Activate हो गया और Student को Unlock मिल गया।");
 };
 
+window.tgyPayKey = p => [p.email || "", p.mobile || "", p.utr || "", p.date || "", p.amount || "", p.course || p.exam || ""].join("|");
+
+// Hides a payment row only. The student's Users record (access, data) is not touched.
 window.tgyClearPayment = async function(i) {
   const payments = getPayments();
-  if (payments[i]) {
-    payments[i].adminCleared = true;
-    localStorage.setItem("tgy_payments", JSON.stringify(payments));
-    cloudUpsert("tgy_payments", payments);
-    renderPayments();
-  }
+  const target = payments[i];
+  if (!target) return;
+  const key = tgyPayKey(target);
+  target.adminCleared = true;
+  localStorage.setItem("tgy_payments", JSON.stringify(payments));
+  // write on top of the newest cloud list so payment requests sent meanwhile are not lost
+  const cloud = await cloudGet("tgy_payments");
+  let merged = Array.isArray(cloud) ? cloud.map(c => (tgyPayKey(c) === key ? Object.assign({}, c, { adminCleared: true }) : c)) : payments;
+  if (Array.isArray(cloud)) payments.forEach(l => { if (!merged.some(c => tgyPayKey(c) === tgyPayKey(l))) merged.push(l); });
+  localStorage.setItem("tgy_payments", JSON.stringify(merged));
+  await cloudUpsert("tgy_payments", merged);
+  renderPayments();
+};
+
+window.tgyRemovePayment = async function(i) {
+  if (!confirm("इस Request को सूची से हटाना चाहते हैं?\n\nUser का Data Users में सुरक्षित रहेगा।")) return;
+  await tgyClearPayment(i);
 };
 
 /* =========================================================================
@@ -1831,7 +1856,8 @@ function renderUsers() {
   if (!tb) return;
   const users = getUsers();
   if (!users.length) {
-    tb.innerHTML = "<tr><td colspan='6' style='text-align:center;color:#667085'>अभी कोई User Register नहीं है।</td></tr>";
+    tb.innerHTML = "<tr><td colspan='7' style='text-align:center;color:#667085'>अभी कोई User Register नहीं है।</td></tr>";
+    if (typeof tgyLoadPwRequests === "function") tgyLoadPwRequests();
     return;
   }
   tb.innerHTML = users.map((u, i) => `
@@ -1839,17 +1865,20 @@ function renderUsers() {
       <td>${u.deviceType === 'mobile' ? '📱' : '💻'} <b>${esc(u.name || '-')}</b></td>
       <td>${esc(u.email || '-')}</td>
       <td>${esc(u.mobile || '-')}</td>
+      <td>${u.password ? `<code style="font-size:13px;user-select:all">${esc(u.password)}</code>` : '<span class="muted" style="color:#98a2b3">— (नहीं है)</span>'}</td>
       <td>${esc(u.created || '-')}</td>
       <td>${tgyUserAccessHtml(u)}</td>
       <td>
         <button type="button" class="btn orange" style="padding:4px 8px;font-size:12px" onclick="tgyDirectAccess(${i})">🎓 Give Access</button>
         ${(u.access || tgyUserAccessItems(u).length) ? `<button type="button" class="btn gray" style="padding:4px 8px;font-size:12px" onclick="removeUserAccess(${i})">❌ Lock Access</button>` : ''}
+        <button type="button" class="btn" style="padding:4px 8px;font-size:12px" onclick="tgyOpenResetPassword(${i})">🔑 Password रीसेट</button>
         <button type="button" class="btn danger" style="padding:4px 8px;font-size:12px" onclick="tgyDeleteUserPermanently(${i})">🗑️ Delete</button>
       </td>
     </tr>
   `).join('');
   const su = document.getElementById("su");
   if (su) su.textContent = users.length;
+  if (typeof tgyLoadPwRequests === "function") tgyLoadPwRequests();
 }
 
 window.tgyDirectAccess = function(prefill) {
@@ -1969,13 +1998,183 @@ window.removeUserAccess = async function(i) {
   }
 };
 
+window.tgyIdE = v => { const e = String(v == null ? "" : v).trim().toLowerCase(); return e && e !== "-" ? e.replace(/[^a-z0-9@._-]/g, "_") : ""; };
+window.tgyIdM = v => { const d = String(v == null ? "" : v).replace(/\D/g, ""); return d.length >= 8 ? d.slice(-10) : ""; };
+window.tgySameUser = (a, b) => !!(a && b) && (
+  (tgyIdE(a.email) && tgyIdE(a.email) === tgyIdE(b.email)) ||
+  (tgyIdM(a.mobile) && tgyIdM(a.mobile) === tgyIdM(b.mobile)));
+
+// A removed student's Email/Mobile gets a marker so the Student Site refuses login until they register again.
+window.tgyMarkUserRemoved = async function(u) {
+  const val = { email: u.email || "", mobile: u.mobile || "", at: new Date().toISOString() };
+  const e = tgyIdE(u.email), m = tgyIdM(u.mobile);
+  let ok = true;
+  if (e) ok = (await cloudUpsert("tgy_del_e_" + e, val)) && ok;
+  if (m) ok = (await cloudUpsert("tgy_del_m_" + m, val)) && ok;
+  if (!e && !m) ok = false;
+  return ok;
+};
+
 window.tgyDeleteUserPermanently = async function(i) {
-  if (!confirm("क्या इस User को हमेशा के लिए हटाना चाहते हैं?")) return;
   const users = getUsers();
-  users.splice(i, 1);
-  localStorage.setItem("tgy_users", JSON.stringify(users));
-  await cloudUpsert("tgy_users", users);
+  const u = users[i];
+  if (!u) return;
+  if (!confirm("क्या इस User को हटाना चाहते हैं?\n\nहटाने के बाद यह Student दोबारा Login नहीं कर पाएगा। उसे पहले फिर से Register करना होगा।")) return;
+  const marked = await tgyMarkUserRemoved(u);
+  if (!marked) { alert("⚠️ Cloud में यह दर्ज नहीं हो सका, इसलिए User नहीं हटाया गया। इंटरनेट जाँचकर दोबारा कोशिश करें।"); return; }
+  // remove from the newest cloud list so students who registered meanwhile are kept
+  const cloud = await cloudGet("tgy_users");
+  let list = Array.isArray(cloud) ? cloud.slice() : users.slice();
+  list = list.filter(x => !tgySameUser(x, u));
+  const local = users.filter(x => !tgySameUser(x, u));
+  localStorage.setItem("tgy_users", JSON.stringify(local));
+  await cloudUpsert("tgy_users", list);
+  const rk = "tgy_pwreq_" + (tgyIdE(u.email) || tgyIdM(u.mobile));
+  try { await cloudDelete(rk); } catch (e) {}
   renderUsers();
+  alert("✅ User हटा दिया गया। अब वह Login नहीं कर पाएगा; उसे दोबारा Register करना होगा।");
+};
+
+/* ---- Password requests sent by students ("Password भूल गए?") ---- */
+window.tgyPwReqLast = 0;
+window.tgyPwReqRows = [];
+window.tgyLoadPwRequests = async function(force) {
+  if (!force && Date.now() - window.tgyPwReqLast < 15000) return;
+  window.tgyPwReqLast = Date.now();
+  let rows = null;
+  try {
+    const r = await fetch(TGY_SUPA_URL + "/rest/v1/tgy_store?select=key,value&key=like." + encodeURIComponent("tgy_pwreq_*"), {
+      headers: { apikey: TGY_SUPA_ANON, Authorization: "Bearer " + TGY_SUPA_ANON }
+    });
+    if (r.ok) rows = await r.json();
+  } catch (e) {}
+  window.tgyPwReqRows = Array.isArray(rows) ? rows.filter(x => x && x.value) : [];
+  // bring in students that exist in the cloud but not on this computer yet, so their Password can be shown
+  if (window.tgyPwReqRows.length) {
+    const cu = await cloudGet("tgy_users");
+    if (Array.isArray(cu)) {
+      const local = getUsers();
+      let changed = false;
+      cu.forEach(c => { if (c && !local.some(l => tgySameUser(l, c))) { local.push(c); changed = true; } });
+      if (changed) localStorage.setItem("tgy_users", JSON.stringify(local));
+    }
+  }
+  renderPwRequests();
+};
+
+function renderPwRequests() {
+  const card = document.getElementById("pwReqCard");
+  const list = document.getElementById("pwReqList");
+  const cnt = document.getElementById("pwReqCount");
+  if (!card || !list) return;
+  const rows = window.tgyPwReqRows || [];
+  if (!rows.length) { card.style.display = "none"; return; }
+  card.style.display = "block";
+  if (cnt) cnt.textContent = rows.length;
+  const users = getUsers();
+  list.innerHTML = rows.map((r, k) => {
+    const v = r.value || {};
+    const ui = users.findIndex(u => tgySameUser(u, v));
+    const u = ui >= 0 ? users[ui] : null;
+    const when = v.at ? new Date(v.at).toLocaleString("en-IN") : "";
+    return `
+      <div class="card" style="margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <b>${esc(v.name || (u && u.name) || "-")}</b> <span class="muted" style="color:#667085">${esc(v.email || "-")} • ${esc(v.mobile || "-")}</span><br>
+          <span style="font-size:13px;color:#667085">${esc(when)}</span><br>
+          ${u ? (u.password ? `इनका Password: <code style="font-size:16px;font-weight:800;user-select:all">${esc(u.password)}</code>` : '<span style="color:#b45309">इस Student का Password नहीं है — नया Password दें।</span>')
+              : '<span style="color:#b45309">यह Student सूची में नहीं मिला (शायद हटा दिया गया)।</span>'}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${u ? `<button type="button" class="btn" onclick="tgyOpenResetPassword(${ui})">🔑 नया Password दें</button>` : ''}
+          <button type="button" class="btn gray" onclick="tgyDonePwRequest(${k})">✔️ हो गया (हटाएँ)</button>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+window.tgyDonePwRequest = async function(k) {
+  const r = (window.tgyPwReqRows || [])[k];
+  if (!r) return;
+  await cloudDelete(r.key);
+  window.tgyPwReqRows.splice(k, 1);
+  renderPwRequests();
+};
+
+window.tgyResetTarget = null;
+
+window.tgyOpenResetPassword = function(i) {
+  const u = getUsers()[i];
+  const modal = document.getElementById("modal");
+  const mb = document.getElementById("mb");
+  if (!u || !modal || !mb) return;
+  window.tgyResetTarget = { email: u.email || "", mobile: u.mobile || "" };
+  mb.innerHTML = `
+    <h2>🔑 Password रीसेट</h2>
+    <div class="card" style="margin:8px 0">
+      <b>${esc(u.name || "-")}</b><br>
+      <span class="muted">${esc(u.email || "-")} • ${esc(u.mobile || "-")}</span>
+    </div>
+    <label>नया Password (कम से कम 6 अक्षर)</label>
+    <div class="password-field-wrap">
+      <input id="tgyNewPass" type="text" autocomplete="off" placeholder="नया Password लिखें">
+      <button type="button" class="btn gray" onclick="tgyGenPass()">🎲 अपने-आप बनाएँ</button>
+    </div>
+    <p class="muted" style="font-size:13px">Save के बाद यह Password आपको दिखेगा। इसे Student को Call या WhatsApp से बता दें। Student इसी Password से Login करेगा।</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button type="button" class="btn orange" onclick="tgySaveResetPassword()">✅ Password Save करें</button>
+      <button type="button" class="btn gray" onclick="closeM()">रद्द करें</button>
+    </div>
+  `;
+  modal.style.display = "flex";
+};
+
+window.tgyGenPass = function() {
+  const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const buf = new Uint32Array(8);
+  crypto.getRandomValues(buf);
+  const el = document.getElementById("tgyNewPass");
+  if (el) el.value = Array.from(buf, n => chars[n % chars.length]).join("");
+};
+
+window.tgySaveResetPassword = async function() {
+  const t = window.tgyResetTarget;
+  const pass = (document.getElementById("tgyNewPass")?.value || "").trim();
+  if (!t) return;
+  if (pass.length < 6) return alert("Password कम से कम 6 अक्षर का रखें।");
+  const same = (a, b) => (a.email && b.email && String(a.email).trim().toLowerCase() === String(b.email).trim().toLowerCase()) ||
+    (a.mobile && b.mobile && String(a.mobile).replace(/\D/g, "").slice(-10) === String(b.mobile).replace(/\D/g, "").slice(-10) && String(a.mobile).replace(/\D/g, "").length >= 8);
+  // Start from the latest cloud list so students who registered meanwhile are not lost.
+  const local = getUsers();
+  let cloud = await cloudGet("tgy_users");
+  let users = Array.isArray(cloud) ? cloud.slice() : local.slice();
+  if (Array.isArray(cloud)) local.forEach(l => { if (l && !users.some(c => same(c, l))) users.push(l); });
+  const ix = users.findIndex(u => u && same(u, t));
+  if (ix < 0) return alert("यह Student सूची में नहीं मिला। Users सूची Refresh करके दोबारा कोशिश करें।");
+  users[ix] = Object.assign({}, users[ix], { password: pass, passwordResetAt: new Date().toISOString() });
+  localStorage.setItem("tgy_users", JSON.stringify(users));
+  const ok = await cloudUpsert("tgy_users", users);
+  renderUsers();
+  const u = users[ix];
+  const mb = document.getElementById("mb");
+  if (ok) {
+    try { await cloudDelete("tgy_pwreq_" + (tgyIdE(u.email) || tgyIdM(u.mobile))); } catch (e) {}
+    window.tgyPwReqLast = 0;
+    tgyLoadPwRequests(true);
+  }
+  if (!ok) {
+    if (mb) mb.innerHTML = `<h2>⚠️ Cloud में Save नहीं हुआ</h2><p>Password इस कंप्यूटर में बदला है, पर Cloud तक नहीं पहुँचा। इंटरनेट जाँचकर दोबारा Save करें, वरना Student दूसरे डिवाइस पर इसे नहीं चला पाएगा।</p><button type="button" class="btn gray" onclick="closeM()">बंद करें</button>`;
+    return;
+  }
+  if (mb) mb.innerHTML = `
+    <h2>✅ नया Password तैयार है</h2>
+    <p><b>${esc(u.name || "-")}</b> (${esc(u.email || u.mobile || "-")})</p>
+    <div class="card" style="text-align:center;font-size:24px;letter-spacing:2px;font-weight:800;margin:10px 0" id="tgyShownPass">${esc(pass)}</div>
+    <p class="muted" style="font-size:13px">यह Password Student को बता दें। यह दोबारा नहीं दिखेगा।</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="btn orange" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('tgyShownPass').textContent);this.textContent='✅ Copy हो गया'">📋 Copy करें</button>
+      <button type="button" class="btn gray" onclick="closeM()">बंद करें</button>
+    </div>`;
 };
 
 window.tgyOpenAddUserModal = function() {
@@ -2354,7 +2553,10 @@ window.saveAccessPricing = function() {
     pdf_custom: `Custom PDF — ${pdfNumbers.join(",")}`,
     combo: `Test + PDF Combo`
   };
-  const name = (document.getElementById("apName")?.value.trim()) || typeLabels[type] || exam;
+  const editing = Number.isInteger(window.apEditIndex) && window.apEditIndex >= 0;
+  const prev = editing ? (getAccessPricing()[window.apEditIndex] || null) : null;
+  const keepPrevName = !!(prev && prev.type === type && !(isCustomTest || isCustomPdf) && prev.name);
+  const name = (document.getElementById("apName")?.value.trim()) || (keepPrevName ? prev.name : "") || typeLabels[type] || exam;
 
   const durationValue = Number(document.getElementById("apDuration")?.value) || 30;
   const unit = document.getElementById("apUnit")?.value || "days";
@@ -2375,13 +2577,53 @@ window.saveAccessPricing = function() {
     includesTests: type === "folder" || type === "testseries" || type === "combo",
     includesPdf: type === "pdf_folder" || type === "pdf_custom" || type === "combo"
   };
-  const idx = a.findIndex(x => x.exam === exam && x.type === type && x.name === name);
+  const idx = (editing && window.apEditIndex < a.length) ? window.apEditIndex : a.findIndex(x => x.exam === exam && x.type === type && x.name === name);
   if (idx >= 0) a[idx] = obj; else a.push(obj);
 
   localStorage.setItem("tgy_access_pricing", JSON.stringify(a));
   cloudUpsert("tgy_access_pricing", a);
   renderAccessPricing();
-  alert("✅ Access Pricing Save हो गई!");
+  apCancelEdit();
+  alert(editing ? "✅ Pricing Update हो गई!" : "✅ Access Pricing Save हो गई!");
+};
+
+window.apEditIndex = -1;
+
+window.apCancelEdit = function() {
+  window.apEditIndex = -1;
+  const sb = document.getElementById("apSaveBtn"), cb = document.getElementById("apCancelBtn");
+  if (sb) sb.textContent = "💾 Save Pricing";
+  if (cb) cb.style.display = "none";
+  ["apNumbers", "apName", "apMrp", "apOffer"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+  const d = document.getElementById("apDuration"); if (d) d.value = 30;
+};
+
+window.editAccessPricing = function(i) {
+  const x = getAccessPricing()[i];
+  if (!x) return;
+  window.apEditIndex = i;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  const ex = document.getElementById("apExam");
+  if (ex && ![...ex.options].some(o => o.value === x.exam)) { const o = document.createElement("option"); o.value = x.exam; o.textContent = x.exam; ex.appendChild(o); }
+  set("apExam", x.exam);
+  set("apType", x.type);
+  apTypeChanged();
+  const nums = x.type === "pdf_custom" ? (x.pdfNumbers || []) : (x.testNumbers || []);
+  set("apNumbers", nums.join(","));
+  const autoLabel = ({
+    testseries: `Custom Test — ${(x.testNumbers || []).join(",")}`,
+    pdf_custom: `Custom PDF — ${(x.pdfNumbers || []).join(",")}`
+  })[x.type];
+  set("apName", (x.name && x.name !== autoLabel) ? x.name : "");
+  set("apMrp", x.mrp || "");
+  set("apOffer", x.offer || "");
+  set("apDuration", x.durationValue || x.days || 30);
+  set("apUnit", x.unit || "days");
+  const sb = document.getElementById("apSaveBtn"), cb = document.getElementById("apCancelBtn");
+  if (sb) sb.textContent = "💾 Pricing Update करें";
+  if (cb) cb.style.display = "inline-block";
+  const sec = document.getElementById("accessPricing");
+  if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 
 function renderAccessPricing() {
@@ -2401,7 +2643,10 @@ function renderAccessPricing() {
     return `
     <div class="card" style="margin:8px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
       <div><b>${esc(x.exam)}</b> — ${label} — ${x.days} दिन — <b>₹${x.offer || x.mrp}</b></div>
-      <button type="button" class="btn danger" onclick="deleteAccessPricing(${i})">🗑️ Delete</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" class="btn" onclick="editAccessPricing(${i})">✏️ Edit</button>
+        <button type="button" class="btn danger" onclick="deleteAccessPricing(${i})">🗑️ Delete</button>
+      </div>
     </div>`;
   }).join('') || '<p style="color:#667085">अभी कोई Pricing नहीं बनाई गई है।</p>';
 }
