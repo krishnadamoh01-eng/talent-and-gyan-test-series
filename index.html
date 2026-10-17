@@ -1376,7 +1376,7 @@ body{padding-left:0!important;background:#fff!important;color:#15263d}
   {const fm=(typeof window.tgyFolderMeta==='function')?(window.tgyFolderMeta(n.folder||n.exam||'')||{}):{};const fp=Number(fm.offer)||Number(fm.mrp)||0;if(fp&&!hasPurchasedNote(n)&&typeof window.buyPdfFolder==='function'){window.buyPdfFolder(n.folder||n.exam||'',fp,Number(fm.days)||0);return}}
   // Fullscreen viewer (works on mobile too: pages are drawn by an embedded PDF reader, not by an <iframe>)
   const raw=n.dataUrl||(window.__tgyPdfCache&&window.__tgyPdfCache[n.id])||'';
-  if(typeof window.tgyOpenPdfFull==='function'){window.tgyOpenPdfFull(n.title||'PDF Notes',raw,n.url||'');return}
+  if(typeof window.tgyOpenPdfFull==='function'){window.tgyOpenPdfFull(n.title||'PDF Notes',raw||(n.id?function(){return window.tgyFetchPdfData(n.id)}:''),n.url||'');return}
   if(n.url){window.open(n.url,'_blank');return}
   alert('PDF उपलब्ध नहीं है।');};
  window.tgyPdfZoom=function(delta){const frame=document.getElementById('tgyPdfFrame'),box=document.getElementById('tgyPdfZoomBox');if(!frame||!box)return;if(delta===0)window.tgyPdfScale=1;else window.tgyPdfScale=Math.max(.6,Math.min(2.5,(window.tgyPdfScale||1)+delta));frame.style.width=(100*window.tgyPdfScale)+'%';frame.style.height=(100*window.tgyPdfScale)+'%';};
@@ -3981,6 +3981,25 @@ function toBytes(raw){
 }
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 
+var PSUPA='https://eivysalhillsvillmake.supabase.co/rest/v1/tgy_store',PKEY='sb_publishable_OPxM7AZMeBch4kMqVaBQBQ_UkI2Z6-U';
+async function pGet(k){
+  var r=await fetch(PSUPA+'?select=value&key=eq.'+encodeURIComponent(k),{headers:{apikey:PKEY,Authorization:'Bearer '+PKEY}});
+  if(!r.ok)throw new Error('cloud '+r.status);
+  var a=await r.json();return a&&a[0]?a[0].value:null;
+}
+// A PDF is stored in the cloud as small pieces (tgy_pdfdata_<id> + tgy_pdfpart_<id>_<n>); put it back together.
+window.tgyFetchPdfData=async function(id){
+  window.__tgyPdfCache=window.__tgyPdfCache||{};
+  if(window.__tgyPdfCache[id])return window.__tgyPdfCache[id];
+  var meta=await pGet('tgy_pdfdata_'+id);
+  if(!meta||!meta.parts)return '';
+  var out=new Array(meta.parts),next=0;
+  async function worker(){while(next<meta.parts){var i=next++;var r=await pGet('tgy_pdfpart_'+id+'_'+i);if(!r||typeof r.d!=='string')throw new Error('missing part '+i);out[i]=r.d}}
+  await Promise.all([worker(),worker(),worker()]);
+  var data=(meta.head||'data:application/pdf;base64,')+out.join('');
+  window.__tgyPdfCache[id]=data;return data;
+};
+
 window.tgyClosePdfFull=function(){
   var o=document.getElementById('tgyPdfFull');
   if(o){if(o._cleanup)try{o._cleanup()}catch(e){}o.remove()}
@@ -4009,8 +4028,9 @@ window.tgyOpenPdfFull=async function(title,raw,extraUrl){
     scroller.innerHTML='<div style="color:#fff;padding:30px 16px;font-size:16px">⚠️ PDF यहाँ दिखाई नहीं जा सकी'+(why?'<br><small style="opacity:.7">'+esc(why)+'</small>':'')+'</div>'+link;
   }
   try{
+    if(typeof raw==='function'){try{raw=await raw()}catch(e){raw=''}}
     var u8=toBytes(raw);
-    if(!u8){ if(extraUrl){fail('');return} fail('PDF का Data उपलब्ध नहीं है।');return }
+    if(!u8){ if(extraUrl){fail('');return} fail('PDF का Data उपलब्ध नहीं है। कृपया थोड़ी देर बाद दोबारा कोशिश करें।');return }
     var lib=await loadLib();
     var pdf=await lib.getDocument({data:u8}).promise;
     var N=pdf.numPages,zoom=1,pages=[],base=null;

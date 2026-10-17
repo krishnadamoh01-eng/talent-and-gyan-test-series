@@ -233,6 +233,10 @@ body.admin-locked > header,body.admin-locked > .layout,body.admin-locked > main,
         <label>2. 📄 PDF Upload करें</label>
         <input id="notePdfFile" type="file" accept="application/pdf,.pdf" style="width:100%;padding:10px">
         <div id="noteUploadStatus" class="muted" style="margin:8px 0;color:#667085"></div>
+        <div id="pdfCloudBar" style="margin:8px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button type="button" class="btn gray" onclick="tgyRetryPdfCloud()">🔄 सभी PDF Cloud में दोबारा भेजें</button>
+          <span id="pdfCloudStatus" class="muted" style="color:#667085;font-size:13px"></span>
+        </div>
         <p class="muted" style="font-size:13px">Price/Access का सेटअप अब <b>Access Pricing</b> Section में होगा।</p>
         <button type="button" class="btn orange" onclick="uploadPdfNote()">3. ⬆️ Upload करें</button>
       </div>
@@ -2267,8 +2271,28 @@ window.tgySyncUsersFromCloud = async function(showNotice = false) {
    STUDY MATERIAL / PDF NOTES
    ========================================================================= */
 
+/* The list the Admin works with is kept in its own copy (tgy_admin_pdf_meta).
+   The Student Site, when opened in this same browser, rewrites "tgy_pdf_notes" with whatever the cloud has
+   (it used to hold only some PDFs) - that must never shrink the Admin's list. */
+const TGY_ADMIN_PDF_KEY = "tgy_admin_pdf_meta", TGY_ADMIN_PDF_DEL = "tgy_admin_pdf_deleted";
+function tgyJ(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
+function tgyStripNote(n) { const c = Object.assign({}, n); delete c.dataUrl; return c; }
+
 function getAdminNotes() {
-  try { return JSON.parse(localStorage.getItem("tgy_pdf_notes") || "[]"); } catch(e) { return []; }
+  const shared = tgyJ("tgy_pdf_notes", []);
+  const own = tgyJ(TGY_ADMIN_PDF_KEY, null);
+  const deleted = new Set(tgyJ(TGY_ADMIN_PDF_DEL, []));
+  let list = Array.isArray(own) ? own.map(tgyStripNote) : (Array.isArray(shared) ? shared.map(tgyStripNote) : []);
+  if (Array.isArray(own) && Array.isArray(shared)) {
+    shared.forEach(x => { if (x && x.id && !deleted.has(x.id) && !list.some(o => o.id === x.id)) list.push(tgyStripNote(x)); });
+  }
+  return list.filter(x => x && x.id && !deleted.has(x.id));
+}
+
+function setAdminNotes(list) {
+  const clean = (list || []).map(tgyStripNote);
+  localStorage.setItem(TGY_ADMIN_PDF_KEY, JSON.stringify(clean));
+  localStorage.setItem("tgy_pdf_notes", JSON.stringify(clean));   // what the Student Site (same browser) reads
 }
 
 /* ---- PDF data lives in IndexedDB (localStorage is too small for real PDF files) ---- */
@@ -2309,16 +2333,97 @@ function tgyDeletePdfBlob(id) {
     tx.onerror = () => reject(tx.error);
   }));
 }
-async function tgySyncPdfNotesToCloud() {
+const TGY_PDF_CHUNK = 800000;   // characters per cloud row (keeps every request small)
+
+async function tgyUploadPdfData(id) {
+  const dataUrl = await tgyGetPdfBlob(id).catch(() => null);
+  if (!dataUrl) return false;
+  const c = dataUrl.indexOf(",");
+  const head = dataUrl.slice(0, c + 1), b64 = dataUrl.slice(c + 1);
+  const parts = Math.max(1, Math.ceil(b64.length / TGY_PDF_CHUNK));
+  for (let i = 0; i < parts; i++) {
+    const ok = await cloudUpsert("tgy_pdfpart_" + id + "_" + i, { d: b64.slice(i * TGY_PDF_CHUNK, (i + 1) * TGY_PDF_CHUNK) });
+    if (!ok) return false;
+  }
+  return await cloudUpsert("tgy_pdfdata_" + id, { parts, head, size: b64.length, at: new Date().toISOString() });
+}
+
+async function tgyDeletePdfCloud(id) {
   try {
-    const a = getAdminNotes();
-    const full = await Promise.all(a.map(async n => {
-      let dataUrl = "";
-      try { dataUrl = await tgyGetPdfBlob(n.id); } catch (e) {}
-      return { ...n, dataUrl: dataUrl || "" };
-    }));
-    cloudUpsert("tgy_pdf_notes", full);
-  } catch (e) { console.warn("[PDF Notes] cloud sync skipped:", e); }
+    const meta = await cloudGet("tgy_pdfdata_" + id);
+    const n = meta && meta.parts ? meta.parts : 0;
+    for (let i = 0; i < n; i++) await cloudDelete("tgy_pdfpart_" + id + "_" + i);
+    await cloudDelete("tgy_pdfdata_" + id);
+  } catch (e) {}
+}
+
+function tgyPdfCloudStatus(t, bad) {
+  const el = document.getElementById("pdfCloudStatus");
+  if (el) { el.textContent = t || ""; el.style.color = bad ? "#b42318" : "#667085"; }
+}
+
+// Sends every PDF that is not in the cloud yet, then the (small) list. Runs one at a time.
+function tgySyncPdfNotesToCloud() {
+  window.__tgyPdfChain = (window.__tgyPdfChain || Promise.resolve()).then(tgySyncPdfNotesNow, tgySyncPdfNotesNow);
+  return window.__tgyPdfChain;
+}
+
+async function tgySyncPdfNotesNow() {
+  const result = { failed: 0, listOk: false };
+  try {
+    const first = getAdminNotes();
+    const todo = first.filter(n => n.dataSynced !== true);
+    const done = new Set();
+    for (let k = 0; k < todo.length; k++) {
+      tgyPdfCloudStatus("☁️ PDF Cloud में भेजी जा रही हैं... (" + (k + 1) + "/" + todo.length + ")");
+      const ok = await tgyUploadPdfData(todo[k].id);
+      if (ok) done.add(todo[k].id); else result.failed++;
+    }
+    // apply the flags on the newest list, so changes made meanwhile (Hide/Free/Delete) are not undone
+    const latest = getAdminNotes();
+    latest.forEach(n => { if (done.has(n.id)) n.dataSynced = true; });
+    setAdminNotes(latest);
+    // students get only PDFs that are really in the cloud
+    const publish = latest.filter(n => n.dataSynced === true);
+    result.listOk = await cloudUpsert("tgy_pdf_notes", publish);
+    if (!result.listOk) result.failed = Math.max(result.failed, 1);
+    const pending = latest.filter(n => n.dataSynced !== true).length;
+    if (result.failed || pending) tgyPdfCloudStatus("⚠️ " + (pending || result.failed) + " PDF Cloud तक नहीं पहुँची — Student को नहीं दिखेंगी। 'दोबारा भेजें' दबाएँ।", true);
+    else tgyPdfCloudStatus("✅ सभी PDF Cloud में हैं (" + latest.length + ")");
+    renderAdminNotes();
+  } catch (e) {
+    console.warn("[PDF Notes] cloud sync problem:", e);
+    result.failed = Math.max(result.failed, 1);
+    tgyPdfCloudStatus("⚠️ Cloud Sync में समस्या: " + (e && e.message || e), true);
+  }
+  return result;
+}
+
+window.tgyRetryPdfCloud = async function() {
+  const all = getAdminNotes();
+  all.forEach(n => { n.dataSynced = false; });   // force a full re-send
+  setAdminNotes(all);
+  await tgySyncPdfNotesToCloud();
+};
+
+// PDFs whose list entry was lost earlier (file still stored in this browser) are brought back, hidden, to be named again.
+async function tgyRecoverOrphanPdfs() {
+  let ids = [];
+  try {
+    const db = await tgyOpenPdfDb();
+    ids = await new Promise((res, rej) => { const q = db.transaction(TGY_PDF_STORE, "readonly").objectStore(TGY_PDF_STORE).getAllKeys(); q.onsuccess = () => res(q.result || []); q.onerror = () => rej(q.error); });
+  } catch (e) { return 0; }
+  const list = getAdminNotes();
+  const deleted = new Set(tgyJ(TGY_ADMIN_PDF_DEL, []));
+  const missing = ids.filter(id => !list.some(n => n.id === id) && !deleted.has(id));
+  if (!missing.length) return 0;
+  missing.forEach(id => {
+    const ts = Number(String(id).replace(/\D/g, ""));
+    const when = ts ? new Date(ts).toLocaleString("en-IN") : id;
+    list.push({ id, title: "वापस मिली PDF — " + when, exam: "", folder: "", fileName: "", visible: false, free: false, recovered: true, dataSynced: false });
+  });
+  setAdminNotes(list);
+  return missing.length;
 }
 
 window.uploadPdfNote = async function() {
@@ -2344,14 +2449,19 @@ window.uploadPdfNote = async function() {
       return;
     }
     const a = getAdminNotes();
-    a.push({ id, title, exam, folder: exam, fileName: file.name, visible: true, free: isFree });
-    localStorage.setItem("tgy_pdf_notes", JSON.stringify(a));
-    tgySyncPdfNotesToCloud();
-    if (st) st.textContent = "✅ PDF Notes Save हो गई।";
+    a.push({ id, title, exam, folder: exam, fileName: file.name, visible: true, free: isFree, dataSynced: false });
+    setAdminNotes(a);
     renderAdminNotes();
     ["noteTitle", "notePdfFile"].forEach(fid => {
       const el = document.getElementById(fid); if (el) el.value = "";
     });
+    if (st) st.textContent = "☁️ PDF Cloud में भेजी जा रही है...";
+    const res = await tgySyncPdfNotesToCloud();
+    const mine = getAdminNotes().find(n => n.id === id);
+    if (st) {
+      if (mine && mine.dataSynced === true && res.listOk) st.textContent = "✅ PDF Save हो गई और Cloud में पहुँच गई — Student Site पर दिखेगी।";
+      else st.textContent = "⚠️ PDF इस कंप्यूटर में Save है, पर Cloud तक नहीं पहुँची (शायद बहुत बड़ी है या इंटरनेट की समस्या)। तब तक Student को नहीं दिखेगी। 'सभी PDF Cloud में दोबारा भेजें' दबाएँ।";
+    }
   };
   r.onerror = function() {
     if (st) st.textContent = "❌ PDF पढ़ने में समस्या हुई।";
@@ -2390,11 +2500,13 @@ function renderAdminNotes() {
             <b>📄 ${esc(n.title)}</b><br>
             <small style="color:#667085;word-break:break-all">${esc(n.fileName || 'PDF')}</small><br>
             <small style="font-weight:700;color:${vis ? '#1a7f37' : '#b45309'}">${vis ? '👁️ Student को दिख रही है' : '🙈 Hidden है'}</small><br>
-            <small style="font-weight:700;color:${n.free === true ? '#1a7f37' : '#123b68'}">${n.free === true ? '🆓 Free' : '💳 Price के अनुसार'}</small>
+            <small style="font-weight:700;color:${n.free === true ? '#1a7f37' : '#123b68'}">${n.free === true ? '🆓 Free' : '💳 Price के अनुसार'}</small><br>
+            <small style="font-weight:700;color:${n.dataSynced === true ? '#1a7f37' : '#b42318'}">${n.dataSynced === true ? '☁️ Cloud में है' : '⚠️ Cloud में नहीं गई'}</small>
             <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
               <button type="button" class="btn" onclick="previewAdminPdfNote(${i})">👁️ View</button>
               <button type="button" class="btn ${vis ? 'gray' : 'orange'}" onclick="togglePdfNoteVisible(${i})">${vis ? '🙈 Hide' : '👁️ Show'}</button>
               <button type="button" class="btn ${n.free === true ? 'gray' : 'orange'}" onclick="togglePdfNoteFree(${i})">${n.free === true ? '💳 Paid करें' : '🆓 Free करें'}</button>
+              <button type="button" class="btn gray" onclick="tgyEditPdfNote(${i})">✏️ नाम/Folder</button>
               <button type="button" class="btn danger" onclick="deletePdfNote(${i})">🗑️ Delete</button>
             </div>
           </div>`;
@@ -2404,12 +2516,48 @@ function renderAdminNotes() {
   `).join('');
 }
 
+window.tgyEditPdfNote = function(i) {
+  const n = getAdminNotes()[i];
+  const modal = document.getElementById("modal"), mb = document.getElementById("mb");
+  if (!n || !modal || !mb) return;
+  window.tgyEditPdfId = n.id;
+  const exams = getExamMaster().map(x => x.name);
+  if (n.exam && !exams.includes(n.exam)) exams.push(n.exam);
+  mb.innerHTML = `
+    <h2>✏️ PDF का नाम / Folder बदलें</h2>
+    <label>Notes का नाम</label>
+    <input id="tgyEditNoteTitle" value="${esc(n.title)}">
+    <label>परीक्षा (Folder)</label>
+    <select id="tgyEditNoteExam"><option value="">— चुनें —</option>${exams.map(x => `<option value="${esc(x)}" ${x === (n.exam || n.folder) ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button type="button" class="btn orange" onclick="tgySaveEditPdfNote()">✅ Save करें</button>
+      <button type="button" class="btn gray" onclick="closeM()">रद्द करें</button>
+    </div>`;
+  modal.style.display = "flex";
+};
+
+window.tgySaveEditPdfNote = async function() {
+  const title = (document.getElementById("tgyEditNoteTitle")?.value || "").trim();
+  const exam = (document.getElementById("tgyEditNoteExam")?.value || "").trim();
+  if (!title) return alert("नाम लिखें।");
+  if (!exam) return alert("परीक्षा (Folder) चुनें।");
+  const a = getAdminNotes();
+  const n = a.find(x => x.id === window.tgyEditPdfId);
+  if (!n) return;
+  n.title = title; n.exam = exam; n.folder = exam;
+  if (n.recovered) { delete n.recovered; }
+  setAdminNotes(a);
+  closeM();
+  renderAdminNotes();
+  await tgySyncPdfNotesToCloud();
+};
+
 window.togglePdfNoteFree = function(i) {
   const a = getAdminNotes();
   const n = a[i];
   if (!n) return;
   n.free = n.free !== true;
-  localStorage.setItem("tgy_pdf_notes", JSON.stringify(a));
+  setAdminNotes(a);
   tgySyncPdfNotesToCloud();
   renderAdminNotes();
 };
@@ -2419,7 +2567,7 @@ window.togglePdfNoteVisible = function(i) {
   const n = a[i];
   if (!n) return;
   n.visible = n.visible === false;
-  localStorage.setItem("tgy_pdf_notes", JSON.stringify(a));
+  setAdminNotes(a);
   tgySyncPdfNotesToCloud();
   renderAdminNotes();
 };
@@ -2442,11 +2590,31 @@ window.deletePdfNote = async function(i) {
   const a = getAdminNotes();
   const n = a[i];
   a.splice(i, 1);
-  localStorage.setItem("tgy_pdf_notes", JSON.stringify(a));
-  if (n && n.id) { try { await tgyDeletePdfBlob(n.id); } catch (e) {} }
-  tgySyncPdfNotesToCloud();
+  setAdminNotes(a);
+  if (n && n.id) {
+    const del = tgyJ(TGY_ADMIN_PDF_DEL, []); del.push(n.id);
+    localStorage.setItem(TGY_ADMIN_PDF_DEL, JSON.stringify(del));
+    try { await tgyDeletePdfBlob(n.id); } catch (e) {}
+  }
   renderAdminNotes();
+  await tgySyncPdfNotesToCloud();
+  if (n && n.id) tgyDeletePdfCloud(n.id);
 };
+
+// On opening the Admin: bring back PDFs whose list entry was lost, then send anything not yet in the cloud.
+(function tgyPdfBoot() {
+  setTimeout(async () => {
+    try {
+      const n = await tgyRecoverOrphanPdfs();
+      if (n) {
+        renderAdminNotes();
+        const st = document.getElementById("noteUploadStatus");
+        if (st) st.textContent = "♻️ " + n + " PDF वापस मिल गईं (वे 'अन्य' में, Hidden हैं)। हर एक पर '✏️ नाम/Folder' दबाकर नाम और परीक्षा सही करें, फिर 'Show' दबाएँ।";
+      }
+    } catch (e) {}
+    tgySyncPdfNotesToCloud();
+  }, 1500);
+})();
 
 /* =========================================================================
    IMPORTANT INFO (LIVE NEWS NOTICE)
