@@ -1470,12 +1470,13 @@ function mtRenderAll() {
             `}
             <div>
               <h2 style="margin:0;color:#123b68;font-size:18px">📁 ${esc(e)}</h2>
-              <p class="muted" style="margin:4px 0;color:#667085;font-weight:600">${tests.length} Test • Folder ${folderVisible ? '👁️ दिख रहा है' : '🙈 Hidden है'}</p>
+              <p class="muted" style="margin:4px 0;color:#667085;font-weight:600">${tests.length} Test • Folder ${folderVisible ? '👁️ दिख रहा है' : '🙈 Hidden है'} • <span style="color:${examObj.freeTests === true ? '#1a7f37' : '#123b68'}">${examObj.freeTests === true ? '🆓 Free' : '💳 Paid'}</span></p>
             </div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button type="button" class="btn" style="font-size:13px" onclick="tgyOpenExamNameEditPopupByName('${encodeURIComponent(e)}')">${logo ? '🖼️ Logo बदलें' : '➕ Logo लगाएँ'}</button>
             <button type="button" class="btn ${folderVisible ? 'gray' : 'orange'}" onclick="mtToggleFolder('${encodeURIComponent(e)}')">${folderVisible ? '🙈 Folder Hide' : '👁️ Folder Show'}</button>
+            <button type="button" class="btn ${examObj.freeTests === true ? 'gray' : 'orange'}" onclick="tgyToggleFolderFree('tests','${encodeURIComponent(e)}')">${examObj.freeTests === true ? '💳 Paid करें' : '🆓 Free करें'}</button>
           </div>
         </div>
 
@@ -1524,6 +1525,32 @@ window.mtToggleExpand = function(e) {
   window.__mtExpanded = window.__mtExpanded || {};
   window.__mtExpanded[e] = !window.__mtExpanded[e];
   mtRenderAll();
+};
+
+// Whole exam folder Free / Paid. "tests" = Mock Test folder, "notes" = Study Material folder.
+window.tgyFolderIsFree = function(kind, name) {
+  const f = kind === "tests" ? "freeTests" : "freeNotes";
+  return getExamMaster().some(x => x.name === name && x[f] === true);
+};
+
+window.tgyToggleFolderFree = async function(kind, enc) {
+  const name = decodeURIComponent(enc);
+  const a = getExamMaster();
+  const obj = a.find(x => x.name === name);
+  if (!obj) return alert("यह Folder परीक्षा सूची (Exam Management) में नहीं मिला।");
+  const field = kind === "tests" ? "freeTests" : "freeNotes";
+  const what = kind === "tests" ? "Mock Tests" : "Study Material";
+  const toFree = obj[field] !== true;
+  const msg = toFree
+    ? `"${name}" Folder के सभी ${what} Free करें?\n\nसभी Students इन्हें बिना खरीदे खोल सकेंगे। बाद में "Paid करें" दबाकर इसे फिर Price वाला कर सकते हैं।`
+    : `"${name}" Folder के ${what} को फिर से Paid करें?\n\nअब ये Price/Access के अनुसार ही खुलेंगे। जिन्होंने पहले खरीदा है उनका Access बना रहेगा।`;
+  if (!confirm(msg)) return;
+  obj[field] = toFree;
+  localStorage.setItem("tgy_exams", JSON.stringify(a));
+  const ok = await cloudUpsert("tgy_exams", a);
+  mtRenderAll();
+  renderAdminNotes();
+  if (!ok) alert("⚠️ बदलाव इस कंप्यूटर में हो गया, पर Cloud तक नहीं पहुँचा, इसलिए Students को अभी नहीं दिखेगा। इंटरनेट जाँचकर यही बटन फिर दबाएँ।");
 };
 
 window.mtToggleFolder = function(e) {
@@ -2490,8 +2517,13 @@ function renderAdminNotes() {
   });
   b.innerHTML = names.map(f => `
     <div class="card" style="margin:16px 0;border:2px solid #1769aa">
-      <h2 style="margin:0 0 4px;color:#123b68;font-size:18px">📁 ${esc(f)}</h2>
-      <p class="muted" style="margin:0 0 12px;color:#667085;font-weight:600">${groups[f].length} PDF</p>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+        <div>
+          <h2 style="margin:0 0 4px;color:#123b68;font-size:18px">📁 ${esc(f)}</h2>
+          <p class="muted" style="margin:0 0 12px;color:#667085;font-weight:600">${groups[f].length} PDF${tgyFolderIsFree("notes", f) ? ' • <span style="color:#1a7f37">🆓 Free</span>' : (getExamMaster().some(x => x.name === f) ? ' • <span style="color:#123b68">💳 Paid</span>' : '')}</p>
+        </div>
+        ${getExamMaster().some(x => x.name === f) ? `<button type="button" class="btn ${tgyFolderIsFree("notes", f) ? 'gray' : 'orange'}" onclick="tgyToggleFolderFree('notes','${encodeURIComponent(f)}')">${tgyFolderIsFree("notes", f) ? '💳 Paid करें' : '🆓 Free करें'}</button>` : ''}
+      </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
         ${groups[f].map(({ n, i }) => {
           const vis = n.visible !== false;
